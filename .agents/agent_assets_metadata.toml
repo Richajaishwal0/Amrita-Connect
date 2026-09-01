@@ -1,0 +1,17 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "wR9mU_5Dq7uKyCJVCYmJr"
+uri = "file://.local/conversation-workspace/files/Amrita-Connect-Implementation-Plan.md"
+type = "text"
+title = "Amrita Connect Implementation Plan"
+description = "A phased delivery plan for building Amrita Connect from foundation and authentication through networking workflows, messaging, admin, and production hardening."
+logical_id = "357de40b-d9a2-440e-8587-7e8007e9d0fe"
+content_hash = "sha256:a3b41b19b1dbf68dd3385a51a1fde7ab1690ac0e412c8ed41175dc93051881f3"
+size = 13837
+mtime_ms = 1788276135882
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/conversation:78214e9c-63d2-447c-8a3c-6869f8fd052d/357de40b-d9a2-440e-8587-7e8007e9d0fe/d17f9ae1-79b0-4fc7-8a27-c3016073ba48"
+storage_version_token = "1788276142357111"
+content_type = "text/markdown"
+source_uri = "file://Amrita-Connect-Implementation-Plan.md"
