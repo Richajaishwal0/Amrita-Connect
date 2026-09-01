@@ -1,0 +1,1466 @@
+# Amrita Connect — Advanced Feature Expansion & Role-Based Ecosystem
+
+The existing **Amrita Connect MERN application is already built, running, and verified**.
+
+Do NOT rebuild the existing application from scratch.
+
+Your task is to **inspect the current codebase first**, understand what has already been implemented, identify missing functionality, create a step-by-step implementation plan, and then progressively upgrade the existing application into a more advanced, production-grade university networking ecosystem.
+
+---
+
+# 1. IMPORTANT: EXISTING FUNCTIONALITY
+
+The application already contains:
+
+* Branded landing page
+* Responsive desktop/mobile layouts
+* Login
+* Registration
+* JWT authentication
+* Session persistence
+* Protected routes
+* Logout
+* Dashboard
+* Profile completion
+* Network metrics
+* Notifications
+* People directory
+* Search
+* Role filters
+* Campus filters
+* Public profiles
+* Mentorship request creation
+* Mentorship accept/reject workflow
+* Collaboration/project posting
+* Opportunities list
+* Opportunity search
+* Opportunity save state
+* Application links
+* Events list
+* Campus filtering
+* Event registration presentation
+* Notifications
+* Notification read state
+* Editable profiles
+* Loading states
+* Error states
+* Empty states
+* Responsive mobile states
+* Seeded demo data
+
+Verification already completed:
+
+* Root typecheck passes
+* API typecheck passes
+* Frontend production build passes
+* API smoke tests pass
+* Desktop preview checked
+* Mobile preview checked
+* API and frontend are running
+
+Therefore:
+
+## DO NOT DUPLICATE THESE FEATURES.
+
+First inspect the existing implementation and reuse the current architecture, components, models, routes, APIs and styling wherever possible.
+
+---
+
+# 2. FIRST TASK — CODEBASE AUDIT
+
+Before writing new code:
+
+1. Inspect the complete project structure.
+2. Inspect frontend routes.
+3. Inspect backend routes.
+4. Inspect MongoDB/Mongoose models.
+5. Inspect authentication middleware.
+6. Inspect role handling.
+7. Inspect current dashboard implementation.
+8. Inspect existing Socket.io implementation.
+9. Inspect existing notification system.
+10. Inspect existing profile system.
+11. Inspect existing mentorship system.
+12. Inspect existing collaboration system.
+13. Inspect existing opportunities and events.
+14. Identify incomplete or placeholder functionality.
+15. Identify functionality that is currently only UI/presentation and not fully connected to the backend.
+
+Do not assume something is missing until you inspect the implementation.
+
+---
+
+# 3. CREATE A STEP-BY-STEP IMPLEMENTATION PLAN
+
+After auditing the codebase, create a plan before implementing.
+
+Divide the work into these phases:
+
+### Phase 1
+
+Role-based architecture and authorization
+
+### Phase 2
+
+Advanced profiles and verification
+
+### Phase 3
+
+Connections and advanced networking
+
+### Phase 4
+
+Mentorship 2.0
+
+### Phase 5
+
+Project/team collaboration
+
+### Phase 6
+
+Research collaboration
+
+### Phase 7
+
+Career and alumni ecosystem
+
+### Phase 8
+
+Communities, clubs and resources
+
+### Phase 9
+
+Campus Buddy
+
+### Phase 10
+
+Real-time communication
+
+### Phase 11
+
+Admin, moderation and analytics
+
+### Phase 12
+
+Recommendation/intelligence layer
+
+### Phase 13
+
+Production hardening and final UX
+
+For each phase specify:
+
+* Features
+* Database changes
+* Backend APIs
+* Frontend pages
+* Components
+* Authorization requirements
+* Dependencies on previous phases
+* Testing requirements
+
+Then implement the phases sequentially.
+
+Do not attempt to generate all phases simultaneously.
+
+---
+
+# 4. PHASE 1 — ROLE-BASED ECOSYSTEM
+
+Upgrade the existing authentication system into proper role-based functionality.
+
+Roles:
+
+```text
+STUDENT
+ALUMNI
+FACULTY
+ADMIN
+```
+
+Implement role-based:
+
+* Routes
+* API authorization
+* Dashboard content
+* Navigation
+* Profile fields
+* Actions
+* Permissions
+
+A user must never be able to access another role's restricted functionality simply by manipulating frontend routes.
+
+Authorization must be enforced on the backend.
+
+---
+
+# 5. ROLE-SPECIFIC DASHBOARDS
+
+Create different dashboards.
+
+## Student Dashboard
+
+Include:
+
+* Profile completion
+* Recommended mentors
+* Recommended people
+* Recommended projects
+* Research opportunities
+* Career opportunities
+* Upcoming events
+* Active mentorships
+* Collaboration requests
+* Saved opportunities
+* Recent notifications
+* Recent conversations
+
+---
+
+## Alumni/Senior Dashboard
+
+Include:
+
+* Mentorship requests
+* Current mentees
+* People recommendations
+* Collaboration opportunities
+* Interview experiences
+* Career profile
+* Messages
+* Events
+
+---
+
+## Faculty/Researcher Dashboard
+
+Include:
+
+* Research opportunities
+* Research applications
+* Research teams
+* Research projects
+* Collaboration requests
+* Publications
+* Messages
+* Events
+
+---
+
+## Admin Dashboard
+
+Create a completely separate admin interface.
+
+Include:
+
+* Total users
+* Students
+* Alumni
+* Faculty
+* Users by campus
+* Pending verifications
+* Reports
+* Active mentorships
+* Active collaborations
+* Research opportunities
+* Events
+* Opportunities
+* Platform activity
+
+Use professional charts and analytics cards.
+
+---
+
+# 6. PHASE 2 — ADVANCED PROFILES
+
+Upgrade the existing profile system.
+
+## Student Profile
+
+Add:
+
+* Resume
+* GitHub
+* LinkedIn
+* Portfolio
+* LeetCode
+* Coding profiles
+* Projects
+* Hackathons
+* Certifications
+* Achievements
+* Career interests
+* Preferred domains
+* Availability
+
+---
+
+## Alumni Profile
+
+Add:
+
+* Current company
+* Current role
+* Industry
+* Years of experience
+* Previous companies
+* Career journey
+* Technologies
+* Interview experiences
+* Mentorship topics
+* Mentor availability
+* Preferred discussion topics
+
+Create a visual career timeline.
+
+Example:
+
+```text
+Amrita — 2021
+      ↓
+Software Engineer
+      ↓
+Amazon
+      ↓
+SDE II
+```
+
+---
+
+## Faculty Profile
+
+Add:
+
+* Department
+* Research interests
+* Research areas
+* Publications
+* ORCID
+* Google Scholar
+* Research projects
+* Labs
+* Current research openings
+
+---
+
+# 7. VERIFICATION SYSTEM
+
+Implement a real verification workflow.
+
+Users can have:
+
+```text
+Pending
+Verified
+Rejected
+Suspended
+```
+
+Admin can verify users.
+
+Verification badges:
+
+* Amrita Verified Student
+* Amrita Verified Alumni
+* Amrita Verified Faculty
+
+Prefer official university email verification where appropriate.
+
+Create an admin verification queue:
+
+```text
+Pending Verification
+
+Name
+Role
+Campus
+Department
+Graduation Year
+
+[View]
+[Approve]
+[Reject]
+```
+
+---
+
+# 8. PHASE 3 — PROFESSIONAL CONNECTIONS
+
+Add a proper connection system.
+
+Users can:
+
+```text
+Connect
+    ↓
+Pending
+    ↓
+Accepted
+    ↓
+Connection
+```
+
+Connection functionality:
+
+* Send request
+* Accept
+* Reject
+* Cancel
+* Remove connection
+* View connections
+
+Connections can:
+
+* Message
+* Collaborate
+* Mentor
+
+Do not confuse connections with mentorship.
+
+Mentorship should remain a separate relationship.
+
+---
+
+# 9. ADVANCED PEOPLE DISCOVERY
+
+Upgrade the existing people directory.
+
+Search by:
+
+* Name
+* Role
+* Campus
+* Department
+* Skills
+* Company
+* Research area
+* Graduation year
+* Interests
+* Industry
+
+Add sorting:
+
+* Relevance
+* Most experienced
+* Recently joined
+* Most connected
+
+Add professional profile indicators:
+
+* Verified
+* Mentor
+* Faculty
+* Alumni
+* Researcher
+
+---
+
+# 10. GLOBAL SEARCH
+
+Create a universal search system.
+
+The search bar should search across:
+
+```text
+People
+Projects
+Research
+Opportunities
+Events
+Communities
+Clubs
+Resources
+```
+
+Example:
+
+Search:
+
+```text
+Machine Learning
+```
+
+Return grouped results:
+
+```text
+PEOPLE
+12 results
+
+RESEARCH
+5 results
+
+PROJECTS
+8 results
+
+OPPORTUNITIES
+14 results
+
+EVENTS
+3 results
+```
+
+Implement backend search instead of downloading all data to the frontend.
+
+---
+
+# 11. PHASE 4 — MENTORSHIP 2.0
+
+Upgrade the existing mentorship system.
+
+Mentors should define:
+
+* Areas they can help with
+* Available days
+* Available time
+* Preferred discussion topics
+* Maximum active mentees
+* Mentorship mode
+
+Example:
+
+```text
+Available:
+Monday
+Wednesday
+Saturday
+
+Time:
+7 PM – 10 PM
+
+Topics:
+DSA
+System Design
+Resume
+Career Guidance
+```
+
+Add:
+
+### Mentor Dashboard
+
+* Pending requests
+* Accepted requests
+* Active mentees
+* Completed mentorships
+
+### Student Dashboard
+
+* Pending requests
+* Active mentors
+* Completed mentorships
+
+Add mentorship status:
+
+```text
+PENDING
+ACCEPTED
+REJECTED
+ACTIVE
+COMPLETED
+CANCELLED
+```
+
+---
+
+# 12. MENTOR MATCHING
+
+Create an initial rule-based recommendation engine.
+
+Match based on:
+
+```text
+Student career goal
++
+Skills
++
+Interests
++
+Target company
++
+Mentor expertise
++
+Role
++
+Experience
+```
+
+Calculate a match score.
+
+Example:
+
+```text
+Amazon SDE Mentor
+94% Match
+```
+
+Explain why:
+
+```text
+✓ Both interested in backend development
+✓ Mentor has Amazon SDE experience
+✓ Student wants interview preparation
+✓ Mentor provides DSA guidance
+```
+
+Do not introduce complex ML yet.
+
+Design the system so an ML recommendation engine can replace the rule-based system later.
+
+---
+
+# 13. PHASE 5 — PROJECT / TEAM FINDER 2.0
+
+Upgrade collaboration.
+
+Project creators should specify:
+
+* Required skills
+* Number of members
+* Current members
+* Deadline
+* Category
+* Project stage
+* Availability requirements
+
+Applicants should have:
+
+* Profile
+* Skills
+* Projects
+* Experience
+* Availability
+
+Creator can:
+
+* Accept
+* Reject
+* Message
+* Manage members
+
+Once accepted, create a project workspace.
+
+---
+
+# 14. PROJECT WORKSPACE
+
+Create:
+
+```text
+Project
+├── Overview
+├── Members
+├── Tasks
+├── Discussions
+├── Resources
+└── Updates
+```
+
+Members can:
+
+* Create tasks
+* Assign tasks
+* Change task status
+* Discuss
+* Share resources
+
+Task statuses:
+
+```text
+TODO
+IN_PROGRESS
+COMPLETED
+```
+
+---
+
+# 15. PHASE 6 — RESEARCH COLLABORATION HUB
+
+Build a proper research ecosystem.
+
+Faculty/researchers can create research opportunities.
+
+Fields:
+
+* Research title
+* Description
+* Domain
+* Research areas
+* Required skills
+* Duration
+* Mentor
+* Positions
+* Deadline
+* Eligibility
+
+Students can:
+
+* Browse
+* Apply
+* Withdraw application
+* Track application status
+
+Faculty can:
+
+* Review applicants
+* Accept
+* Reject
+* Build research teams
+
+---
+
+# 16. RESEARCH PROJECTS
+
+Once students are accepted, create research projects.
+
+Include:
+
+* Project description
+* Faculty mentor
+* Researchers
+* Students
+* Tasks
+* Resources
+* Publications
+* Project status
+
+Allow researchers to add publications.
+
+Publication fields:
+
+* Title
+* Authors
+* Journal/conference
+* Year
+* DOI
+* Link
+* Research domain
+
+---
+
+# 17. PHASE 7 — ALUMNI CAREER ECOSYSTEM
+
+Create a dedicated Alumni section.
+
+Users can discover:
+
+* Alumni by company
+* Alumni by role
+* Alumni by graduation year
+* Alumni by campus
+* Alumni by industry
+
+Example:
+
+```text
+Microsoft
+
+42 Amrita Alumni
+
+SDE — 21
+Data Scientist — 7
+Product — 5
+Other — 9
+```
+
+---
+
+# 18. INTERVIEW EXPERIENCE SYSTEM
+
+Allow alumni to submit interview experiences.
+
+Fields:
+
+* Company
+* Role
+* Graduation year
+* Interview year
+* Difficulty
+* Number of rounds
+* Round details
+* Topics
+* Preparation advice
+
+Example:
+
+```text
+Amazon — SDE
+
+Round 1
+Online Assessment
+
+Round 2
+DSA
+
+Round 3
+System Design
+
+Round 4
+Behavioral
+```
+
+Students can search interview experiences by company and role.
+
+---
+
+# 19. CAREER JOURNEYS
+
+Allow alumni to create career journeys.
+
+Example:
+
+```text
+Amrita — 2021
+       ↓
+Intern
+       ↓
+Software Engineer
+       ↓
+Amazon
+       ↓
+SDE II
+```
+
+Display these visually on alumni profiles.
+
+---
+
+# 20. OPPORTUNITY APPLICATION TRACKER
+
+Upgrade the existing opportunities module.
+
+Students should be able to save opportunities and track applications.
+
+Statuses:
+
+```text
+SAVED
+APPLIED
+ASSESSMENT
+INTERVIEW
+OFFER
+REJECTED
+WITHDRAWN
+```
+
+Example:
+
+```text
+Amazon Internship
+Applied → Assessment
+
+Microsoft Internship
+Applied → Interview
+
+Company X
+Offer
+```
+
+Create an application dashboard.
+
+---
+
+# 21. PHASE 8 — COMMUNITIES
+
+Create professional communities.
+
+Examples:
+
+* AI & ML
+* Web Development
+* Cybersecurity
+* Competitive Programming
+* Research
+* Entrepreneurship
+* Data Science
+
+Community page:
+
+```text
+About
+Members
+Discussions
+Projects
+Events
+Resources
+```
+
+Do NOT create an Instagram-style feed.
+
+Keep discussions professional and topic-based.
+
+---
+
+# 22. CLUBS & ORGANIZATIONS
+
+Create university club pages.
+
+Club fields:
+
+* Name
+* Description
+* Campus
+* Category
+* Members
+* Leadership
+* Events
+* Projects
+* Recruitment
+
+Club admins should be able to manage their club.
+
+---
+
+# 23. RESOURCE LIBRARY
+
+Create a university resource repository.
+
+Resources:
+
+* Notes
+* Interview preparation
+* Research papers
+* Workshop materials
+* Project resources
+* Tutorials
+* Career resources
+
+Search and filter by:
+
+* Department
+* Topic
+* Skill
+* Campus
+* Category
+
+---
+
+# 24. PHASE 9 — CAMPUS BUDDY 2.0
+
+Upgrade Campus Buddy into a complete cross-campus assistance system.
+
+Student specifies:
+
+```text
+Destination Campus
+Visit Dates
+Help Category
+Description
+```
+
+Categories:
+
+* Campus navigation
+* Transportation
+* Accommodation guidance
+* Food
+* Academic guidance
+* Events
+* Local information
+
+Students from the destination campus can volunteer.
+
+Add:
+
+* Buddy availability
+* Request status
+* Messaging
+* Completion
+* Rating/review
+
+---
+
+# 25. PHASE 10 — REAL-TIME COMMUNICATION
+
+Upgrade the existing Socket.io system.
+
+Implement:
+
+* One-to-one messaging
+* Group conversations
+* Online status
+* Typing indicator
+* Read receipts
+* Unread counts
+* Message timestamps
+* Conversation search
+
+Project teams and research teams should support group conversations.
+
+---
+
+# 26. PHASE 11 — NOTIFICATION CENTER
+
+Expand notifications.
+
+Notification types:
+
+* Mentorship
+* Connection
+* Collaboration
+* Research
+* Opportunity
+* Event
+* Message
+* System
+
+Add:
+
+* Read/unread
+* Mark all as read
+* Notification preferences
+
+Design notifications so future email notifications can be added easily.
+
+---
+
+# 27. ADMIN PLATFORM
+
+Build a serious admin system.
+
+Admin modules:
+
+```text
+Overview
+Users
+Verification
+Reports
+Moderation
+Events
+Opportunities
+Research
+Projects
+Communities
+Clubs
+Analytics
+System Settings
+```
+
+Admin can:
+
+* Search users
+* Verify users
+* Suspend users
+* Delete users
+* Review reports
+* Remove content
+* Manage events
+* Manage opportunities
+* Manage research opportunities
+* Manage communities
+
+---
+
+# 28. REPORTING & MODERATION
+
+Users can report:
+
+* Fake profiles
+* Spam
+* Scam opportunities
+* Inappropriate content
+* Harassment
+* Misleading information
+
+Report workflow:
+
+```text
+USER REPORT
+     ↓
+ADMIN REVIEW
+     ↓
+ACTION
+     ↓
+RESOLVED
+```
+
+Actions:
+
+* Dismiss
+* Warn
+* Remove content
+* Suspend user
+* Ban user
+
+Add moderation history.
+
+---
+
+# 29. ADMIN ANALYTICS
+
+Create analytics dashboards.
+
+### User analytics
+
+* Users by role
+* Users by campus
+* Users by department
+* Users by graduation year
+
+### Platform analytics
+
+* Mentorship requests
+* Successful mentorships
+* Projects
+* Research applications
+* Event registrations
+* Opportunity applications
+* Messages
+
+### Engagement
+
+* Daily active users
+* Monthly active users
+* New registrations
+* Active connections
+
+Use clean charts and tables.
+
+---
+
+# 30. PHASE 12 — RECOMMENDATION ENGINE
+
+After the core functionality is stable, implement personalized recommendations.
+
+For each student:
+
+### Recommended Mentors
+
+Based on:
+
+* Career goal
+* Skills
+* Company
+* Interests
+
+### Recommended Projects
+
+Based on:
+
+* Skills
+* Interests
+* Availability
+
+### Recommended Research
+
+Based on:
+
+* Research interests
+* Skills
+* Department
+
+### Recommended Opportunities
+
+Based on:
+
+* Skills
+* Eligibility
+* Department
+* Graduation year
+* Interests
+
+Initially use a transparent rule-based scoring system.
+
+Example:
+
+```text
+Skill Match        40%
+Interest Match     20%
+Role Match         15%
+Career Match       15%
+Experience Match   10%
+```
+
+Show the user why something was recommended.
+
+---
+
+# 31. FUTURE AI ARCHITECTURE
+
+Do not over-engineer AI now.
+
+Design recommendation services so they can later be replaced by ML/AI models.
+
+Potential future features:
+
+* AI mentor matching
+* AI research matching
+* AI opportunity matching
+* Profile improvement assistant
+* Skill-gap analysis
+* Career recommendations
+
+Keep these as a later layer.
+
+---
+
+# 32. PROFILE REPUTATION
+
+Introduce professional reputation rather than social-media likes.
+
+Possible indicators:
+
+* Mentorships completed
+* Projects completed
+* Research contributions
+* Community contributions
+* Helpful answers
+* Event participation
+
+Badges:
+
+```text
+Top Mentor
+Research Contributor
+Community Contributor
+Project Leader
+Alumni Mentor
+```
+
+Keep this professional and avoid gamification-heavy UI.
+
+---
+
+# 33. CROSS-CAMPUS DIRECTORY
+
+Create a campus discovery system.
+
+Each campus should have:
+
+* Departments
+* People
+* Events
+* Clubs
+* Communities
+* Research
+* Opportunities
+
+Users should be able to explore another campus.
+
+The platform's central identity should remain:
+
+**One University. Every Campus. One Connected Community.**
+
+---
+
+# 34. UI/UX REQUIREMENTS
+
+Maintain the existing visual identity.
+
+Use:
+
+* Deep blue
+* White
+* Gold accents
+* Professional typography
+* Clean cards
+* Tables where appropriate
+* Responsive layouts
+* Consistent spacing
+* Accessible forms
+
+Do NOT turn the application into:
+
+* Instagram
+* Facebook
+* Twitter/X
+* Gaming dashboard
+
+Avoid unnecessary animations.
+
+---
+
+# 35. ARCHITECTURE REQUIREMENTS
+
+Reuse the existing architecture.
+
+Do not unnecessarily rewrite working code.
+
+Maintain separation:
+
+```text
+Frontend
+   ↓
+REST API
+   ↓
+Controllers
+   ↓
+Services
+   ↓
+Models
+   ↓
+MongoDB
+```
+
+Use services for complex business logic.
+
+Keep authorization on the backend.
+
+---
+
+# 36. DATABASE REQUIREMENTS
+
+Add models only when required.
+
+Potential new models:
+
+```text
+Connection
+InterviewExperience
+CareerJourney
+ResearchProject
+ResearchApplication
+ProjectWorkspace
+ProjectTask
+Community
+CommunityMember
+Club
+ClubMember
+Resource
+VerificationRequest
+Report
+ModerationAction
+ApplicationTracker
+CampusBuddyRequest
+MentorAvailability
+Badge
+```
+
+Reuse existing models whenever possible.
+
+Do not duplicate existing collections.
+
+---
+
+# 37. TESTING REQUIREMENTS
+
+After every phase:
+
+### Backend
+
+Test:
+
+* Authentication
+* Authorization
+* APIs
+* Validation
+* Error handling
+* Database operations
+
+### Frontend
+
+Test:
+
+* Routes
+* Forms
+* Loading states
+* Empty states
+* Error states
+* Role-based UI
+* Responsive layouts
+
+### Security
+
+Verify:
+
+* Users cannot access admin APIs
+* Students cannot perform faculty-only actions
+* Unauthorized users cannot access protected APIs
+* JWT validation works
+* Passwords are never exposed
+* Sensitive environment variables are not exposed
+
+---
+
+# 38. IMPORTANT DEVELOPMENT RULE
+
+Implement **ONE PHASE AT A TIME**.
+
+For each phase:
+
+```text
+1. Inspect existing implementation
+2. Plan required changes
+3. Modify database/models
+4. Implement backend APIs
+5. Implement frontend
+6. Connect frontend/backend
+7. Test
+8. Fix errors
+9. Verify build
+10. Move to next phase
+```
+
+Do not move to the next phase if the current phase is broken.
+
+---
+
+# 39. FINAL QUALITY BAR
+
+The finished Amrita Connect application should feel like:
+
+> A verified professional university ecosystem connecting students, seniors, alumni, faculty and researchers across Amrita campuses.
+
+The platform should make it possible for a student to go from:
+
+```text
+"I need help"
+       ↓
+Find the right person
+       ↓
+Connect
+       ↓
+Request mentorship / collaboration
+       ↓
+Communicate
+       ↓
+Work together
+       ↓
+Discover opportunities
+       ↓
+Build career/research network
+```
+
+The platform should NOT feel like a social-media clone.
+
+Prioritize:
+
+1. Correct role-based functionality
+2. Security
+3. Real backend functionality
+4. Clean architecture
+5. Professional UX
+6. Cross-campus networking
+7. Mentorship
+8. Research collaboration
+9. Career ecosystem
+10. Intelligent recommendations
+
+---
+
+# START NOW
+
+Begin by **auditing the existing Amrita Connect codebase**.
+
+Do not immediately modify code.
+
+First produce:
+
+### A. Current architecture summary
+
+### B. Already implemented functionality
+
+### C. Missing/incomplete functionality
+
+### D. Database/model changes required
+
+### E. Backend API changes required
+
+### F. Frontend pages/components required
+
+### G. Step-by-step implementation roadmap
+
+Then start implementing **Phase 1 only**.
+
+After Phase 1 is implemented and verified, continue sequentially through the remaining phases.
+
+Do not delete or break currently working functionality.
