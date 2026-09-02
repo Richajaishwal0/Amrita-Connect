@@ -4,7 +4,13 @@
   "files": [],
   "references": [
     {
-      "path": "./lib/db"
+      "path": "./database"
+    },
+    {
+      "path": "./backend"
+    },
+    {
+      "path": "./frontend"
     },
     {
       "path": "./lib/api-client-react"

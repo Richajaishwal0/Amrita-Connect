@@ -590,6 +590,29 @@ export const ListOpportunitiesResponse = zod.object({
 
 
 /**
+ * @summary Save an opportunity for the current user
+ */
+export const SaveOpportunityParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SaveOpportunityResponse = zod.object({
+  "opportunityId": zod.string(),
+  "saved": zod.boolean()
+})
+
+
+/**
+ * @summary Remove an opportunity from the current user's saves
+ */
+export const UnsaveOpportunityParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UnsaveOpportunityResponse = zod.void()
+
+
+/**
  * @summary List upcoming university events
  */
 export const listEventsQueryPageDefault = 1;
@@ -622,6 +645,29 @@ export const ListEventsResponse = zod.object({
   "pageSize": zod.int(),
   "total": zod.int()
 })
+
+
+/**
+ * @summary Register the current user for an event
+ */
+export const RegisterForEventParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RegisterForEventResponse = zod.object({
+  "eventId": zod.string(),
+  "registered": zod.boolean()
+})
+
+
+/**
+ * @summary Cancel the current user's event registration
+ */
+export const UnregisterFromEventParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UnregisterFromEventResponse = zod.void()
 
 
 /**

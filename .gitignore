@@ -1,49 +1,81 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# ==============================================================================
+# Environment Variables & Secrets (CRITICAL: Never commit credentials)
+# ==============================================================================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+*.pem
+*.key
+*.cert
 
-# compiled output
-dist
-tmp
-out-tsc
+# ==============================================================================
+# Dependencies
+# ==============================================================================
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# ==============================================================================
+# Build & Compiled Output
+# ==============================================================================
+dist/
+build/
+out/
+out-tsc/
 *.tsbuildinfo
-.expo
-.expo-shared
+.tsbuildinfo
+.next/
+.nuxt/
 
-# dependencies
-node_modules
+# ==============================================================================
+# Logs & Diagnostic Files
+# ==============================================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
+# ==============================================================================
+# Temporary Files, Cache, & System Artifacts
+# ==============================================================================
+.cache/
+.turbo/
+.temp/
+.tmp/
+tmp/
+coverage/
+.nyc_output/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ==============================================================================
+# IDE & Editor Configuration
+# ==============================================================================
+.idea/
 *.sublime-workspace
-
-# IDE - VSCode
+*.sublime-project
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
-.DS_Store
-Thumbs.db
-
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-
-# Replit
-.cache/
-.local/
+# ==============================================================================
+# Legacy Replit / Agent Files
+# ==============================================================================
+.replit
+.replitignore
+.agents/
+.conversation/
+artifacts/
+shared/
+scripts/

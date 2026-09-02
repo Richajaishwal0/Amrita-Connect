@@ -29,6 +29,7 @@ import type {
   DashboardSummary,
   ErrorResponse,
   EventListResponse,
+  EventRegistration,
   HealthStatus,
   ListCollaborationsParams,
   ListEventsParams,
@@ -40,6 +41,7 @@ import type {
   NotFoundResponse,
   Notification,
   OpportunityListResponse,
+  OpportunitySave,
   ProfileUpdate,
   PublicUser,
   RegisterInput,
@@ -83,16 +85,6 @@ export const getHealthCheckUrl = () => {
 
   return `/api/healthz`
 }
-
-
-
-
-
-
-
-
-
-
 
 /**
  * @summary Health check
@@ -156,6 +148,11 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getRegisterUrl = () => {
@@ -370,6 +367,13 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getUpdateMyProfileUrl = () => {
 
 
@@ -518,6 +522,13 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetUserUrl = (id: string,) => {
 
 
@@ -1131,6 +1142,148 @@ export function useListOpportunities<TData = Awaited<ReturnType<typeof listOppor
 
 
 
+export const getSaveOpportunityUrl = (id: string,) => {
+
+
+
+
+  return `/api/opportunities/${id}/save`
+}
+
+/**
+ * @summary Save an opportunity for the current user
+ */
+export const saveOpportunity = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySave> => {
+
+  return customFetch<OpportunitySave>(getSaveOpportunityUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSaveOpportunityMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveOpportunity>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveOpportunity>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['saveOpportunity'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveOpportunity>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  saveOpportunity(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveOpportunityMutationResult = NonNullable<Awaited<ReturnType<typeof saveOpportunity>>>
+
+    export type SaveOpportunityMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Save an opportunity for the current user
+ */
+export const useSaveOpportunity = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveOpportunity>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveOpportunity>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getSaveOpportunityMutationOptions(options));
+    }
+
+export const getUnsaveOpportunityUrl = (id: string,) => {
+
+
+
+
+  return `/api/opportunities/${id}/save`
+}
+
+/**
+ * @summary Remove an opportunity from the current user's saves
+ */
+export const unsaveOpportunity = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getUnsaveOpportunityUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnsaveOpportunityMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsaveOpportunity>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unsaveOpportunity>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['unsaveOpportunity'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unsaveOpportunity>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unsaveOpportunity(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnsaveOpportunityMutationResult = NonNullable<Awaited<ReturnType<typeof unsaveOpportunity>>>
+
+    export type UnsaveOpportunityMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an opportunity from the current user's saves
+ */
+export const useUnsaveOpportunity = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsaveOpportunity>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unsaveOpportunity>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getUnsaveOpportunityMutationOptions(options));
+    }
+
 export const getListEventsUrl = (params?: ListEventsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1214,6 +1367,148 @@ export function useListEvents<TData = Awaited<ReturnType<typeof listEvents>>, TE
 
 
 
+
+export const getRegisterForEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/events/${id}/register`
+}
+
+/**
+ * @summary Register the current user for an event
+ */
+export const registerForEvent = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EventRegistration> => {
+
+  return customFetch<EventRegistration>(getRegisterForEventUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegisterForEventMutationOptions = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerForEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerForEvent>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['registerForEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerForEvent>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  registerForEvent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterForEventMutationResult = NonNullable<Awaited<ReturnType<typeof registerForEvent>>>
+
+    export type RegisterForEventMutationError = ErrorType<NotFoundResponse | ErrorResponse>
+
+    /**
+ * @summary Register the current user for an event
+ */
+export const useRegisterForEvent = <TError = ErrorType<NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerForEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerForEvent>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRegisterForEventMutationOptions(options));
+    }
+
+export const getUnregisterFromEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/events/${id}/register`
+}
+
+/**
+ * @summary Cancel the current user's event registration
+ */
+export const unregisterFromEvent = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getUnregisterFromEventUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnregisterFromEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unregisterFromEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unregisterFromEvent>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['unregisterFromEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unregisterFromEvent>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unregisterFromEvent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnregisterFromEventMutationResult = NonNullable<Awaited<ReturnType<typeof unregisterFromEvent>>>
+
+    export type UnregisterFromEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel the current user's event registration
+ */
+export const useUnregisterFromEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unregisterFromEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unregisterFromEvent>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getUnregisterFromEventMutationOptions(options));
+    }
 
 export const getListNotificationsUrl = () => {
 
@@ -1433,3 +1728,10 @@ export function useGetAdminSummary<TData = Awaited<ReturnType<typeof getAdminSum
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+

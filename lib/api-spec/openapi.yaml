@@ -318,6 +318,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityListResponse"
 
+  /opportunities/{id}/save:
+    post:
+      operationId: saveOpportunity
+      tags: [opportunities]
+      security:
+        - bearerAuth: []
+      summary: Save an opportunity for the current user
+      parameters:
+        - $ref: "#/components/parameters/OpportunityId"
+      responses:
+        "200":
+          description: Saved opportunity state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunitySave"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: unsaveOpportunity
+      tags: [opportunities]
+      security:
+        - bearerAuth: []
+      summary: Remove an opportunity from the current user's saves
+      parameters:
+        - $ref: "#/components/parameters/OpportunityId"
+      responses:
+        "204":
+          description: Opportunity unsaved
+
   /events:
     get:
       operationId: listEvents
@@ -336,6 +366,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EventListResponse"
+
+  /events/{id}/register:
+    post:
+      operationId: registerForEvent
+      tags: [events]
+      security:
+        - bearerAuth: []
+      summary: Register the current user for an event
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Registered event state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistration"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Event capacity reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: unregisterFromEvent
+      tags: [events]
+      security:
+        - bearerAuth: []
+      summary: Cancel the current user's event registration
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "204":
+          description: Event registration cancelled
 
   /notifications:
     get:
@@ -414,6 +480,18 @@ components:
       schema:
         type: string
     NotificationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    OpportunityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    EventId:
       name: id
       in: path
       required: true
@@ -895,6 +973,14 @@ components:
         total:
           type: integer
       required: [items, page, pageSize, total]
+    OpportunitySave:
+      type: object
+      properties:
+        opportunityId:
+          type: string
+        saved:
+          type: boolean
+      required: [opportunityId, saved]
     Event:
       type: object
       properties:
@@ -934,6 +1020,14 @@ components:
         total:
           type: integer
       required: [items, page, pageSize, total]
+    EventRegistration:
+      type: object
+      properties:
+        eventId:
+          type: string
+        registered:
+          type: boolean
+      required: [eventId, registered]
     Notification:
       type: object
       properties:

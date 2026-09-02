@@ -250,11 +250,21 @@ export interface OpportunityListResponse {
   total: number;
 }
 
+export interface OpportunitySave {
+  opportunityId: string;
+  saved: boolean;
+}
+
 export interface EventListResponse {
   items: Event[];
   page: number;
   pageSize: number;
   total: number;
+}
+
+export interface EventRegistration {
+  eventId: string;
+  registered: boolean;
 }
 
 export interface Notification {

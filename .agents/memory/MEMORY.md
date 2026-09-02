@@ -1,1 +1,0 @@
-- [Authorization boundaries](authorization-boundaries.md) — roles/status are server-owned; public profiles must stay privacy-safe and contract-synchronized.
