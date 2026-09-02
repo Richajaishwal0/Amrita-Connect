@@ -4,3 +4,6 @@ export * from "./event";
 export * from "./mentorship";
 export * from "./collaboration";
 export * from "./notification";
+export * from "./post";
+export * from "./connection";
+export * from "./message";

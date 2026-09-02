@@ -22,11 +22,14 @@ import {
 } from "@workspace/api-zod";
 import {
   CollaborationModel,
+  ConnectionModel,
   EventModel,
   EventRegistrationModel,
   MentorshipRequestModel,
+  MessageModel,
   NotificationModel,
   OpportunityModel,
+  PostModel,
   SavedOpportunityModel,
   UserModel,
 } from "@workspace/db";
@@ -43,6 +46,39 @@ function serializeUser(user: any, includeEmail = false) {
     ...(includeEmail ? { email: plain.email } : {}),
     id: String(_id || id),
     createdAt: plain.createdAt ? new Date(plain.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+function serializePost(post: any, currentUserId?: string) {
+  if (!post) return null;
+  const plain = typeof post.toObject === "function" ? post.toObject() : post;
+  const likes = (plain.likes || []).map((id: any) => String(id?._id || id));
+  const savedBy = (plain.savedBy || []).map((id: any) => String(id?._id || id));
+  const author = serializeUser(plain.authorId);
+  const comments = (plain.comments || []).map((c: any) => ({
+    id: String(c._id || c.id),
+    text: c.text,
+    createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+    user: serializeUser(c.userId),
+    isMyComment: currentUserId ? String(c.userId?._id || c.userId?.id || c.userId) === currentUserId : false,
+  }));
+
+  return {
+    id: String(plain._id || plain.id),
+    content: plain.content,
+    imageUrl: plain.imageUrl || null,
+    category: plain.category || "General",
+    campus: plain.campus,
+    department: plain.department,
+    createdAt: plain.createdAt ? new Date(plain.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: plain.updatedAt ? new Date(plain.updatedAt).toISOString() : new Date().toISOString(),
+    author,
+    likesCount: likes.length,
+    commentsCount: comments.length,
+    isLiked: currentUserId ? likes.includes(currentUserId) : false,
+    isSaved: currentUserId ? savedBy.includes(currentUserId) : false,
+    isMyPost: currentUserId ? String(plain.authorId?._id || plain.authorId?.id || plain.authorId) === currentUserId : false,
+    comments,
   };
 }
 
@@ -205,6 +241,8 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       upcoming,
       opportunityItems,
       savedRows,
+      connectionsCount,
+      pendingConnectionRequests,
     ] = await Promise.all([
       UserModel.countDocuments(),
       MentorshipRequestModel.countDocuments({ requesterId: userObjId, status: "pending" }),
@@ -217,6 +255,16 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       EventModel.find().sort({ date: 1 }).limit(3).lean(),
       OpportunityModel.find().sort({ deadline: 1 }).limit(3).lean(),
       SavedOpportunityModel.find({ userId: userObjId }).select("opportunityId").lean(),
+      ConnectionModel.countDocuments({
+        $or: [
+          { senderId: userObjId, status: "accepted" },
+          { receiverId: userObjId, status: "accepted" },
+        ],
+      }),
+      ConnectionModel.countDocuments({
+        receiverId: userObjId,
+        status: "pending",
+      }),
     ]);
 
     const registeredIds = new Set(registeredRows.map((r) => String(r.eventId)));
@@ -225,6 +273,8 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
     res.json({
       profileCompletion: 72,
       peopleCount,
+      connectionsCount,
+      pendingConnectionRequests,
       mentorshipPending,
       savedOpportunities,
       upcomingEvents,
@@ -599,6 +649,821 @@ router.patch("/notifications/:id/read", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/posts", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize || "20"), 10) || 20));
+    const filter: Record<string, any> = {};
+
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+    if (req.query.campus) {
+      filter.campus = req.query.campus;
+    }
+    if (req.query.department) {
+      filter.department = req.query.department;
+    }
+    if (req.query.search) {
+      filter.content = new RegExp(String(req.query.search), "i");
+    }
+    if (req.query.filter === "saved") {
+      filter.savedBy = userObjId;
+    } else if (req.query.filter === "my_posts") {
+      filter.authorId = userObjId;
+    }
+
+    const [rows, total] = await Promise.all([
+      PostModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .populate("authorId")
+        .populate("comments.userId")
+        .lean(),
+      PostModel.countDocuments(filter),
+    ]);
+
+    res.json({
+      items: rows.map((post) => serializePost(post, userId)),
+      page,
+      pageSize,
+      total,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { content, imageUrl, category } = req.body;
+    if (!content || typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ success: false, message: "Post content is required" });
+      return;
+    }
+    const author = await UserModel.findById(userId);
+    if (!author) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    const validCategories = [
+      "General",
+      "Achievement",
+      "Project",
+      "Opportunity",
+      "Interview Experience",
+      "Resource",
+      "Question",
+      "Help Needed",
+    ];
+    const postCategory = validCategories.includes(category) ? category : "General";
+
+    const post = await PostModel.create({
+      authorId: author._id,
+      content: content.trim(),
+      imageUrl: imageUrl && typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null,
+      category: postCategory,
+      campus: author.campus,
+      department: author.department,
+      likes: [],
+      comments: [],
+      savedBy: [],
+    });
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.status(201).json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/posts/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { content, imageUrl, category } = req.body;
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+    if (String(post.authorId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own posts" });
+      return;
+    }
+
+    if (content !== undefined && typeof content === "string" && content.trim()) {
+      post.content = content.trim();
+    }
+    if (imageUrl !== undefined) {
+      post.imageUrl = imageUrl && typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null;
+    }
+    if (category !== undefined) {
+      const validCategories = [
+        "General",
+        "Achievement",
+        "Project",
+        "Opportunity",
+        "Interview Experience",
+        "Resource",
+        "Question",
+        "Help Needed",
+      ];
+      if (validCategories.includes(category)) {
+        post.category = category as any;
+      }
+    }
+    post.updatedAt = new Date();
+    await post.save();
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/posts/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+    const user = await UserModel.findById(userId);
+    const isAdmin = user?.role === "admin";
+    if (String(post.authorId) !== userId && !isAdmin) {
+      res.status(403).json({ success: false, message: "You are not authorized to delete this post" });
+      return;
+    }
+    await PostModel.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Post deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts/:id/like", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const isLiked = post.likes.some((id) => String(id) === userId);
+    if (isLiked) {
+      post.likes = post.likes.filter((id) => String(id) !== userId) as any;
+    } else {
+      post.likes.push(userObjId);
+      if (String(post.authorId) !== userId) {
+        const currentUser = await UserModel.findById(userId);
+        await NotificationModel.create({
+          userId: post.authorId,
+          type: "post_like",
+          title: "New like on your post",
+          message: `${currentUser?.fullName ?? "A member"} liked your ${post.category.toLowerCase()} post.`,
+        });
+      }
+    }
+    await post.save();
+    res.json({ id: String(post._id), isLiked: !isLiked, likesCount: post.likes.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts/:id/save", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const isSaved = post.savedBy.some((id) => String(id) === userId);
+    if (isSaved) {
+      post.savedBy = post.savedBy.filter((id) => String(id) !== userId) as any;
+    } else {
+      post.savedBy.push(userObjId);
+    }
+    await post.save();
+    res.json({ id: String(post._id), isSaved: !isSaved, savedCount: post.savedBy.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts/:id/comments", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const { text } = req.body;
+    if (!text || typeof text !== "string" || !text.trim()) {
+      res.status(400).json({ success: false, message: "Comment text is required" });
+      return;
+    }
+
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    post.comments.push({
+      userId: userObjId,
+      text: text.trim(),
+      createdAt: new Date(),
+    });
+    await post.save();
+
+    if (String(post.authorId) !== userId) {
+      const currentUser = await UserModel.findById(userId);
+      await NotificationModel.create({
+        userId: post.authorId,
+        type: "post_comment",
+        title: "New comment on your post",
+        message: `${currentUser?.fullName ?? "A member"} commented: "${text.trim().slice(0, 60)}${text.trim().length > 60 ? "..." : ""}"`,
+      });
+    }
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.status(201).json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/posts/:id/comments/:commentId", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const comment = (post.comments as any).id(req.params.commentId);
+    if (!comment) {
+      res.status(404).json({ success: false, message: "Comment not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId);
+    const isAdmin = user?.role === "admin";
+    if (String(comment.userId) !== userId && String(post.authorId) !== userId && !isAdmin) {
+      res.status(403).json({ success: false, message: "You are not authorized to delete this comment" });
+      return;
+    }
+
+    post.comments.pull({ _id: req.params.commentId });
+    await post.save();
+
+    res.json({ success: true, message: "Comment deleted" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/connections", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+
+    const [accepted, incoming, outgoing] = await Promise.all([
+      ConnectionModel.find({
+        $or: [
+          { senderId: userObjId, status: "accepted" },
+          { receiverId: userObjId, status: "accepted" },
+        ],
+      })
+        .populate("senderId")
+        .populate("receiverId")
+        .sort({ updatedAt: -1 })
+        .lean(),
+      ConnectionModel.find({
+        receiverId: userObjId,
+        status: "pending",
+      })
+        .populate("senderId")
+        .sort({ createdAt: -1 })
+        .lean(),
+      ConnectionModel.find({
+        senderId: userObjId,
+        status: "pending",
+      })
+        .populate("receiverId")
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    const connectedItems = accepted.map((conn) => {
+      const isSender = String(conn.senderId?._id || conn.senderId) === userId;
+      const otherUser = isSender ? conn.receiverId : conn.senderId;
+      return {
+        id: String(conn._id),
+        user: serializeUser(otherUser),
+        connectedAt: conn.updatedAt ? new Date(conn.updatedAt).toISOString() : new Date(conn.createdAt).toISOString(),
+      };
+    });
+
+    const incomingItems = incoming.map((conn) => ({
+      id: String(conn._id),
+      user: serializeUser(conn.senderId),
+      message: conn.message || null,
+      createdAt: new Date(conn.createdAt).toISOString(),
+    }));
+
+    const outgoingItems = outgoing.map((conn) => ({
+      id: String(conn._id),
+      user: serializeUser(conn.receiverId),
+      message: conn.message || null,
+      createdAt: new Date(conn.createdAt).toISOString(),
+    }));
+
+    res.json({
+      connected: connectedItems,
+      incoming: incomingItems,
+      outgoing: outgoingItems,
+      totalConnected: connectedItems.length,
+      pendingCount: incomingItems.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/connections/status/:userId", requireAuth, async (req, res, next) => {
+  try {
+    const currentUserId = getUserId(req);
+    const targetUserId = req.params.userId;
+
+    if (currentUserId === targetUserId) {
+      res.json({ status: "self" });
+      return;
+    }
+
+    const conn = await ConnectionModel.findOne({
+      $or: [
+        { senderId: toObjectId(currentUserId), receiverId: toObjectId(targetUserId) },
+        { senderId: toObjectId(targetUserId), receiverId: toObjectId(currentUserId) },
+      ],
+    }).lean();
+
+    if (!conn) {
+      res.json({ status: "none" });
+      return;
+    }
+
+    if (conn.status === "accepted") {
+      res.json({ status: "accepted", connectionId: String(conn._id) });
+      return;
+    }
+
+    if (conn.status === "pending") {
+      if (String(conn.senderId) === currentUserId) {
+        res.json({ status: "pending_sent", connectionId: String(conn._id) });
+      } else {
+        res.json({ status: "pending_received", connectionId: String(conn._id) });
+      }
+      return;
+    }
+
+    res.json({ status: "none" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/connections", requireAuth, async (req, res, next) => {
+  try {
+    const senderId = getUserId(req);
+    const { receiverId, message } = req.body;
+
+    if (!receiverId || typeof receiverId !== "string") {
+      res.status(400).json({ success: false, message: "Target user receiverId is required" });
+      return;
+    }
+
+    if (senderId === receiverId) {
+      res.status(400).json({ success: false, message: "You cannot connect with yourself" });
+      return;
+    }
+
+    const [sender, receiver] = await Promise.all([
+      UserModel.findById(senderId),
+      UserModel.findById(receiverId),
+    ]);
+
+    if (!receiver) {
+      res.status(404).json({ success: false, message: "Target user not found" });
+      return;
+    }
+
+    const existing = await ConnectionModel.findOne({
+      $or: [
+        { senderId: toObjectId(senderId), receiverId: toObjectId(receiverId) },
+        { senderId: toObjectId(receiverId), receiverId: toObjectId(senderId) },
+      ],
+    });
+
+    if (existing) {
+      if (existing.status === "accepted") {
+        res.status(400).json({ success: false, message: "You are already connected with this user" });
+        return;
+      }
+      if (existing.status === "pending") {
+        res.status(400).json({ success: false, message: "A connection request is already pending" });
+        return;
+      }
+      existing.senderId = toObjectId(senderId);
+      existing.receiverId = toObjectId(receiverId);
+      existing.status = "pending";
+      existing.message = message?.trim() || null;
+      await existing.save();
+
+      await NotificationModel.create({
+        userId: receiver._id,
+        type: "connection_request",
+        title: "New Connection Request",
+        message: `${sender?.fullName ?? "A member"} sent you a connection request.`,
+      });
+
+      res.status(201).json({ success: true, connectionId: String(existing._id), status: "pending_sent" });
+      return;
+    }
+
+    const connection = await ConnectionModel.create({
+      senderId: toObjectId(senderId),
+      receiverId: toObjectId(receiverId),
+      status: "pending",
+      message: message?.trim() || null,
+    });
+
+    await NotificationModel.create({
+      userId: receiver._id,
+      type: "connection_request",
+      title: "New Connection Request",
+      message: `${sender?.fullName ?? "A member"} sent you a connection request.`,
+    });
+
+    res.status(201).json({ success: true, connectionId: String(connection._id), status: "pending_sent" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/connections/:id/accept", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const connection = await ConnectionModel.findById(req.params.id);
+
+    if (!connection) {
+      res.status(404).json({ success: false, message: "Connection request not found" });
+      return;
+    }
+
+    if (String(connection.receiverId) !== userId) {
+      res.status(403).json({ success: false, message: "Only the recipient can accept this connection request" });
+      return;
+    }
+
+    connection.status = "accepted";
+    connection.updatedAt = new Date();
+    await connection.save();
+
+    const currentUser = await UserModel.findById(userId);
+    await NotificationModel.create({
+      userId: connection.senderId,
+      type: "connection_accepted",
+      title: "Connection Request Accepted",
+      message: `${currentUser?.fullName ?? "A member"} accepted your connection request. You are now connected!`,
+    });
+
+    res.json({ success: true, message: "Connection accepted", status: "accepted" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/connections/:id/reject", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const connection = await ConnectionModel.findById(req.params.id);
+
+    if (!connection) {
+      res.status(404).json({ success: false, message: "Connection request not found" });
+      return;
+    }
+
+    if (String(connection.receiverId) !== userId && String(connection.senderId) !== userId) {
+      res.status(403).json({ success: false, message: "You are not authorized to reject this request" });
+      return;
+    }
+
+    await ConnectionModel.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Connection request declined" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/connections/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const connection = await ConnectionModel.findById(req.params.id);
+
+    if (!connection) {
+      res.status(404).json({ success: false, message: "Connection not found" });
+      return;
+    }
+
+    if (String(connection.senderId) !== userId && String(connection.receiverId) !== userId) {
+      res.status(403).json({ success: false, message: "You are not authorized to modify this connection" });
+      return;
+    }
+
+    await ConnectionModel.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Connection removed" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/connections/suggestions", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const currentUser = await UserModel.findById(userId).lean();
+    if (!currentUser) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    const existingConnections = await ConnectionModel.find({
+      $or: [{ senderId: toObjectId(userId) }, { receiverId: toObjectId(userId) }],
+    }).lean();
+
+    const excludedUserIds = new Set<string>([
+      userId,
+      ...existingConnections.map((c) => String(c.senderId)),
+      ...existingConnections.map((c) => String(c.receiverId)),
+    ]);
+
+    const candidates = await UserModel.find({
+      _id: { $nin: Array.from(excludedUserIds).map((id) => toObjectId(id)) },
+      status: "active",
+    })
+      .limit(60)
+      .lean();
+
+    const scoredCandidates = candidates.map((cand) => {
+      let score = 0;
+      const reasons: string[] = [];
+
+      if (cand.campus && cand.campus === currentUser.campus) {
+        score += 30;
+        reasons.push(`Same campus (${cand.campus})`);
+      }
+
+      if (cand.department && cand.department === currentUser.department) {
+        score += 25;
+        reasons.push(`Same department`);
+      }
+
+      const candSkills = cand.skills || [];
+      const mySkills = currentUser.skills || [];
+      const sharedSkills = candSkills.filter((s) => mySkills.some((ms) => ms.toLowerCase() === s.toLowerCase()));
+      if (sharedSkills.length > 0) {
+        score += sharedSkills.length * 15;
+        reasons.push(`Shares skills: ${sharedSkills.slice(0, 3).join(", ")}`);
+      }
+
+      const candInterests = cand.interests || [];
+      const myInterests = currentUser.interests || [];
+      const sharedInterests = candInterests.filter((i) => myInterests.some((mi) => mi.toLowerCase() === i.toLowerCase()));
+      if (sharedInterests.length > 0) {
+        score += sharedInterests.length * 10;
+        reasons.push(`Shared interests: ${sharedInterests.slice(0, 2).join(", ")}`);
+      }
+
+      if (
+        (currentUser.role === "student" && cand.role === "alumni") ||
+        (currentUser.role === "alumni" && cand.role === "student") ||
+        (currentUser.role === "researcher" && cand.role === "faculty")
+      ) {
+        score += 20;
+        reasons.push(`Valuable network pair (${cand.role})`);
+      }
+
+      return {
+        user: serializeUser(cand),
+        score,
+        reason: reasons[0] || `Amrita ${cand.campus} community`,
+        matchingPoints: reasons,
+      };
+    });
+
+    scoredCandidates.sort((a, b) => b.score - a.score);
+
+    res.json({
+      items: scoredCandidates.slice(0, 12),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/messages/conversations", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+
+    const messages = await MessageModel.find({
+      $or: [{ senderId: userObjId }, { recipientId: userObjId }],
+    })
+      .sort({ createdAt: -1 })
+      .populate("senderId")
+      .populate("recipientId")
+      .lean();
+
+    const conversationMap = new Map<string, any>();
+
+    for (const msg of messages) {
+      const isSender = String(msg.senderId?._id || msg.senderId) === userId;
+      const otherUserRaw = isSender ? msg.recipientId : msg.senderId;
+      const otherUserId = String(otherUserRaw?._id || otherUserRaw?.id || otherUserRaw);
+
+      if (!otherUserId || otherUserId === userId) continue;
+
+      if (!conversationMap.has(otherUserId)) {
+        conversationMap.set(otherUserId, {
+          otherUser: serializeUser(otherUserRaw),
+          lastMessage: {
+            id: String(msg._id),
+            content: msg.content,
+            createdAt: new Date(msg.createdAt).toISOString(),
+            isMine: isSender,
+            read: msg.read,
+          },
+          unreadCount: !isSender && !msg.read ? 1 : 0,
+        });
+      } else {
+        if (!isSender && !msg.read) {
+          const conv = conversationMap.get(otherUserId);
+          conv.unreadCount += 1;
+        }
+      }
+    }
+
+    res.json({
+      items: Array.from(conversationMap.values()),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const recipientId = req.params.recipientId;
+    const recipientObjId = toObjectId(recipientId);
+
+    const [recipient, messages] = await Promise.all([
+      UserModel.findById(recipientId).lean(),
+      MessageModel.find({
+        $or: [
+          { senderId: userObjId, recipientId: recipientObjId },
+          { senderId: recipientObjId, recipientId: userObjId },
+        ],
+      })
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+
+    if (!recipient) {
+      res.status(404).json({ success: false, message: "Recipient user not found" });
+      return;
+    }
+
+    await MessageModel.updateMany(
+      { senderId: recipientObjId, recipientId: userObjId, read: false },
+      { $set: { read: true } }
+    );
+
+    res.json({
+      recipient: serializeUser(recipient),
+      messages: messages.map((msg) => ({
+        id: String(msg._id),
+        senderId: String(msg.senderId),
+        recipientId: String(msg.recipientId),
+        content: msg.content,
+        read: msg.read,
+        createdAt: new Date(msg.createdAt).toISOString(),
+        isMine: String(msg.senderId) === userId,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/messages", requireAuth, async (req, res, next) => {
+  try {
+    const senderId = getUserId(req);
+    const { recipientId, content } = req.body;
+
+    if (!recipientId || typeof recipientId !== "string") {
+      res.status(400).json({ success: false, message: "Recipient ID is required" });
+      return;
+    }
+
+    if (!content || typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ success: false, message: "Message content cannot be empty" });
+      return;
+    }
+
+    if (senderId === recipientId) {
+      res.status(400).json({ success: false, message: "You cannot message yourself" });
+      return;
+    }
+
+    const [sender, recipient] = await Promise.all([
+      UserModel.findById(senderId),
+      UserModel.findById(recipientId),
+    ]);
+
+    if (!recipient) {
+      res.status(404).json({ success: false, message: "Recipient not found" });
+      return;
+    }
+
+    const message = await MessageModel.create({
+      senderId: toObjectId(senderId),
+      recipientId: toObjectId(recipientId),
+      content: content.trim(),
+      read: false,
+    });
+
+    await NotificationModel.create({
+      userId: recipient._id,
+      type: "direct_message",
+      title: "New direct message",
+      message: `${sender?.fullName ?? "A member"}: "${content.trim().slice(0, 50)}${content.trim().length > 50 ? "..." : ""}"`,
+    });
+
+    res.status(201).json({
+      id: String(message._id),
+      senderId: String(message.senderId),
+      recipientId: String(message.recipientId),
+      content: message.content,
+      read: message.read,
+      createdAt: new Date(message.createdAt).toISOString(),
+      isMine: true,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/messages/:recipientId/read", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const recipientId = req.params.recipientId;
+
+    await MessageModel.updateMany(
+      { senderId: toObjectId(recipientId), recipientId: toObjectId(userId), read: false },
+      { $set: { read: true } }
+    );
+
+    res.json({ success: true, message: "Messages marked as read" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/admin/summary", requireAuth, requireRole("admin"), async (_req, res) => {
   const [users, opportunities, events] = await Promise.all([
     UserModel.countDocuments(),
@@ -609,3 +1474,6 @@ router.get("/admin/summary", requireAuth, requireRole("admin"), async (_req, res
 });
 
 export default router;
+
+
+
