@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, BriefcaseBusiness,
+  ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, BriefcaseBusiness,
   Building2, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight,
   Code, Compass, Copy, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Layers,
 
@@ -89,7 +89,7 @@ function ThemeToggle({ className }: { className?: string }) {
 interface NavItem {
   href: string;
   label: string;
-  icon: typeof House;
+  icon: any;
   roles?: readonly string[];
 }
 
@@ -100,37 +100,43 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    group: 'Main',
+    group: 'Main Workspace',
     items: [
       { href: '/dashboard', label: 'Overview', icon: House },
       { href: '/feed', label: 'Community Feed', icon: Sparkles },
       { href: '/messages', label: 'Messages', icon: MessageSquare },
+      { href: '/notifications', label: 'Notifications', icon: Bell },
     ],
   },
   {
     group: 'People & Network',
     items: [
+      { href: '/people', label: 'People Directory', icon: Users },
       { href: '/connections', label: 'My Network', icon: Users2 },
-      { href: '/matchmaker', label: 'Matchmaker', icon: Compass },
-      { href: '/people', label: 'Directory', icon: Users },
+      { href: '/matchmaker', label: 'Smart Matchmaker', icon: Compass },
       { href: '/campus-buddy', label: 'Campus Buddy', icon: MapPin },
+    ],
+  },
+  {
+    group: 'Mentorship & Guidance',
+    items: [
+      { href: '/mentorship', label: 'Mentorship Hub', icon: HeartHandshake },
+      { href: '/interviews', label: 'Interview Prep', icon: GraduationCap },
+      { href: '/help', label: 'Student Help Desk', icon: HelpCircle },
     ],
   },
   {
     group: 'Academics & Labs',
     items: [
+      { href: '/collaborations', label: 'Collaborate', icon: Network },
       { href: '/research', label: 'Research Hub', icon: BookOpen },
       { href: '/showcase', label: 'Project Showcase', icon: Trophy },
-      { href: '/collaborations', label: 'Collaborate', icon: Network },
-      { href: '/interviews', label: 'Interview Prep', icon: GraduationCap },
     ],
   },
   {
-    group: 'Career & Growth',
+    group: 'Career & Events',
     items: [
-      { href: '/help', label: 'Help Desk', icon: HelpCircle },
-      { href: '/mentorship', label: 'Mentorship', icon: HeartHandshake },
-      { href: '/opportunities', label: 'Opportunities', icon: BriefcaseBusiness },
+      { href: '/opportunities', label: 'Opportunities Board', icon: BriefcaseBusiness },
       { href: '/events', label: 'Events Calendar', icon: CalendarDays },
     ],
   },
@@ -191,96 +197,99 @@ function Brand({ light = false, small = false }: { light?: boolean; small?: bool
     <Link
       data-testid="link-brand"
       href="/"
-      className={cx('flex items-center gap-2.5', light ? 'text-primary-foreground' : 'text-foreground')}
+      className="flex items-center gap-2.5 transition-transform active:scale-95"
     >
-      <span
-        className={cx(
-          'grid place-items-center rounded-xl bg-accent text-primary font-bold shadow-sm',
-          small ? 'h-7 w-7 text-xs' : 'h-9 w-9 text-sm'
-        )}
-      >
-        A
-      </span>
-      <span className={cx('font-bold tracking-[-.04em]', small ? 'text-sm' : 'text-base')}>
-        Amrita <span className="font-normal opacity-60">Connect</span>
-      </span>
+      <svg className={small ? 'h-6 w-6' : 'h-7 w-7 sm:h-8 sm:w-8'} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="8" r="4" fill="#f97316" />
+        <circle cx="8" cy="26" r="4" fill="#f97316" />
+        <circle cx="28" cy="26" r="4" fill="#f97316" />
+        <line x1="18" y1="8" x2="8" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+        <line x1="18" y1="8" x2="28" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+        <line x1="8" y1="26" x2="28" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+      <div className="flex flex-col leading-[1.05]">
+        <span className={cx('font-black tracking-wider', small ? 'text-[11px]' : 'text-xs sm:text-sm', light ? 'text-white' : 'text-slate-900 dark:text-white')}>
+          AMRITA
+        </span>
+        <span className={cx('font-extrabold tracking-wider text-orange-500', small ? 'text-[11px]' : 'text-xs sm:text-sm')}>
+          CONNECT
+        </span>
+      </div>
     </Link>
   );
 }
 
 const PLACED_ALUMNI = [
   {
-    name: 'Karthik Ramanathan',
-    role: 'Software Engineer III',
+    name: 'Arjun Narayanan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=280&q=80',
+    role: 'Software Engineer',
+    roleColor: 'text-blue-600 dark:text-blue-400',
     company: 'Google',
-    companyBadge: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    campus: 'Amritapuri',
-    department: 'Computer Science',
-    batch: 'Class of 2023',
-    quote: 'Found my ICPC teammates and senior alumni mentors on the campus network who guided me through distributed systems prep.',
-    skills: ['Distributed Systems', 'C++', 'Go', 'Kubernetes'],
-    location: 'Zurich, Switzerland',
+    location: 'Google, USA',
+    batch: 'Class of 2019 • CSE',
+    ringClass: 'ring-blue-400/80',
+    btnClass: 'bg-blue-50/80 text-blue-600 hover:bg-blue-100 border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900',
+    logo: 'google',
   },
   {
-    name: 'Sneha Iyer',
-    role: 'AI Research Scientist',
-    company: 'Microsoft Research',
-    companyBadge: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
-    campus: 'Bengaluru',
-    department: 'AI & Data Science',
-    batch: 'Class of 2022',
-    quote: 'Cross-campus collaboration with Kochi biotech lab helped publish our IEEE paper which opened doors directly to Microsoft AI lab.',
-    skills: ['PyTorch', 'LLMs', 'Computer Vision', 'NLP'],
-    location: 'Bengaluru, India',
+    name: 'Meghana Iyer',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=280&q=80',
+    role: 'Product Manager',
+    roleColor: 'text-sky-500 dark:text-sky-400',
+    company: 'Microsoft',
+    location: 'Microsoft, USA',
+    batch: 'Class of 2018 • ECE',
+    ringClass: 'ring-sky-400/80',
+    btnClass: 'bg-sky-50/80 text-sky-600 hover:bg-sky-100 border-sky-200/60 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-900',
+    logo: 'microsoft',
   },
   {
-    name: 'Aditya S. Nair',
-    role: 'Cloud Infrastructure Architect',
+    name: 'Rohit Prakash',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=280&q=80',
+    role: 'Solutions Architect',
+    roleColor: 'text-amber-500 dark:text-amber-400',
     company: 'Amazon AWS',
-    companyBadge: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-    campus: 'Coimbatore',
-    department: 'Information Technology',
-    batch: 'Class of 2021',
-    quote: 'The alumni referral network bridged the gap to global opportunities directly. Amrita Connect makes that organic and effortless.',
-    skills: ['AWS Serverless', 'Terraform', 'System Design', 'Kafka'],
-    location: 'Seattle, USA',
+    location: 'Amazon AWS, USA',
+    batch: 'Class of 2017 • IT',
+    ringClass: 'ring-amber-400/80',
+    btnClass: 'bg-amber-50/80 text-amber-600 hover:bg-amber-100 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900',
+    logo: 'aws',
   },
   {
-    name: 'Pooja Menon',
-    role: 'Autonomous Systems Engineer',
+    name: 'Karan Mahesh',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=280&q=80',
+    role: 'AI Research Engineer',
+    roleColor: 'text-emerald-500 dark:text-emerald-400',
     company: 'NVIDIA',
-    companyBadge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-    campus: 'Coimbatore',
-    department: 'Electronics & Communication',
-    batch: 'Class of 2023',
-    quote: 'Worked on robotics research with faculty across Kochi and Bengaluru before campus placements. Cross-campus visibility was a game-changer.',
-    skills: ['CUDA', 'ROS 2', 'Embedded Linux', 'Edge AI'],
-    location: 'Santa Clara, USA',
+    location: 'NVIDIA, USA',
+    batch: 'Class of 2020 • CSE',
+    ringClass: 'ring-emerald-400/80',
+    btnClass: 'bg-emerald-50/80 text-emerald-600 hover:bg-emerald-100 border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900',
+    logo: 'nvidia',
   },
   {
-    name: 'Vishnu Vardhan',
-    role: 'Lead Threat Researcher',
+    name: 'Ananya Subramani',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=280&q=80',
+    role: 'Security Researcher',
+    roleColor: 'text-rose-500 dark:text-rose-400',
     company: 'Cisco Talos',
-    companyBadge: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
-    campus: 'Amritapuri',
-    department: 'Cyber Security (bi0s)',
-    batch: 'Class of 2022',
-    quote: "Amrita's CTF community gave us hands-on security foundations recognized worldwide. Now I mentor the next batch through Amrita Connect.",
-    skills: ['Reverse Eng', 'Malware Analysis', 'Kernel Security'],
-    location: 'Bengaluru, India',
+    location: 'Cisco Talos, USA',
+    batch: 'Class of 2019 • CSE',
+    ringClass: 'ring-rose-400/80',
+    btnClass: 'bg-rose-50/80 text-rose-600 hover:bg-rose-100 border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900',
+    logo: 'cisco',
   },
-  {
-    name: 'Divya Pillai',
-    role: 'Product Engineer',
-    company: 'Adobe',
-    companyBadge: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-    campus: 'Chennai',
-    department: 'Computer Science',
-    batch: 'Class of 2024',
-    quote: 'Connected with senior alumni who reviewed my UI architecture and took mock system design interviews before my on-campus placement drive.',
-    skills: ['React', 'WebAssembly', 'Cloud Canvas', 'TypeScript'],
-    location: 'Noida, India',
-  },
+];
+
+const AMRITA_CAMPUSES = [
+  { id: 'cbe', name: 'Coimbatore', title: 'Coimbatore (Ettimadai)', focus: 'Aerospace, Robotics, Cyber Physical Systems & Core Engineering', count: '10,000+ Members', activeProjects: 142, icon: Rocket },
+  { id: 'amp', name: 'Amritapuri', title: 'Amritapuri (Kollam)', focus: 'Cybersecurity (bi0s), Wireless IoT, Nanotech & Computing', count: '8,500+ Members', activeProjects: 118, icon: ShieldCheck },
+  { id: 'blr', name: 'Bengaluru', title: 'Bengaluru Campus', focus: 'Artificial Intelligence, Data Science & Tech Startups', count: '6,000+ Members', activeProjects: 94, icon: Zap },
+  { id: 'koc', name: 'Kochi', title: 'Kochi Health Sciences', focus: 'Precision Medicine, Biotech Genomics, Medical AI & Nanomedicine', count: '5,500+ Members', activeProjects: 86, icon: HeartHandshake },
+  { id: 'chn', name: 'Chennai', title: 'Chennai Campus', focus: 'Advanced Computing, Emerging Tech & Cyber Physical Systems', count: '3,500+ Members', activeProjects: 45, icon: Layers },
+  { id: 'amr', name: 'Amaravati', title: 'Amaravati Campus', focus: 'Interdisciplinary Engineering, Sustainable Tech & AI', count: '2,000+ Members', activeProjects: 32, icon: Lightbulb },
+  { id: 'mys', name: 'Mysuru & NCR', title: 'Mysuru & NCR Campuses', focus: 'Media, Pure Sciences, Commerce & Management Studies', count: '2,500+ Members', activeProjects: 28, icon: BookOpen },
 ];
 
 const RENOWNED_FACULTY = [
@@ -338,131 +347,201 @@ const RENOWNED_FACULTY = [
   },
 ];
 
-const AMRITA_CAMPUSES = [
-  { id: 'cbe', name: 'Coimbatore', title: 'Coimbatore (Ettimadai)', focus: 'Aerospace, Robotics, Cyber Physical Systems & Core Engineering', count: '10,000+ Members', activeProjects: 142, icon: Rocket },
-  { id: 'amp', name: 'Amritapuri', title: 'Amritapuri (Kollam)', focus: 'Cybersecurity (bi0s), Wireless IoT, Nanotech & Computing', count: '8,500+ Members', activeProjects: 118, icon: ShieldCheck },
-  { id: 'blr', name: 'Bengaluru', title: 'Bengaluru Campus', focus: 'Artificial Intelligence, Data Science & Tech Startups', count: '6,000+ Members', activeProjects: 94, icon: Zap },
-  { id: 'koc', name: 'Kochi', title: 'Kochi Health Sciences', focus: 'Precision Medicine, Biotech Genomics, Medical AI & Nanomedicine', count: '5,500+ Members', activeProjects: 86, icon: HeartHandshake },
-  { id: 'chn', name: 'Chennai', title: 'Chennai Campus', focus: 'Advanced Computing, Emerging Tech & Cyber Physical Systems', count: '3,500+ Members', activeProjects: 45, icon: Layers },
-  { id: 'amr', name: 'Amaravati', title: 'Amaravati Campus', focus: 'Interdisciplinary Engineering, Sustainable Tech & AI', count: '2,000+ Members', activeProjects: 32, icon: Lightbulb },
-  { id: 'mys', name: 'Mysuru & NCR', title: 'Mysuru & NCR Campuses', focus: 'Media, Pure Sciences, Commerce & Management Studies', count: '2,500+ Members', activeProjects: 28, icon: BookOpen },
-];
-
-/* 1. Alumni Spotlight with Editorial Styling & Company Ticker */
+/* 1. Alumni Spotlight 5-Column Carousel matching Reference Screenshot */
 function AlumniSpotlightSection() {
-  const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [activePage, setActivePage] = useState(0);
 
-  useEffect(() => {
-    if (paused) return;
-    const timer = setInterval(() => {
-      setActive((prev) => (prev + 1) % PLACED_ALUMNI.length);
-    }, 5500);
-    return () => clearInterval(timer);
-  }, [paused]);
-
-  const current = PLACED_ALUMNI[active];
+  const getCompanyLogoBadge = (type: string) => {
+    switch (type) {
+      case 'google':
+        return (
+          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
+            <span className="font-bold text-xs text-blue-500">G</span>
+          </div>
+        );
+      case 'microsoft':
+        return (
+          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white p-1">
+            <div className="grid grid-cols-2 gap-0.5 w-3.5 h-3.5">
+              <div className="bg-[#f25022] rounded-[1px]" />
+              <div className="bg-[#7fba00] rounded-[1px]" />
+              <div className="bg-[#00a4ef] rounded-[1px]" />
+              <div className="bg-[#ffb900] rounded-[1px]" />
+            </div>
+          </div>
+        );
+      case 'aws':
+        return (
+          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
+            <span className="font-extrabold text-[9px] text-[#ff9900]">aws</span>
+          </div>
+        );
+      case 'nvidia':
+        return (
+          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-[#76b900] shadow-md ring-2 ring-white">
+            <span className="font-bold text-[9px] text-white">n</span>
+          </div>
+        );
+      case 'cisco':
+        return (
+          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
+            <span className="font-extrabold text-[8px] text-[#00bceb]">cisco</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <section className="border-t border-border bg-gradient-to-b from-background via-secondary/20 to-background py-20 sm:py-28">
+    <section className="border-t border-border/70 bg-transparent py-16 sm:py-24 relative z-10">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         {/* Brand Logos Bar */}
-        <div className="mb-16 text-center">
-          <p className="mono text-[11px] font-bold uppercase tracking-[.24em] text-muted-foreground">
-            Alumni Leading Breakthroughs Globally At
+        <div className="mb-12 text-center">
+          <p className="mono text-[11px] font-bold uppercase tracking-[.25em] text-muted-foreground">
+            ALUMNI LEADING BREAKTHROUGHS GLOBALLY AT
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm font-bold text-muted-foreground/70">
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-blue-500" /> Google</span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-sky-500" /> Microsoft</span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-amber-500" /> Amazon AWS</span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-emerald-500" /> NVIDIA</span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-cyan-500" /> Cisco Talos</span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors"><Building2 className="h-4 w-4 text-rose-500" /> Adobe</span>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm font-bold text-muted-foreground/80">
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-blue-500" /> Google
+            </span>
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-sky-500" /> Microsoft
+            </span>
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-amber-500" /> Amazon AWS
+            </span>
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-emerald-500" /> NVIDIA
+            </span>
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-cyan-500" /> Cisco Talos
+            </span>
+            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
+              <Building2 className="h-4 w-4 text-rose-500" /> Adobe
+            </span>
           </div>
         </div>
 
-        {/* Editorial Story Layout */}
-        <div
-          className="relative overflow-hidden rounded-3xl border border-border bg-card/90 p-8 sm:p-12 lg:p-16 shadow-xl backdrop-blur-sm"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-        >
-          <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={cx('inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold', current.companyBadge)}>
-                  <Building2 className="h-3.5 w-3.5" /> {current.company}
-                </span>
-                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
-                  {current.batch}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent">
-                  <Check className="h-3 w-3" /> Verified Alumnus
-                </span>
-              </div>
+        {/* Main 5-Column Alumni Carousel Container matching Reference Image */}
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/95 p-6 sm:p-10 shadow-xl backdrop-blur-md">
+          {/* Navigation Arrows */}
+          <button
+            type="button"
+            aria-label="Previous alumni"
+            onClick={() => setActivePage((prev) => (prev === 0 ? 4 : prev - 1))}
+            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 grid h-10 w-10 place-items-center rounded-full border border-border/80 bg-background/95 text-foreground shadow-md hover:bg-muted active:scale-95 transition-all"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
 
-              <blockquote className="relative">
-                <Quote className="h-10 w-10 text-accent/20 mb-2" />
-                <p className="text-xl font-medium leading-relaxed tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-                  “{current.quote}”
+          <button
+            type="button"
+            aria-label="Next alumni"
+            onClick={() => setActivePage((prev) => (prev + 1) % 5)}
+            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 grid h-10 w-10 place-items-center rounded-full border border-border/80 bg-background/95 text-foreground shadow-md hover:bg-muted active:scale-95 transition-all"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Background Connecting Dotted Curved Path */}
+          <div className="absolute top-[82px] left-16 right-16 hidden lg:block pointer-events-none z-0">
+            <svg className="w-full h-12" viewBox="0 0 900 40" fill="none" preserveAspectRatio="none">
+              <path
+                d="M 10 20 Q 225 5 450 20 T 890 20"
+                stroke="currentColor"
+                className="text-border/60"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+              />
+              <circle cx="170" cy="14" r="4" fill="#3b82f6" />
+              <circle cx="390" cy="23" r="4" fill="#f97316" />
+              <circle cx="610" cy="18" r="4" fill="#10b981" />
+              <circle cx="830" cy="20" r="4" fill="#f43f5e" />
+            </svg>
+          </div>
+
+          {/* 5-Column Alumni Profile Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-6 relative z-10 px-6 sm:px-8">
+            {PLACED_ALUMNI.map((alum) => (
+              <div
+                key={alum.name}
+                className="flex flex-col items-center text-center group transition-all duration-300 hover:-translate-y-1"
+              >
+                {/* Circular Profile Avatar with Company Pin */}
+                <div className="relative mb-3.5">
+                  <div className={cx('h-24 w-24 rounded-full p-1 ring-2 shadow-lg transition-all', alum.ringClass)}>
+                    <img
+                      src={alum.avatar}
+                      alt={alum.name}
+                      className="h-full w-full rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextElementSibling) {
+                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
+                        }
+                      }}
+                    />
+                    <div
+                      style={{ display: 'none' }}
+                      className="h-full w-full place-items-center rounded-full bg-secondary text-foreground font-bold text-base"
+                    >
+                      {initials(alum.name)}
+                    </div>
+                  </div>
+                  {getCompanyLogoBadge(alum.logo)}
+                </div>
+
+                {/* Name */}
+                <h3 className="text-sm font-bold text-foreground tracking-tight">
+                  {alum.name}
+                </h3>
+
+                {/* Role Title */}
+                <p className={cx('text-xs font-semibold mt-0.5', alum.roleColor)}>
+                  {alum.role}
                 </p>
-              </blockquote>
 
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/20 text-accent font-bold text-base shadow-sm">
-                  {initials(current.name)}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">{current.name}</h3>
-                  <p className="text-xs text-accent font-medium">{current.role} · <span className="text-muted-foreground">{current.location}</span></p>
-                  <p className="text-xs text-muted-foreground">{current.department} · Amrita {current.campus}</p>
-                </div>
-              </div>
+                {/* Company & Location */}
+                <p className="mt-2 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
+                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/80" />
+                  <span>{alum.location}</span>
+                </p>
 
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                <span className="text-xs font-semibold text-muted-foreground">Core Competencies:</span>
-                {current.skills.map((skill) => (
-                  <Tag key={skill} warm>{skill}</Tag>
-                ))}
-              </div>
-            </div>
+                {/* Batch & Major */}
+                <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
+                  <GraduationCap className="h-3 w-3 shrink-0 text-muted-foreground/80" />
+                  <span>{alum.batch}</span>
+                </p>
 
-            {/* Navigation controls */}
-            <div className="flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-4 border-t lg:border-t-0 lg:border-l border-border pt-6 lg:pt-0 lg:pl-10">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label="Previous story"
-                  onClick={() => setActive((prev) => (prev === 0 ? PLACED_ALUMNI.length - 1 : prev - 1))}
-                  className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-secondary text-foreground hover:bg-muted active:scale-95 transition-all"
+                {/* View Profile Action Button */}
+                <Link
+                  href="/register"
+                  className={cx(
+                    'mt-4 w-full max-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-bold shadow-sm transition-all active:scale-95',
+                    alum.btnClass
+                  )}
                 >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next story"
-                  onClick={() => setActive((prev) => (prev + 1) % PLACED_ALUMNI.length)}
-                  className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-secondary text-foreground hover:bg-muted active:scale-95 transition-all"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
+                  View Profile →
+                </Link>
               </div>
+            ))}
+          </div>
 
-              <div className="flex lg:flex-col items-center gap-1.5">
-                {PLACED_ALUMNI.map((alum, idx) => (
-                  <button
-                    key={alum.name}
-                    type="button"
-                    aria-label={`Jump to ${alum.name}`}
-                    onClick={() => setActive(idx)}
-                    className={cx(
-                      'rounded-full transition-all duration-300',
-                      active === idx ? 'h-2 w-6 lg:w-2 lg:h-6 bg-accent' : 'h-2 w-2 bg-muted hover:bg-muted-foreground/50'
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
+          {/* Carousel Dot Pagination */}
+          <div className="mt-8 flex items-center justify-center gap-2">
+            {[0, 1, 2, 3, 4].map((idx) => (
+              <button
+                key={idx}
+                type="button"
+                aria-label={`Go to slide ${idx + 1}`}
+                onClick={() => setActivePage(idx)}
+                className={cx(
+                  'rounded-full transition-all duration-300',
+                  activePage === idx ? 'h-1.5 w-6 bg-blue-500 shadow-sm' : 'h-1.5 w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'
+                )}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -470,117 +549,524 @@ function AlumniSpotlightSection() {
   );
 }
 
-/* 2. Interactive University Live Mesh & Cross-Campus Radar */
+/* 2. Interactive University Live Mesh & 7-Campus Constellation Map */
 function UniversityLiveMesh() {
-  const [selectedCampus, setSelectedCampus] = useState(AMRITA_CAMPUSES[0]);
+  const { data: currentUser } = useGetCurrentUser();
+  const getNavHref = (target: string) =>
+    currentUser ? target : `/login?redirect=${encodeURIComponent(target)}`;
 
-  const liveFeeds = [
-    { time: 'Just now', tag: 'Mentorship', text: 'Karthik Ramanathan (Google) confirmed 1-on-1 prep slot for Distributed Systems.', campus: 'Amritapuri' },
-    { time: '12m ago', tag: 'Research', text: 'Kochi Medical AI Lab opened 2 research assistantships in precision oncology.', campus: 'Kochi' },
-    { time: '28m ago', tag: 'Collaboration', text: 'Coimbatore & Bengaluru students formed a Smart India Hackathon finalist team.', campus: 'Coimbatore' },
-    { time: '1h ago', tag: 'Opportunity', text: 'Dr. Shantanu Bhowmik announced DRDO sponsored project vacancies.', campus: 'Coimbatore' },
-    { time: '2h ago', tag: 'Alumni', text: 'Sneha Iyer (Microsoft Research) reviewed 4 biomedical NLP papers.', campus: 'Bengaluru' },
+  const MAP_NODES = [
+    {
+      id: 'amp',
+      name: 'Amritapuri',
+      queryCampus: 'Amritapuri',
+      members: '860+',
+      focus: 'Cybersecurity (bi0s), Wireless IoT, Nanotech & Computing',
+      projects: 118,
+      icon: ShieldCheck,
+      color: '#8b5cf6', // purple
+      iconBg: 'bg-indigo-600 text-white shadow-indigo-500/40',
+      pos: { x: 45, y: 15 },
+      popoverPlacement: 'bottom',
+      connections: ['koc', 'blr'],
+    },
+    {
+      id: 'koc',
+      name: 'Kochi',
+      queryCampus: 'Kochi',
+      members: '720+',
+      focus: 'Precision Medicine, Biotech Genomics, Medical AI & Nanomedicine',
+      projects: 86,
+      icon: Heart,
+      color: '#ec4899', // pink
+      iconBg: 'bg-pink-500 text-white shadow-pink-500/40',
+      pos: { x: 19, y: 44 },
+      popoverPlacement: 'right',
+      connections: ['amp', 'cbe', 'blr'],
+    },
+    {
+      id: 'cbe',
+      name: 'Coimbatore',
+      queryCampus: 'Coimbatore',
+      members: '1.2K+',
+      focus: 'Aerospace, Robotics, Cyber Physical Systems & Core Engineering',
+      projects: 142,
+      icon: Rocket,
+      color: '#f97316', // orange
+      iconBg: 'bg-orange-500 text-white shadow-orange-500/40',
+      pos: { x: 26, y: 64 },
+      popoverPlacement: 'top', // Place ABOVE to avoid colliding with Chennai below
+      connections: ['koc', 'blr', 'chn', 'mys'],
+    },
+    {
+      id: 'blr',
+      name: 'Bengaluru',
+      queryCampus: 'Bengaluru',
+      members: '1.1K+',
+      focus: 'Artificial Intelligence, Data Science & Tech Startups',
+      projects: 94,
+      icon: Zap,
+      color: '#10b981', // emerald green
+      iconBg: 'bg-emerald-500 text-white shadow-emerald-500/40',
+      pos: { x: 57, y: 50 },
+      popoverPlacement: 'bottom',
+      connections: ['amp', 'koc', 'cbe', 'amr', 'mys'],
+    },
+    {
+      id: 'amr',
+      name: 'Amaravati',
+      queryCampus: 'Amaravati',
+      members: '640+',
+      focus: 'Interdisciplinary Engineering, Sustainable Tech & AI',
+      projects: 32,
+      icon: Lightbulb,
+      color: '#eab308', // amber/gold
+      iconBg: 'bg-amber-500 text-white shadow-amber-500/40',
+      pos: { x: 79, y: 44 },
+      popoverPlacement: 'left',
+      connections: ['blr', 'mys'],
+    },
+    {
+      id: 'chn',
+      name: 'Chennai',
+      queryCampus: 'Chennai',
+      members: '950+',
+      focus: 'Advanced Computing, Emerging Tech & Cyber Physical Systems',
+      projects: 45,
+      icon: Layers,
+      color: '#3b82f6', // blue
+      iconBg: 'bg-blue-600 text-white shadow-blue-500/40',
+      pos: { x: 42, y: 89 },
+      popoverPlacement: 'top',
+      connections: ['cbe'],
+    },
+    {
+      id: 'mys',
+      name: 'Mysuru & NCR',
+      queryCampus: 'Mysuru',
+      members: '580+',
+      focus: 'Media, Pure Sciences, Commerce & Management Studies',
+      projects: 28,
+      icon: BookOpen,
+      color: '#6366f1', // violet
+      iconBg: 'bg-indigo-600 text-white shadow-indigo-500/40',
+      pos: { x: 68, y: 80 },
+      popoverPlacement: 'top',
+      connections: ['cbe', 'blr', 'amr'],
+    },
   ];
 
+  const LIVE_ACTIVITIES = [
+    { text: 'Karthik R. (Google) mentoring Distributed Systems team', from: 'Amritapuri', to: 'Bengaluru', tag: 'Mentorship' },
+    { text: 'Smart India Hackathon project sync live', from: 'Coimbatore', to: 'Amritapuri', tag: 'Hackathon' },
+    { text: 'Precision Oncology dataset shared for ML model training', from: 'Kochi', to: 'Bengaluru', tag: 'Research' },
+    { text: 'Autonomous Drone Robotics paper collaboration finalized', from: 'Coimbatore', to: 'Chennai', tag: 'Paper' },
+    { text: 'Clean Energy & Microgrid research sprint active', from: 'Amaravati', to: 'Bengaluru', tag: 'Initiative' },
+  ];
+
+  const [selectedCampus, setSelectedCampus] = useState<typeof MAP_NODES[0] | null>(null);
+  const [hoveredCampus, setHoveredCampus] = useState<typeof MAP_NODES[0] | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [activeLiveIndex, setActiveLiveIndex] = useState(0);
+
+  // Rotate live activity ticker every 4 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveLiveIndex((prev) => (prev + 1) % LIVE_ACTIVITIES.length);
+    }, 4200);
+    return () => clearInterval(timer);
+  }, [LIVE_ACTIVITIES.length]);
+
+  const activeCampus = hoveredCampus || selectedCampus;
+
+  const isConnectedToActive = (nodeId1: string, nodeId2: string) => {
+    if (!activeCampus) return false;
+    return (
+      (activeCampus.id === nodeId1 && activeCampus.connections.includes(nodeId2)) ||
+      (activeCampus.id === nodeId2 && activeCampus.connections.includes(nodeId1))
+    );
+  };
+
+  const getLineClass = (from: string, to: string) => {
+    if (!activeCampus) return 'opacity-70 stroke-[2.2]';
+    if (isConnectedToActive(from, to)) return 'opacity-100 stroke-[3.5] drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]';
+    return 'opacity-20 stroke-[1.5]';
+  };
+
+  const getPopoverPositionClass = (placement?: string) => {
+    switch (placement) {
+      case 'top':
+        return 'bottom-full mb-3.5 left-1/2 -translate-x-1/2';
+      case 'bottom':
+        return 'top-full mt-3.5 left-1/2 -translate-x-1/2';
+      case 'right':
+        return 'top-1/2 -translate-y-1/2 left-full ml-3.5';
+      case 'left':
+        return 'top-1/2 -translate-y-1/2 right-full mr-3.5';
+      default:
+        return 'bottom-full mb-3.5 left-1/2 -translate-x-1/2';
+    }
+  };
+
   return (
-    <section className="border-t border-border py-20 sm:py-28">
+    <section className="border-t border-border py-20 sm:py-28 bg-[#f8faff] dark:bg-[#0b0f19] relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="max-w-2xl">
-          <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-accent">
-            <Globe className="h-3.5 w-3.5" /> University Live Mesh
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="max-w-2xl">
+            <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-orange-500">
+              <Globe className="h-3.5 w-3.5" /> University Live Mesh
+            </div>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+              Real-Time Collaboration Across 7 Campuses.
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Explore live research initiatives, active members, and inter-campus momentum happening right now. Click any campus to explore connections.
+            </p>
           </div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Real-Time Collaboration Across 7 Campuses.
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Explore live research initiatives, active members, and inter-campus momentum happening right now.
-          </p>
+
+          {/* Live Activity Live Beacon Widget */}
+          <div className="flex items-center gap-2.5 rounded-full border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-4 py-2 shadow-sm backdrop-blur-md">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            </span>
+            <div className="text-xs truncate max-w-xs sm:max-w-md">
+              <span className="font-bold text-orange-600 dark:text-orange-400 mr-1.5">
+                [{LIVE_ACTIVITIES[activeLiveIndex].tag}]
+              </span>
+              <span className="text-slate-700 dark:text-slate-200 font-medium">
+                {LIVE_ACTIVITIES[activeLiveIndex].text}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-start">
-          {/* Interactive Campus Selector */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-              Select an Amrita Center of Excellence:
-            </p>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {AMRITA_CAMPUSES.map((camp) => {
-                const Icon = camp.icon;
-                const isSelected = selectedCampus.id === camp.id;
-                return (
-                  <button
-                    key={camp.id}
-                    type="button"
-                    onClick={() => setSelectedCampus(camp)}
-                    className={cx(
-                      'flex items-start gap-3.5 rounded-2xl border p-4 text-left transition-all',
-                      isSelected
-                        ? 'border-accent bg-accent/10 shadow-md ring-1 ring-accent/30'
-                        : 'border-border bg-card hover:bg-secondary/60'
-                    )}
-                  >
-                    <div className={cx('mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl', isSelected ? 'bg-accent text-primary font-bold' : 'bg-secondary text-muted-foreground')}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold text-foreground">{camp.name}</span>
-                        {isSelected && <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {camp.focus}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Quick Filter Campus Chips */}
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setSelectedCampus(null); setHoveredCampus(null); }}
+            className={cx(
+              'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-sm',
+              !selectedCampus
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent ring-2 ring-slate-900/20'
+                : 'bg-white/80 dark:bg-slate-900/80 text-muted-foreground border-slate-200 dark:border-slate-800 hover:text-foreground'
+            )}
+          >
+            🌐 All 7 Hubs
+          </button>
+          {MAP_NODES.map((camp) => (
+            <button
+              key={camp.id}
+              type="button"
+              onClick={() => setSelectedCampus(selectedCampus?.id === camp.id ? null : camp)}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all border shadow-sm',
+                selectedCampus?.id === camp.id
+                  ? 'bg-orange-500 text-white border-orange-600 ring-2 ring-orange-500/30'
+                  : 'bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-accent hover:scale-105'
+              )}
+            >
+              <span style={{ backgroundColor: camp.color }} className="h-2 w-2 rounded-full" />
+              <span>{camp.name}</span>
+            </button>
+          ))}
+        </div>
 
-            {/* Selected Campus Insight Bar */}
-            <div className="mt-6 rounded-2xl border border-border bg-secondary/30 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">{selectedCampus.title}</h4>
-                  <p className="text-xs text-muted-foreground">{selectedCampus.count} · {selectedCampus.activeProjects} Active Projects</p>
-                </div>
-                <Link
-                  href="/people"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all"
-                >
-                  Explore {selectedCampus.name} Directory <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
+        {/* Clean Interactive Map Visualization Container */}
+        <div className="mt-6 relative rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 shadow-xl backdrop-blur-xl overflow-hidden min-h-[620px] sm:min-h-[720px] p-6 sm:p-12 flex items-center justify-center">
+          
+          {/* Detailed India Map Silhouette with Regions & Coastlines */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+            <svg viewBox="0 0 1000 900" className="h-[96%] w-auto max-w-none text-indigo-500/20 dark:text-indigo-400/15">
+              {/* Outer India boundary */}
+              <path
+                d="M 380 40 
+                   C 400 45, 430 65, 450 90 
+                   C 470 120, 500 140, 520 170 
+                   C 550 180, 590 200, 620 230 
+                   C 660 250, 720 260, 780 270 
+                   C 840 280, 890 300, 930 330 
+                   C 950 350, 960 380, 930 410 
+                   C 900 440, 840 450, 800 440 
+                   C 770 430, 750 450, 740 480 
+                   C 720 540, 700 600, 670 660 
+                   C 640 720, 600 780, 560 840 
+                   C 530 870, 500 890, 480 890 
+                   C 460 890, 440 850, 410 790 
+                   C 380 730, 340 670, 310 610 
+                   C 280 550, 250 490, 240 440 
+                   C 230 390, 210 340, 220 300 
+                   C 230 260, 260 220, 290 180 
+                   C 320 140, 350 90, 370 50 Z"
+                fill="currentColor"
+                fillOpacity="0.12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeDasharray="2 3"
+              />
+              {/* Internal state / network contours */}
+              <path
+                d="M 370 180 Q 480 220 620 230
+                   M 290 300 Q 450 350 740 320
+                   M 240 440 Q 480 470 700 480
+                   M 270 560 Q 460 580 660 570
+                   M 340 680 Q 480 700 580 690
+                   M 440 100 Q 480 400 480 880
+                   M 320 220 Q 360 520 380 780
+                   M 600 240 Q 610 500 590 760"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+                strokeDasharray="4 6"
+                strokeOpacity="0.6"
+              />
+            </svg>
           </div>
 
-          {/* Live Activity Terminal Stream */}
-          <div className="rounded-3xl border border-border bg-card/90 p-6 sm:p-7 shadow-lg">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="mono text-xs font-bold uppercase tracking-wider text-foreground">Live Activity Stream</span>
-              </div>
-              <span className="mono text-[10px] text-muted-foreground">Updated Live</span>
-            </div>
+          {/* Dotted Curved Connecting Network Mesh Between Campuses */}
+          <svg className="absolute inset-0 h-full w-full pointer-events-none z-10" viewBox="0 0 1000 700" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="grad-amp-koc" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#ec4899" />
+              </linearGradient>
+              <linearGradient id="grad-amp-blr" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#10b981" />
+              </linearGradient>
+              <linearGradient id="grad-koc-cbe" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ec4899" />
+                <stop offset="100%" stopColor="#f97316" />
+              </linearGradient>
+              <linearGradient id="grad-koc-blr" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ec4899" />
+                <stop offset="100%" stopColor="#10b981" />
+              </linearGradient>
+              <linearGradient id="grad-cbe-blr" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f97316" />
+                <stop offset="100%" stopColor="#10b981" />
+              </linearGradient>
+              <linearGradient id="grad-cbe-chn" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f97316" />
+                <stop offset="100%" stopColor="#3b82f6" />
+              </linearGradient>
+              <linearGradient id="grad-cbe-mys" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f97316" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </linearGradient>
+              <linearGradient id="grad-blr-amr" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#eab308" />
+              </linearGradient>
+              <linearGradient id="grad-blr-mys" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </linearGradient>
+              <linearGradient id="grad-amr-mys" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#eab308" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </linearGradient>
+            </defs>
 
-            <div className="mt-5 space-y-4">
-              {liveFeeds.map((feed, idx) => (
-                <div key={idx} className="flex items-start gap-3 text-xs">
-                  <span className="mono shrink-0 font-semibold text-muted-foreground">{feed.time}</span>
-                  <div className="min-w-0 flex-1">
-                    <span className="mr-1.5 font-bold text-accent">[{feed.tag}]</span>
-                    <span className="text-foreground/90">{feed.text}</span>
-                    <span className="ml-1.5 text-[10px] text-muted-foreground/70">({feed.campus})</span>
+            {/* Amritapuri (450, 105) -> Kochi (190, 308) */}
+            <path d="M 450 105 Q 310 190 190 308" fill="none" stroke="url(#grad-amp-koc)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('amp', 'koc'))} />
+            <circle r="4" fill="#8b5cf6" className="filter drop-shadow-[0_0_6px_#8b5cf6]">
+              <animateMotion dur="3.5s" repeatCount="indefinite" path="M 450 105 Q 310 190 190 308" />
+            </circle>
+
+            {/* Amritapuri (450, 105) -> Bengaluru (570, 350) */}
+            <path d="M 450 105 Q 490 230 570 350" fill="none" stroke="url(#grad-amp-blr)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('amp', 'blr'))} />
+            <circle r="4" fill="#10b981" className="filter drop-shadow-[0_0_6px_#10b981]">
+              <animateMotion dur="4s" repeatCount="indefinite" path="M 450 105 Q 490 230 570 350" />
+            </circle>
+
+            {/* Kochi (190, 308) -> Coimbatore (260, 448) */}
+            <path d="M 190 308 Q 210 380 260 448" fill="none" stroke="url(#grad-koc-cbe)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('koc', 'cbe'))} />
+            <circle r="4" fill="#f97316" className="filter drop-shadow-[0_0_6px_#f97316]">
+              <animateMotion dur="3.2s" repeatCount="indefinite" path="M 190 308 Q 210 380 260 448" />
+            </circle>
+
+            {/* Kochi (190, 308) -> Bengaluru (570, 350) */}
+            <path d="M 190 308 Q 360 300 570 350" fill="none" stroke="url(#grad-koc-blr)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('koc', 'blr'))} />
+
+            {/* Coimbatore (260, 448) -> Bengaluru (570, 350) */}
+            <path d="M 260 448 Q 410 420 570 350" fill="none" stroke="url(#grad-cbe-blr)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('cbe', 'blr'))} />
+            <circle r="4" fill="#10b981" className="filter drop-shadow-[0_0_6px_#10b981]">
+              <animateMotion dur="3.8s" repeatCount="indefinite" path="M 260 448 Q 410 420 570 350" />
+            </circle>
+
+            {/* Coimbatore (260, 448) -> Chennai (420, 623) */}
+            <path d="M 260 448 Q 320 550 420 623" fill="none" stroke="url(#grad-cbe-chn)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('cbe', 'chn'))} />
+            <circle r="4" fill="#3b82f6" className="filter drop-shadow-[0_0_6px_#3b82f6]">
+              <animateMotion dur="4.2s" repeatCount="indefinite" path="M 260 448 Q 320 550 420 623" />
+            </circle>
+
+            {/* Coimbatore (260, 448) -> Mysuru & NCR (680, 560) */}
+            <path d="M 260 448 Q 490 540 680 560" fill="none" stroke="url(#grad-cbe-mys)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('cbe', 'mys'))} />
+
+            {/* Bengaluru (570, 350) -> Amaravati (790, 308) */}
+            <path d="M 570 350 Q 680 310 790 308" fill="none" stroke="url(#grad-blr-amr)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('blr', 'amr'))} />
+            <circle r="4" fill="#eab308" className="filter drop-shadow-[0_0_6px_#eab308]">
+              <animateMotion dur="3.6s" repeatCount="indefinite" path="M 570 350 Q 680 310 790 308" />
+            </circle>
+
+            {/* Bengaluru (570, 350) -> Mysuru & NCR (680, 560) */}
+            <path d="M 570 350 Q 620 460 680 560" fill="none" stroke="url(#grad-blr-mys)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('blr', 'mys'))} />
+            <circle r="4" fill="#6366f1" className="filter drop-shadow-[0_0_6px_#6366f1]">
+              <animateMotion dur="3s" repeatCount="indefinite" path="M 570 350 Q 620 460 680 560" />
+            </circle>
+
+            {/* Amaravati (790, 308) -> Mysuru & NCR (680, 560) */}
+            <path d="M 790 308 Q 750 450 680 560" fill="none" stroke="url(#grad-amr-mys)" strokeDasharray="5 5" className={cx('transition-all duration-300', getLineClass('amr', 'mys'))} />
+          </svg>
+
+          {/* 7 Interactive Campus Nodes with Concentric Rings */}
+          <div className="relative w-full h-[540px] sm:h-[620px] z-20">
+            {MAP_NODES.map((camp) => {
+              const Icon = camp.icon;
+              const isSelected = activeCampus?.id === camp.id;
+              const isNeighbor = activeCampus && activeCampus.connections.includes(camp.id);
+              return (
+                <div
+                  key={camp.id}
+                  style={{
+                    left: `${camp.pos.x}%`,
+                    top: `${camp.pos.y}%`,
+                    transform: `translate(-50%, -50%) scale(${isSelected ? zoomLevel * 1.08 : isNeighbor ? zoomLevel * 1.03 : zoomLevel})`,
+                  }}
+                  className={cx(
+                    'absolute transition-transform duration-300',
+                    isSelected ? 'z-50' : isNeighbor ? 'z-30' : 'z-20'
+                  )}
+                >
+                  {/* Concentric Glowing Colored Wave Rings exactly like Picture 2 */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
+                    {/* Ring 1 */}
+                    <div
+                      style={{ borderColor: camp.color, backgroundColor: camp.color }}
+                      className={cx(
+                        'absolute h-16 w-16 rounded-full blur-sm transition-opacity',
+                        isSelected ? 'opacity-30 scale-125' : 'opacity-15'
+                      )}
+                    />
+                    {/* Ring 2 */}
+                    <div
+                      style={{ borderColor: camp.color }}
+                      className={cx(
+                        'absolute h-24 w-24 rounded-full border border-dashed animate-spin-slow duration-[35s] transition-all',
+                        isSelected ? 'opacity-60 scale-115' : 'opacity-40'
+                      )}
+                    />
+                    {/* Ring 3 */}
+                    <div
+                      style={{ borderColor: camp.color }}
+                      className={cx(
+                        'absolute h-36 w-36 rounded-full border transition-all',
+                        isSelected ? 'opacity-45 scale-110' : 'opacity-25'
+                      )}
+                    />
+                    {/* Ring 4 */}
+                    <div
+                      style={{ borderColor: camp.color }}
+                      className={cx(
+                        'absolute h-48 w-48 rounded-full border transition-all',
+                        isSelected ? 'opacity-30 scale-105' : 'opacity-15'
+                      )}
+                    />
                   </div>
-                </div>
-              ))}
-            </div>
 
-            <div className="mt-6 rounded-xl border border-border bg-secondary/50 p-3.5 text-center">
-              <p className="text-xs text-muted-foreground">
-                🔒 All connections require active Amrita email or alumni verification.
-              </p>
-            </div>
+                  {/* Node Capsule Badge with Rounded Pin Icon */}
+                  <Link
+                    href={getNavHref(`/people?campus=${encodeURIComponent(camp.queryCampus)}`)}
+                    onMouseEnter={() => setHoveredCampus(camp)}
+                    onMouseLeave={() => setHoveredCampus(null)}
+                    onClick={() => setSelectedCampus(selectedCampus?.id === camp.id ? null : camp)}
+                    className={cx(
+                      'group relative flex items-center gap-3 rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 py-2 pl-2 pr-5 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer',
+                      isSelected
+                        ? 'ring-2 ring-orange-500 shadow-orange-500/25 scale-105'
+                        : isNeighbor
+                        ? 'ring-1 ring-orange-400/50 hover:border-accent'
+                        : 'hover:border-accent'
+                    )}
+                  >
+                    {/* Colored Teardrop / Circle Icon Badge */}
+                    <div
+                      style={{ backgroundColor: camp.color }}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white font-bold shadow-md transition-transform group-hover:scale-110"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+
+                    {/* Campus Name & Member Count */}
+                    <div className="min-w-0">
+                      <div className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-slate-100 leading-tight">
+                        {camp.name}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                        <span>{camp.members}</span>
+                        {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Contextual Floating Popover with Smart Position to Prevent Collisions */}
+                  {isSelected && (
+                    <div className={cx(
+                      'absolute z-50 w-64 rounded-2xl border border-slate-200/90 dark:border-slate-700 bg-white/98 dark:bg-slate-900/98 p-4 shadow-2xl backdrop-blur-md animate-scale-in text-left pointer-events-auto',
+                      getPopoverPositionClass(camp.popoverPlacement)
+                    )}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-foreground">{camp.name}</span>
+                        <span className="mono text-[10px] font-bold text-accent">{camp.members} verified</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                        {camp.focus}
+                      </p>
+                      <div className="mt-2.5 flex items-center justify-between border-t border-border/60 pt-2">
+                        <span className="text-[10px] text-muted-foreground">{camp.projects} Active Initiatives</span>
+                        <Link
+                          href={getNavHref(`/people?campus=${encodeURIComponent(camp.queryCampus)}`)}
+                          className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-0.5"
+                        >
+                          Connect Now <ArrowRight className="h-3 w-3 inline" />
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Minimal Floating Map Controls on Right Side (Round Buttons from Pic 2) */}
+          <div className="absolute right-5 sm:right-8 bottom-12 z-30 flex flex-col gap-3">
+            <button
+              type="button"
+              title="Zoom in"
+              onClick={() => setZoomLevel((z) => Math.min(z + 0.1, 1.25))}
+              className="grid h-10 w-10 place-items-center rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all font-bold text-lg"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              title="Zoom out"
+              onClick={() => setZoomLevel((z) => Math.max(z - 0.1, 0.85))}
+              className="grid h-10 w-10 place-items-center rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all font-bold text-lg"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              title="Reset center"
+              onClick={() => { setZoomLevel(1); setSelectedCampus(null); setHoveredCampus(null); }}
+              className="grid h-10 w-10 place-items-center rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all"
+            >
+              <Compass className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -655,7 +1141,7 @@ function InteractiveFeatureExplorer() {
   const current = features[activeTab];
 
   return (
-    <section className="border-t border-border bg-secondary/15 py-20 sm:py-28">
+    <section className="border-t border-border/70 bg-transparent py-20 sm:py-28 relative z-10">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="max-w-2xl">
           <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-accent">
@@ -983,140 +1469,457 @@ function RolePreviewInteractive() {
   );
 }
 
-function Landing() {
+/* Hero 7-Campus Constellation Graphic matching Reference Design */
+function CampusConstellationHero() {
+  const campusNodes = [
+    {
+      id: 'coimbatore',
+      name: 'Coimbatore',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=260&q=80',
+      initials: 'CB',
+      color: '#8b5cf6', // purple
+      ringClass: 'ring-purple-400/40 bg-purple-500/10',
+      badgeClass: 'text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 260, y2: 65, color: '#a78bfa' },
+      className: 'top-1 left-1/2 -translate-x-1/2',
+    },
+    {
+      id: 'bengaluru',
+      name: 'Bengaluru',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=260&q=80',
+      initials: 'BL',
+      color: '#f97316', // orange/yellow
+      ringClass: 'ring-orange-400/40 bg-orange-500/10',
+      badgeClass: 'text-orange-600 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 135, y2: 130, color: '#fb923c' },
+      className: 'top-12 left-4 sm:left-8',
+    },
+    {
+      id: 'amaravati',
+      name: 'Amaravati',
+      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=260&q=80',
+      initials: 'AM',
+      color: '#10b981', // teal/green
+      ringClass: 'ring-emerald-400/40 bg-emerald-500/10',
+      badgeClass: 'text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 105, y2: 245, color: '#34d399' },
+      className: 'top-[42%] -left-2 sm:left-2',
+    },
+    {
+      id: 'mysuru',
+      name: 'Mysuru',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=260&q=80',
+      initials: 'MY',
+      color: '#f97316', // orange
+      ringClass: 'ring-orange-400/40 bg-orange-500/10',
+      badgeClass: 'text-orange-600 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 175, y2: 375, color: '#fb923c' },
+      className: 'bottom-4 left-14 sm:left-18',
+    },
+    {
+      id: 'kochi',
+      name: 'Kochi',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=260&q=80',
+      initials: 'KC',
+      color: '#3b82f6', // blue
+      ringClass: 'ring-blue-400/40 bg-blue-500/10',
+      badgeClass: 'text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 340, y2: 380, color: '#60a5fa' },
+      className: 'bottom-1 right-24 sm:right-28',
+    },
+    {
+      id: 'amritapuri',
+      name: 'Amritapuri',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=260&q=80',
+      initials: 'AP',
+      color: '#8b5cf6', // indigo/purple
+      ringClass: 'ring-purple-400/40 bg-purple-500/10',
+      badgeClass: 'text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 415, y2: 275, color: '#c084fc' },
+      className: 'top-[54%] -right-1 sm:right-3',
+    },
+    {
+      id: 'chennai',
+      name: 'Chennai',
+      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=260&q=80',
+      initials: 'CH',
+      color: '#10b981', // green
+      ringClass: 'ring-emerald-400/40 bg-emerald-500/10',
+      badgeClass: 'text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
+      line: { x1: 260, y1: 245, x2: 405, y2: 145, color: '#4ade80' },
+      className: 'top-20 -right-1 sm:right-4',
+    },
+  ];
+
   return (
-    <div className="grain min-h-[100dvh] overflow-hidden bg-background">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <Brand light={false} />
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              data-testid="link-login"
-              href="/login"
-              className="hidden px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground sm:block"
+    <div className="relative mx-auto w-full max-w-[540px] h-[500px] sm:h-[530px] flex items-center justify-center select-none animate-rise delay-2">
+      {/* Soft Dot Matrix Globe Pattern Backdrop */}
+      <div className="absolute inset-4 rounded-full bg-dot-pattern opacity-40 [mask-image:radial-gradient(circle_at_center,#000_60%,transparent_100%)] pointer-events-none" />
+
+      {/* SVG Connecting Radiating Lines between Center & Campuses */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 520 490" fill="none">
+        {campusNodes.map((node) => (
+          <g key={`line-${node.id}`}>
+            {/* Outer soft glow line */}
+            <line
+              x1={node.line.x1}
+              y1={node.line.y1}
+              x2={node.line.x2}
+              y2={node.line.y2}
+              stroke={node.line.color}
+              strokeWidth="4"
+              strokeOpacity="0.25"
+              strokeLinecap="round"
+            />
+            {/* Crisp core line */}
+            <line
+              x1={node.line.x1}
+              y1={node.line.y1}
+              x2={node.line.x2}
+              y2={node.line.y2}
+              stroke={node.line.color}
+              strokeWidth="1.8"
+              strokeOpacity="0.75"
+              strokeLinecap="round"
+            />
+            {/* Animated traveling data pulse */}
+            <circle r="3.5" fill={node.line.color} className="animate-pulse">
+              <animateMotion
+                path={`M ${node.line.x1} ${node.line.y1} L ${node.line.x2} ${node.line.y2}`}
+                dur={`${2.5 + (node.id.charCodeAt(0) % 3) * 0.7}s`}
+                repeatCount="indefinite"
+              />
+            </circle>
+          </g>
+        ))}
+      </svg>
+
+      {/* Center White Glowing Circular Hub */}
+      <div className="relative z-10 grid place-items-center h-32 w-32 sm:h-36 sm:w-36 rounded-full bg-card border-2 border-border/90 shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-4 text-center">
+        {/* Subtle pulsing background aura */}
+        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-orange-400/20 via-amber-400/20 to-orange-400/20 animate-pulse-slow -z-10" />
+
+        <div className="flex flex-col items-center justify-center">
+          <svg className="h-7 w-7 sm:h-8 sm:w-8 mb-1" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="8" r="4" fill="#f97316" />
+            <circle cx="8" cy="26" r="4" fill="#f97316" />
+            <circle cx="28" cy="26" r="4" fill="#f97316" />
+            <line x1="18" y1="8" x2="8" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="18" y1="8" x2="28" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="8" y1="26" x2="28" y2="26" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          <span className="font-black text-xs sm:text-sm tracking-wider text-slate-900 dark:text-white leading-none">
+            AMRITA
+          </span>
+          <span className="font-extrabold text-xs sm:text-sm tracking-wider text-orange-500 leading-none mt-0.5">
+            CONNECT
+          </span>
+        </div>
+      </div>
+
+      {/* 7 Radial 3D Character Avatar Nodes */}
+      {campusNodes.map((node) => (
+        <div
+          key={node.id}
+          className={cx('absolute z-10 flex flex-col items-center group transition-transform duration-300 hover:scale-105', node.className)}
+        >
+          {/* Avatar Ring */}
+          <div className={cx('relative h-14 w-14 sm:h-16 sm:w-16 rounded-full p-1 ring-2 shadow-lg transition-all', node.ringClass)}>
+            <img
+              src={node.avatar}
+              alt={node.name}
+              className="h-full w-full rounded-full object-cover shadow-inner"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                if (e.currentTarget.nextElementSibling) {
+                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
+                }
+              }}
+            />
+            <div
+              style={{ display: 'none' }}
+              className="h-full w-full place-items-center rounded-full bg-secondary text-primary font-bold text-xs"
             >
-              Sign in
+              {node.initials}
+            </div>
+          </div>
+
+          {/* Clean White Pill Campus Label */}
+          <span className={cx('mt-1.5 rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold shadow-md backdrop-blur-md whitespace-nowrap', node.badgeClass)}>
+            {node.name}
+          </span>
+        </div>
+      ))}
+
+      {/* Top-Right Floating Notification Card */}
+      <div className="absolute top-1 -right-2 sm:-right-6 rounded-2xl border border-border/80 bg-card/95 p-3 sm:p-3.5 shadow-xl backdrop-blur-md flex items-center gap-3 animate-float max-w-[210px] sm:max-w-[245px] z-20">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-500 font-bold">
+          <Users className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold text-foreground">New Connection</p>
+          <p className="text-[10px] text-muted-foreground truncate leading-snug">
+            <span className="font-semibold text-foreground">Rahul</span> (<span className="text-blue-500 font-bold">CBE</span>) & <span className="font-semibold text-foreground">Ananya</span> (<span className="text-blue-500 font-bold">BLR</span>)
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom-Right Floating Notification Card */}
+      <div className="absolute -bottom-2 -right-2 sm:right-2 rounded-2xl border border-border/80 bg-card/95 p-3 sm:p-3.5 shadow-xl backdrop-blur-md flex items-center gap-3 animate-float-reverse max-w-[200px] sm:max-w-[230px] z-20">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-purple-500/15 text-purple-500 font-bold">
+          <Rocket className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold text-foreground">Project Match</p>
+          <p className="text-[10px] text-muted-foreground truncate leading-snug">
+            <span className="text-purple-500 font-bold">AI Drone Team</span> matched!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Landing() {
+  const { data: currentUser } = useGetCurrentUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const getNavHref = (target: string) =>
+    currentUser ? target : `/login?redirect=${encodeURIComponent(target)}`;
+
+  return (
+    <div className="min-h-[100dvh] overflow-hidden bg-background text-foreground relative">
+      {/* Top Navbar with Responsive Navigation & Mobile Drawer */}
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8">
+          <Brand />
+
+          {/* Desktop Navigation Tabs (Visible on lg screens) */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold">
+            <Link href="/" className="relative text-foreground font-bold py-1">
+              Home
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
             </Link>
-            <Link
-              data-testid="link-register"
-              href="/register"
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-sm"
+            <Link href={getNavHref('/people')} className="text-muted-foreground hover:text-foreground transition-colors">
+              People
+            </Link>
+            <Link href={getNavHref('/mentorship')} className="text-muted-foreground hover:text-foreground transition-colors">
+              Mentorship
+            </Link>
+            <Link href={getNavHref('/collaborations')} className="text-muted-foreground hover:text-foreground transition-colors">
+              Collaborate
+            </Link>
+            <Link href={getNavHref('/events')} className="text-muted-foreground hover:text-foreground transition-colors">
+              Events
+            </Link>
+            <Link href={getNavHref('/opportunities')} className="text-muted-foreground hover:text-foreground transition-colors">
+              Opportunities
+            </Link>
+          </nav>
+
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle className="hidden sm:inline-flex" />
+            {currentUser ? (
+              <Link
+                href="/dashboard"
+                className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold shadow-md active:scale-95 transition-all flex items-center gap-1.5 sm:gap-2"
+              >
+                <span>Workspace</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2.5">
+                <Link
+                  data-testid="link-login"
+                  href="/login"
+                  className="rounded-xl border border-border/80 bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted shadow-sm transition-all"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  data-testid="link-register"
+                  href="/register"
+                  className="rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2 text-sm font-bold hover:opacity-90 shadow-md active:scale-95 transition-all"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile / Tablet Menu Toggle */}
+            <button
+              type="button"
+              aria-label="Toggle navigation menu"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden grid h-9 w-9 place-items-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all"
             >
-              Join the network
-            </Link>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile / Tablet Dropdown Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-border/70 bg-card/95 px-5 py-4 backdrop-blur-xl shadow-xl animate-in slide-in-from-top-2 duration-200">
+            <nav className="flex flex-col gap-2.5 text-sm font-semibold">
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-orange-500 font-bold py-1.5 flex items-center justify-between"
+              >
+                <span>Home</span>
+                <span className="h-2 w-2 rounded-full bg-orange-500" />
+              </Link>
+              <Link
+                href={getNavHref('/people')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5"
+              >
+                People Directory
+              </Link>
+              <Link
+                href={getNavHref('/mentorship')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5"
+              >
+                Mentorship
+              </Link>
+              <Link
+                href={getNavHref('/collaborations')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5"
+              >
+                Collaborate
+              </Link>
+              <Link
+                href={getNavHref('/events')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5"
+              >
+                Events
+              </Link>
+              <Link
+                href={getNavHref('/opportunities')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5"
+              >
+                Opportunities
+              </Link>
+            </nav>
+
+            <div className="mt-4 pt-4 border-t border-border/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Theme</span>
+                <ThemeToggle />
+              </div>
+              {!currentUser && (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-1.5 text-xs font-bold"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
-      <main>
-        {/* Spacious Modern Hero */}
-        <section className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:pb-24 lg:pt-16">
-          <div className="relative z-10 animate-rise">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" /> One University · 7 Campuses · Endless Momentum
+      <main className="relative z-10">
+        {/* Exact Reference Hero Section */}
+        <section className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[1.1fr_.9fr] lg:gap-14 lg:pb-20 lg:pt-14">
+          {/* Left Content Column */}
+          <div className="animate-rise">
+            {/* Eyebrow Pill */}
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-200/60 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 px-3.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm">
+              <Star className="h-3.5 w-3.5 text-orange-500 fill-orange-500" />
+              <span>One University. Every Campus. One Community.</span>
             </div>
-            <h1 className="max-w-3xl text-5xl font-bold leading-[1.02] tracking-[-.06em] text-foreground sm:text-6xl lg:text-7xl">
-              Find your next<br />
-              <span className="serif font-normal italic text-accent">breakthrough connection.</span>
+
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-[58px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.08]">
+              Connect across <br />
+              campuses. <br />
+              <span className="text-orange-500">Unlock your</span> <br />
+              <span className="text-orange-500">breakthrough.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
-              Amrita Connect bridges the gap between campuses, research labs, and global alumni networks. Find mentors, form project teams, and discover exclusive opportunities.
+
+            {/* Description */}
+            <p className="mt-6 max-w-lg text-base sm:text-lg leading-relaxed text-muted-foreground">
+              Amrita Connect brings together students, faculty, researchers and alumni from all 7 campuses to learn, collaborate and grow together.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            {/* Action Buttons */}
+            <div className="mt-8 flex flex-wrap items-center gap-3.5">
               <Link
                 data-testid="link-hero-register"
                 href="/register"
-                className="inline-flex items-center gap-3 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-sm"
+                className="inline-flex items-center gap-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3.5 text-sm font-bold hover:opacity-90 shadow-lg active:scale-95 transition-all"
               >
                 Create your profile <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                data-testid="link-hero-login"
-                href="/login"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3.5 text-sm font-semibold text-foreground hover:bg-muted shadow-sm"
+                data-testid="link-hero-explore"
+                href="/people"
+                className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card px-6 py-3.5 text-sm font-bold text-foreground hover:bg-muted shadow-sm active:scale-95 transition-all"
               >
-                I already belong here
+                Explore network
               </Link>
             </div>
 
-            {/* Quick Hero Stat Counters */}
-            <div className="mt-12 grid grid-cols-3 gap-4 border-t border-border pt-8">
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">30,000+</div>
-                <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">Alumni Network</div>
+            {/* Bottom 4-Stat Floating Card */}
+            <div className="mt-10 rounded-3xl border border-border/70 bg-card/90 p-5 sm:p-6 shadow-xl backdrop-blur-md grid grid-cols-4 gap-2 sm:gap-4 text-center">
+              <div className="flex flex-col items-center">
+                <div className="grid h-8 w-8 place-items-center rounded-xl bg-purple-500/15 text-purple-500 mb-2">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="text-lg sm:text-2xl font-extrabold text-foreground tracking-tight">50K+</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Members</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">7 Campuses</div>
-                <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">Interconnected</div>
+
+              <div className="flex flex-col items-center">
+                <div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-500/15 text-emerald-500 mb-2">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <div className="text-lg sm:text-2xl font-extrabold text-foreground tracking-tight">7</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Campuses</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">500+</div>
-                <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">Active Projects</div>
+
+              <div className="flex flex-col items-center">
+                <div className="grid h-8 w-8 place-items-center rounded-xl bg-sky-500/15 text-sky-500 mb-2">
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+                <div className="text-lg sm:text-2xl font-extrabold text-foreground tracking-tight">10K+</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Connections</div>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <div className="grid h-8 w-8 place-items-center rounded-xl bg-orange-500/15 text-orange-500 mb-2">
+                  <Trophy className="h-4 w-4" />
+                </div>
+                <div className="text-lg sm:text-2xl font-extrabold text-foreground tracking-tight">2K+</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Projects</div>
               </div>
             </div>
           </div>
 
-          {/* Hero Visual Mock Graphic */}
-          <div className="relative min-h-[440px] animate-rise delay-2">
-            <div className="absolute -right-20 top-3 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-            
-            {/* Primary badge card */}
-            <div className="absolute left-6 top-6 h-[340px] w-[340px] rotate-3 rounded-3xl bg-secondary border border-border p-7 shadow-2xl sm:left-12 sm:h-[360px] sm:w-[360px]">
-              <div className="flex items-center justify-between text-foreground/70">
-                <span className="mono text-[10px] uppercase tracking-[.2em] font-bold">AMRITA CONNECT</span>
-                <Network className="h-5 w-5 text-accent" />
-              </div>
-              <div className="mt-16">
-                <div className="mono text-[10px] uppercase tracking-[.18em] text-foreground/60">Cross-Campus Academic Commons</div>
-                <div className="mt-3 text-3xl font-bold leading-tight tracking-[-.05em] text-foreground sm:text-4xl">
-                  One campus,<br /><span className="serif font-normal italic text-accent">every opportunity.</span>
-                </div>
-              </div>
-              <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between border-t border-border pt-4 text-xs text-muted-foreground">
-                <span>Coimbatore · Amritapuri · Bengaluru · Kochi</span>
-                <span className="mono font-bold text-accent">A++</span>
-              </div>
-            </div>
-
-            {/* Floating Mentorship Request Card */}
-            <div className="absolute bottom-0 right-0 w-64 rotate-[-6deg] rounded-2xl border border-border bg-card p-4 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent/20 text-accent font-bold text-xs">
-                  KR
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">Karthik Ramanathan</p>
-                  <p className="text-[10px] text-muted-foreground">SWE III @ Google · Amritapuri</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-foreground/90 font-medium">
-                “Accepted your mentorship request on Distributed Systems!”
-              </p>
-              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-emerald-500 font-bold">
-                <Check className="h-3 w-3" /> Confirmed for Friday
-              </div>
-            </div>
-
-            {/* Floating Collaboration Card */}
-            <div className="absolute -left-2 top-0 w-56 -rotate-6 rounded-2xl border border-border bg-card p-3.5 shadow-lg hidden sm:block">
-              <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-accent" /> New Project Match
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                AI Diagnostics collaboration opened by Kochi Health Sciences lab.
-              </p>
-              <div className="mt-2 flex gap-1">
-                <Tag>BioAI</Tag>
-                <Tag>PyTorch</Tag>
-              </div>
-            </div>
+          {/* Right Constellation Graphic matching Reference */}
+          <div className="relative">
+            <CampusConstellationHero />
           </div>
         </section>
 
-        {/* Section 1: Editorial Alumni Spotlight & Company Marquee (No CTC) */}
+        {/* Section 1: Editorial Alumni Spotlight & Company Marquee */}
         <AlumniSpotlightSection />
 
         {/* Section 2: University Live Mesh & Cross-Campus Radar */}
@@ -1134,9 +1937,10 @@ function Landing() {
         {/* Section 6: Interactive Role Preview */}
         <RolePreviewInteractive />
 
-        {/* Big Call to Action Banner */}
-        <section className="border-t border-border bg-gradient-to-b from-secondary/30 to-background py-16 sm:py-24">
-          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 sm:flex-row sm:items-center sm:px-8">
+        {/* Big Call to Action Banner with Rich Ambient Gradient */}
+        <section className="relative border-t border-border bg-gradient-to-b from-secondary/40 via-background to-background py-16 sm:py-24 overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+          <div className="relative mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 sm:flex-row sm:items-center sm:px-8">
             <div>
               <div className="mono text-[10px] font-bold uppercase tracking-[.22em] text-accent">
                 Your place in the network
@@ -1144,20 +1948,21 @@ function Landing() {
               <h2 className="mt-2 text-3xl font-bold tracking-[-.04em] text-foreground sm:text-4xl">
                 Start with one good conversation today.
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-muted-foreground max-w-xl">
                 Join thousands of students, researchers, faculty, and alumni across Amrita Vishwa Vidyapeetham.
               </p>
             </div>
             <Link
               data-testid="link-bottom-register"
               href="/register"
-              className="inline-flex items-center gap-3 rounded-xl bg-primary px-7 py-4 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-md active:scale-95 shrink-0"
+              className="inline-flex items-center gap-3 rounded-xl bg-primary px-8 py-4 text-sm font-bold text-primary-foreground hover:opacity-90 shadow-xl active:scale-95 shrink-0 transition-all"
             >
               Join Amrita Connect <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </section>
       </main>
+
 
       {/* Modern Footer */}
       <footer className="border-t border-border bg-card py-12 text-xs text-muted-foreground">
@@ -1240,15 +2045,95 @@ function AuthLayout({ children, title, detail, mode }: { children: React.ReactNo
   </div>;
 }
 function LoginPage() {
-  const login = useLogin(); const [, setLocation] = useLocation(); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState('');
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setError(''); login.mutate({ data: { email, password } }, { onSuccess: (data) => { setAuthSession(data.token); queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() }); setLocation('/dashboard'); }, onError: () => setError('Those details did not work. Check your email and password, then try again.') }); };
-  return <AuthLayout mode="login" title="Good to see you." detail="Sign in to pick up where you left off."><form onSubmit={submit} className="mt-8 space-y-5"><Field id="email" label="University or personal email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /><Field id="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /><div className="flex justify-end"><button data-testid="button-forgot-password" type="button" className="text-xs font-semibold text-muted-foreground hover:text-foreground" onClick={() => setError('Please contact your campus administrator to reset your password.')}>Forgot password?</button></div>{error && <p data-testid="status-auth-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}<Button data-testid="button-submit-login" type="submit" className="w-full py-3.5" disabled={login.isPending}>{login.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}Sign in</Button></form></AuthLayout>;
+  const login = useLogin();
+  const [, setLocation] = useLocation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    login.mutate(
+      { data: { email, password } },
+      {
+        onSuccess: (data) => {
+          setAuthSession(data.token);
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get('redirect') || '/dashboard';
+          setLocation(redirect);
+        },
+        onError: () => setError('Those details did not work. Check your email and password, then try again.'),
+      }
+    );
+  };
+  return (
+    <AuthLayout mode="login" title="Good to see you." detail="Sign in to pick up where you left off.">
+      <form onSubmit={submit} className="mt-8 space-y-5">
+        <Field id="email" label="University or personal email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Field id="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <div className="flex justify-end">
+          <button data-testid="button-forgot-password" type="button" className="text-xs font-semibold text-muted-foreground hover:text-foreground" onClick={() => setError('Please contact your campus administrator to reset your password.')}>
+            Forgot password?
+          </button>
+        </div>
+        {error && <p data-testid="status-auth-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5" disabled={login.isPending}>
+          {login.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+          Sign in
+        </Button>
+      </form>
+    </AuthLayout>
+  );
 }
+
 function RegisterPage() {
-  const register = useRegister(); const [, setLocation] = useLocation(); const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'student' as 'student' | 'alumni' | 'faculty' | 'researcher', campus: campuses[0], department: departments[0], graduationYear: '' }); const [error, setError] = useState('');
+  const register = useRegister();
+  const [, setLocation] = useLocation();
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'student' as 'student' | 'alumni' | 'faculty' | 'researcher', campus: campuses[0], department: departments[0], graduationYear: '' });
+  const [error, setError] = useState('');
+
   const update = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setError(''); register.mutate({ data: { ...form, graduationYear: form.graduationYear ? Number(form.graduationYear) : null } }, { onSuccess: (data) => { setAuthSession(data.token); queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() }); setLocation('/dashboard'); }, onError: () => setError('We could not create your account. Please review the details and try again.') }); };
-  return <AuthLayout mode="register" title="Make your place." detail="Create a profile that helps the right people understand what you are building toward."><form onSubmit={submit} className="mt-8 space-y-4"><Field id="full-name" label="Full name" value={form.fullName} onChange={(e) => update('fullName', e.target.value)} required /><Field id="register-email" label="Email address" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} required /><div className="grid gap-4 sm:grid-cols-2"><SelectField id="role" label="I am a" value={form.role} onChange={(e) => update('role', e.target.value)} options={Object.entries(roleLabels).filter(([key]) => key !== 'admin').map(([value, label]) => ({ value, label }))} /><SelectField id="campus" label="Campus" value={form.campus} onChange={(e) => update('campus', e.target.value)} options={campuses.map((value) => ({ value, label: value }))} /></div><SelectField id="department" label="Department" value={form.department} onChange={(e) => update('department', e.target.value)} options={departments.map((value) => ({ value, label: value }))} /><div className="grid gap-4 sm:grid-cols-2"><Field id="graduation-year" label="Graduation year" type="number" placeholder="Optional" value={form.graduationYear} onChange={(e) => update('graduationYear', e.target.value)} /><Field id="register-password" label="Create password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} minLength={8} required /></div>{error && <p data-testid="status-register-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}<Button data-testid="button-submit-register" type="submit" className="mt-3 w-full py-3.5" disabled={register.isPending}>{register.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}Create my profile</Button></form></AuthLayout>;
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    register.mutate(
+      { data: { ...form, graduationYear: form.graduationYear ? Number(form.graduationYear) : null } },
+      {
+        onSuccess: (data) => {
+          setAuthSession(data.token);
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get('redirect') || '/dashboard';
+          setLocation(redirect);
+        },
+        onError: () => setError('We could not create your account. Please review the details and try again.'),
+      }
+    );
+  };
+  return (
+    <AuthLayout mode="register" title="Make your place." detail="Create a profile that helps the right people understand what you are building toward.">
+      <form onSubmit={submit} className="mt-8 space-y-4">
+        <Field id="full-name" label="Full name" value={form.fullName} onChange={(e) => update('fullName', e.target.value)} required />
+        <Field id="register-email" label="Email address" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} required />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField id="role" label="I am a" value={form.role} onChange={(e) => update('role', e.target.value)} options={Object.entries(roleLabels).filter(([key]) => key !== 'admin').map(([value, label]) => ({ value, label }))} />
+          <SelectField id="campus" label="Campus" value={form.campus} onChange={(e) => update('campus', e.target.value)} options={campuses.map((value) => ({ value, label: value }))} />
+        </div>
+        <SelectField id="department" label="Department" value={form.department} onChange={(e) => update('department', e.target.value)} options={departments.map((value) => ({ value, label: value }))} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id="graduation-year" label="Graduation year" type="number" placeholder="Optional" value={form.graduationYear} onChange={(e) => update('graduationYear', e.target.value)} />
+          <Field id="register-password" label="Create password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} minLength={8} required />
+        </div>
+        {error && <p data-testid="status-register-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        <Button data-testid="button-submit-register" type="submit" className="mt-3 w-full py-3.5" disabled={register.isPending}>
+          {register.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+          Create my profile
+        </Button>
+      </form>
+    </AuthLayout>
+  );
 }
 function Field({ id, label, type = 'text', value, onChange, placeholder, required, minLength }: { id: string; label: string; type?: string; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; placeholder?: string; required?: boolean; minLength?: number }) { return <label className="block"><span className="mb-1.5 block text-xs font-bold text-foreground">{label}</span><input data-testid={`input-${id}`} id={id} type={type} autoComplete={type === 'password' ? (id === 'password' ? 'current-password' : 'new-password') : type === 'email' ? 'email' : undefined} value={value} onChange={onChange} placeholder={placeholder} required={required} minLength={minLength} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-accent focus:ring-2 focus:ring-accent/30" /></label>; }
 function SelectField({ id, label, value, onChange, options }: { id: string; label: string; value: string; onChange: React.ChangeEventHandler<HTMLSelectElement>; options: Array<{ value: string; label: string }> }) { return <label className="block">{label ? <span className="mb-1.5 block text-xs font-bold text-foreground">{label}</span> : null}<select data-testid={`select-${id}`} id={id} value={value} onChange={onChange} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30">{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>; }
@@ -1258,9 +2143,14 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
   const [location, setLocation] = useLocation();
   const unread = useListNotifications({ query: { queryKey: getListNotificationsQueryKey(), staleTime: 30000 } });
   const unreadCount = unread.data?.filter((n) => !n.read).length ?? 0;
-  
+
+  const activeGroup =
+    NAV_GROUPS.find((group) =>
+      group.items.some((item) => location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href)))
+    ) || NAV_GROUPS[0];
+
   const currentItem = ALL_NAV_ITEMS.find((item) => location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href)));
-  const currentLabel = currentItem?.label ?? 'Profile';
+  const currentLabel = currentItem?.label ?? 'Workspace';
 
   const handleLogout = () => {
     clearAuthSession();
@@ -1293,7 +2183,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
         </div>
 
         {/* Role & Campus Badge */}
-        <div className="shrink-0 px-4 pt-3.5 pb-1">
+        <div className="shrink-0 px-4 pt-3.5 pb-2">
           <div className="flex items-center justify-between rounded-xl bg-sidebar-accent/50 px-3.5 py-2 text-[11px] font-semibold text-sidebar-foreground/80 border border-sidebar-border/50">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1305,48 +2195,51 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
           </div>
         </div>
 
-        {/* Scrollable Navigation Groups - ZERO OVERLAP EVER */}
-        <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-5">
-          {NAV_GROUPS.map((group) => {
-            const filteredItems = group.items.filter(
-              (item) => !item.roles || (user && item.roles.includes(user.role))
-            );
-            if (filteredItems.length === 0) return null;
+        {/* Section Navigation - ONLY the active section is rendered */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {activeGroup.group !== 'Main Workspace' && (
+            <Link
+              href="/dashboard"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-1"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Overview</span>
+            </Link>
+          )}
 
-            return (
-              <div key={group.group} className="space-y-1">
-                <div className="mono px-3 text-[9px] font-bold uppercase tracking-[.2em] text-sidebar-foreground/45 mb-1.5">
-                  {group.group}
-                </div>
-                <nav className="space-y-0.5" aria-label={group.group}>
-                  {filteredItems.map(({ href, label, icon: Icon }) => {
-                    const isActive = location === href || (href !== '/dashboard' && location.startsWith(href));
-                    return (
-                      <Link
-                        data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
-                        onClick={() => setOpen(false)}
-                        href={href}
-                        key={href}
-                        aria-current={isActive ? 'page' : undefined}
-                        className={cx(
-                          'flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
-                          isActive
-                            ? 'bg-sidebar-accent text-accent font-bold shadow-sm ring-1 ring-accent/30'
-                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                        )}
-                      >
-                        <Icon className={cx('h-4 w-4 shrink-0', isActive ? 'text-accent' : 'text-sidebar-foreground/50')} />
-                        <span className="truncate">{label}</span>
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
-            );
-          })}
+          <div className="mono px-2 text-[11px] font-extrabold uppercase tracking-[.2em] text-foreground/80 mb-3">
+            {activeGroup.group}
+          </div>
+
+          <nav className="space-y-1.5" aria-label={activeGroup.group}>
+            {activeGroup.items
+              .filter((item) => !item.roles || (user && item.roles.includes(user.role)))
+              .map(({ href, label, icon: Icon }) => {
+                const isActive = location === href || (href !== '/dashboard' && location.startsWith(href));
+                return (
+                  <Link
+                    data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
+                    onClick={() => setOpen(false)}
+                    href={href}
+                    key={href + label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cx(
+                      'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
+                      isActive
+                        ? 'border border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm ring-1 ring-amber-500/30'
+                        : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                    )}
+                  >
+                    <Icon className={cx('h-4 w-4 shrink-0', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-sidebar-foreground/50')} />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                );
+              })}
+          </nav>
         </div>
 
-        {/* Fixed User Profile & Logout Footer in Flex Flow */}
+        {/* Fixed User Profile & Logout Footer */}
         <div className="shrink-0 border-t border-sidebar-border/70 p-3 space-y-1.5 bg-sidebar/95 backdrop-blur-sm">
           <Link
             data-testid="link-nav-profile"
@@ -1389,7 +2282,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
 
       {/* Main Content Viewport */}
       <div className="lg:pl-72 flex min-h-screen flex-col">
-        {/* Top Sticky Header */}
+        {/* Clean Top Sticky Header */}
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border bg-background/90 px-4 sm:px-8 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
@@ -1408,6 +2301,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
             </div>
           </div>
 
+          {/* Right User Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
             <Link
@@ -2776,47 +3670,77 @@ function ConnectionsPage() {
 
   return (
     <>
-      <PageTitle
-        eyebrow="Professional Network"
-        title="Amrita Connected Network."
-        detail="Stay in touch with peers, alumni mentors, researchers, and batchmates across all 7 Amrita campuses."
-      />
+      {/* Social Network Header */}
+      <div className="mb-8 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-secondary/30 p-6 sm:p-8 shadow-sm backdrop-blur-md relative overflow-hidden animate-rise">
+        <div className="absolute top-0 right-0 h-48 w-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-orange-500">
+              <Users className="h-3.5 w-3.5" /> Professional & Campus Network
+            </div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Amrita Connected Network.
+            </h1>
+            <p className="mt-1.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Stay in touch with batchmates, research co-investigators, and alumni mentors across all 7 Amrita campuses.
+            </p>
+          </div>
 
-      {/* Tabs */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div className="flex rounded-lg border border-border bg-card p-1">
-          {[
-            { id: 'connected', label: `My Connections (${data?.totalConnected ?? 0})` },
-            { id: 'pending', label: `Pending Requests (${data?.pendingCount ?? 0})` },
-            { id: 'suggestions', label: 'People You May Know' },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              data-testid={`tab-connections-${t.id}`}
-              onClick={() => setTab(t.id as any)}
-              className={cx(
-                'rounded-md px-3.5 py-1.5 text-xs font-bold transition-all',
-                tab === t.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+          {/* Quick Metrics Badge */}
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3 text-center shadow-sm">
+              <div className="text-xl font-black text-foreground">{data?.totalConnected ?? 0}</div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Connections</div>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3 text-center shadow-sm">
+              <div className="text-xl font-black text-orange-500">{data?.pendingCount ?? 0}</div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pending</div>
+            </div>
+          </div>
         </div>
 
-        {tab === 'connected' && (
-          <label className="relative block w-full sm:w-64">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search your connections..."
-              className="w-full rounded-lg border border-input bg-card py-1.5 pl-8 pr-3 text-xs outline-none focus:border-accent"
-            />
-          </label>
-        )}
+        {/* Social Discovery Tabs & Search Bar */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-border/70">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'connected', label: `My Connections (${data?.totalConnected ?? 0})`, icon: UserCheck },
+              { id: 'pending', label: `Invitations (${data?.pendingCount ?? 0})`, icon: Bell },
+              { id: 'suggestions', label: 'People You May Know', icon: Sparkles },
+            ].map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  data-testid={`tab-connections-${t.id}`}
+                  onClick={() => setTab(t.id as any)}
+                  className={cx(
+                    'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all border shadow-sm',
+                    tab === t.id
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-md scale-[1.02]'
+                      : 'bg-card/70 border-border text-muted-foreground hover:text-foreground hover:border-slate-300'
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {tab === 'connected' && (
+            <label className="relative block w-full sm:w-72">
+              <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filter by name, campus, skill..."
+                className="w-full rounded-xl border border-input bg-card py-2 pl-9 pr-3 text-xs outline-none focus:border-orange-500 shadow-sm"
+              />
+            </label>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -2825,49 +3749,69 @@ function ConnectionsPage() {
         <ErrorState onRetry={() => refetch()} />
       ) : tab === 'connected' ? (
         connectedList.length === 0 ? (
-          <EmptyState
-            icon={Users2}
-            title="No connections found"
-            detail="Start expanding your cross-campus network by discovering classmates, researchers, and alumni!"
-            action={
-              <Button onClick={() => setTab('suggestions')}>
-                <Sparkles className="h-4 w-4" /> Find People You May Know
+          /* Engaging Social Empty State with Suggested Avatars */
+          <div className="rounded-3xl border border-dashed border-orange-500/30 bg-gradient-to-b from-card/80 to-orange-50/20 dark:to-orange-950/10 p-8 sm:p-12 text-center shadow-sm animate-rise">
+            <div className="relative mx-auto h-20 w-20 mb-4 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-orange-500/10 animate-ping opacity-60" />
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-orange-500/15 text-orange-600 dark:text-orange-400 font-black shadow-inner">
+                <Users2 className="h-8 w-8" />
+              </div>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+              Your Amrita network starts here.
+            </h3>
+            <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              You have 0 active connections yet. Connect with classmates in your department, alumni mentors at top tech companies, and cross-campus research teams!
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Button onClick={() => setTab('suggestions')} className="rounded-xl px-5 py-2.5 text-xs font-bold shadow-md">
+                <Sparkles className="h-4 w-4" /> Discover People You May Know
               </Button>
-            }
-          />
+              <Link
+                href="/people"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-5 py-2.5 text-xs font-bold text-foreground hover:bg-muted shadow-sm transition-all"
+              >
+                <span>Explore Full 50K+ Directory</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {connectedList.map(({ id, user, connectedAt }) => (
-              <div key={id} className="surface flex flex-col justify-between rounded-xl border border-border p-5 shadow-sm animate-rise">
+              <div key={id} className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise">
                 <div>
                   <div className="flex items-start justify-between">
                     <Avatar user={user} size="md" />
-                    <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
                       {roleLabels[user.role] ?? user.role}
                     </span>
                   </div>
-                  <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-accent">
+                  <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors">
                     {user.fullName}
                   </Link>
                   <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                     {user.headline || `${user.department} · Amrita ${user.campus}`}
                   </p>
-                  <div className="mt-3 text-[11px] text-muted-foreground/80">
-                    Connected {relative(connectedAt || '')}
+                  <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>Connected {relative(connectedAt || '')}</span>
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-border pt-3">
+                <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/messages/${user.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm active:scale-95 transition-all"
                     >
-                      <MessageSquare className="h-3 w-3" /> Message
+                      <MessageSquare className="h-3.5 w-3.5" /> Message
                     </Link>
                     <Link
                       href={`/people/${user.id}`}
-                      className="text-xs font-bold text-muted-foreground hover:text-foreground"
+                      className="text-xs font-bold text-muted-foreground hover:text-foreground py-1.5 px-2"
                     >
                       Profile
                     </Link>
@@ -2884,7 +3828,6 @@ function ConnectionsPage() {
                     Disconnect
                   </button>
                 </div>
-
               </div>
             ))}
           </div>
@@ -2893,33 +3836,38 @@ function ConnectionsPage() {
         <div className="space-y-8 animate-rise">
           {/* Incoming */}
           <section>
-            <h3 className="text-sm font-bold text-foreground">
-              Received Invitations ({incomingList.length})
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <span>Received Invitations</span>
+              <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[11px] font-bold">
+                {incomingList.length}
+              </span>
             </h3>
             {incomingList.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">No incoming connection requests at this time.</p>
+              <div className="mt-3 rounded-2xl border border-border bg-card/60 p-6 text-center text-xs text-muted-foreground">
+                No incoming connection requests at this time.
+              </div>
             ) : (
-              <div className="mt-3 divide-y divide-border rounded-xl border border-border bg-card">
+              <div className="mt-3 divide-y divide-border/70 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
                 {incomingList.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-3">
+                  <div key={item.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between hover:bg-secondary/30 transition-colors">
+                    <div className="flex items-start gap-3.5">
                       <Avatar user={item.user} size="md" />
                       <div>
                         <div className="flex items-center gap-2">
-                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-accent">
+                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-orange-500 transition-colors">
                             {item.user.fullName}
                           </Link>
-                          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                             {roleLabels[item.user.role] ?? item.user.role}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">{item.user.headline || `${item.user.department} · ${item.user.campus}`}</p>
                         {item.message && (
-                          <p className="mt-2 rounded-lg bg-secondary/60 p-2.5 text-xs text-foreground italic">
+                          <div className="mt-2.5 rounded-xl border border-orange-500/20 bg-orange-50/50 dark:bg-orange-950/20 p-3 text-xs text-foreground italic">
                             "{item.message}"
-                          </p>
+                          </div>
                         )}
-                        <span className="mt-1 block text-[10px] text-muted-foreground">Received {relative(item.createdAt || '')}</span>
+                        <span className="mt-1.5 block text-[10px] text-muted-foreground">Received {relative(item.createdAt || '')}</span>
                       </div>
                     </div>
 
@@ -2927,7 +3875,7 @@ function ConnectionsPage() {
                       <Button
                         onClick={() => acceptMutation.mutate(item.id)}
                         disabled={acceptMutation.isPending}
-                        className="px-3.5 py-1.5 text-xs"
+                        className="px-4 py-2 text-xs font-bold"
                       >
                         <Check className="h-3.5 w-3.5" /> Accept
                       </Button>
@@ -2935,7 +3883,7 @@ function ConnectionsPage() {
                         variant="quiet"
                         onClick={() => rejectMutation.mutate(item.id)}
                         disabled={rejectMutation.isPending}
-                        className="px-3.5 py-1.5 text-xs"
+                        className="px-3.5 py-2 text-xs"
                       >
                         Decline
                       </Button>
@@ -2948,23 +3896,28 @@ function ConnectionsPage() {
 
           {/* Outgoing */}
           <section>
-            <h3 className="text-sm font-bold text-foreground">
-              Sent Invitations ({outgoingList.length})
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <span>Sent Invitations</span>
+              <span className="rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[11px] font-bold">
+                {outgoingList.length}
+              </span>
             </h3>
             {outgoingList.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">No pending sent invitations.</p>
+              <div className="mt-3 rounded-2xl border border-border bg-card/60 p-6 text-center text-xs text-muted-foreground">
+                No pending sent invitations.
+              </div>
             ) : (
-              <div className="mt-3 divide-y divide-border rounded-xl border border-border bg-card">
+              <div className="mt-3 divide-y divide-border/70 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
                 {outgoingList.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-secondary/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <Avatar user={item.user} size="md" />
                       <div>
                         <div className="flex items-center gap-2">
-                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-accent">
+                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-orange-500 transition-colors">
                             {item.user.fullName}
                           </Link>
-                          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                             {roleLabels[item.user.role] ?? item.user.role}
                           </span>
                         </div>
@@ -2998,7 +3951,7 @@ function ConnectionsPage() {
               title="No recommendations right now"
               detail="Explore the full directory to meet people from all departments and campuses."
               action={
-                <Link href="/people" className="text-sm font-bold text-accent">
+                <Link href="/people" className="text-sm font-bold text-orange-500">
                   Browse People Directory
                 </Link>
               }
@@ -3006,24 +3959,24 @@ function ConnectionsPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {suggestionsList.map(({ user, score: _score, reason, matchingPoints }) => (
-                <div key={user.id} className="surface flex flex-col justify-between rounded-xl border border-border p-5 shadow-sm animate-rise">
+                <div key={user.id} className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise">
                   <div>
                     <div className="flex items-start justify-between">
                       <Avatar user={user} size="md" />
-                      <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent">
+                      <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
                         {roleLabels[user.role] ?? user.role}
                       </span>
                     </div>
-                    <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-accent">
+                    <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors">
                       {user.fullName}
                     </Link>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {user.headline || `${user.department} · Amrita ${user.campus}`}
                     </p>
 
-                    <div className="mt-3 rounded-lg border border-accent/20 bg-accent/5 p-2.5 text-xs">
-                      <div className="font-semibold text-accent flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3" /> {reason}
+                    <div className="mt-3.5 rounded-xl border border-orange-500/20 bg-orange-50/50 dark:bg-orange-950/20 p-3 text-xs">
+                      <div className="font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5" /> {reason}
                       </div>
                       {matchingPoints.length > 1 && (
                         <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground list-disc list-inside">
@@ -3035,7 +3988,7 @@ function ConnectionsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between border-t border-border pt-3.5">
+                  <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3.5">
                     <Link href={`/people/${user.id}`} className="text-xs font-bold text-muted-foreground hover:text-foreground">
                       Profile
                     </Link>
@@ -7904,72 +8857,520 @@ function ShowcasePage() {
 }
 
 
+/* =========================================================================
+   PEOPLE OF AMRITA — EXACT REFERENCE DESIGN & SOCIAL PLATFORM
+   ========================================================================= */
+
 function PeoplePage() {
-
-
-
-
-
-
+  const { data: currentUser } = useGetCurrentUser();
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
-  const [campus, setCampus] = useState('');
-  const [department, setDepartment] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const storiesScrollRef = useRef<HTMLDivElement>(null);
+
   const params = useMemo(() => ({
     search: search || undefined,
-    role: role ? (role as 'student' | 'alumni' | 'faculty' | 'researcher' | 'admin') : undefined,
-    campus: campus || undefined,
-    department: department || undefined,
+    role: selectedRole ? (selectedRole as 'student' | 'alumni' | 'faculty' | 'researcher' | 'admin') : undefined,
     page: 1,
-    pageSize: 20,
-  }), [search, role, campus, department]);
-  const { data, isLoading, isError, refetch } = useListUsers(params, { query: { queryKey: getListUsersQueryKey(params) } });
-  return <>
-    <PageTitle eyebrow="Directory" title="People worth knowing." detail="Search the full Amrita community by experience, campus, or discipline." />
-    <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_150px_150px_200px]">
-      <label className="relative block">
-        <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-        <input data-testid="input-people-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search names, skills, interests..." className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 pr-3 text-sm outline-none focus:border-accent-foreground" />
-      </label>
-      <SelectField id="people-role-filter" label="" value={role} onChange={(e) => setRole(e.target.value)} options={[{ value: '', label: 'All roles' }, ...Object.entries(roleLabels).map(([value, label]) => ({ value, label }))]} />
-      <SelectField id="people-campus-filter" label="" value={campus} onChange={(e) => setCampus(e.target.value)} options={[{ value: '', label: 'All campuses' }, ...campuses.map((value) => ({ value, label: value }))]} />
-      <SelectField id="people-department-filter" label="" value={department} onChange={(e) => setDepartment(e.target.value)} options={[{ value: '', label: 'All departments' }, ...departments.map((value) => ({ value, label: value }))]} />
-    </div>
-    {isLoading ? <LoadingState rows={5} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !data?.items?.length ? <EmptyState icon={Users} title="No people match that search" detail="Try a broader search or remove one of the filters." action={<Button variant="outline" onClick={() => { setSearch(''); setRole(''); setCampus(''); setDepartment(''); }}>Clear filters</Button>} /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.items.map((person, i) => <PersonCard key={person.id} user={person} index={i} />)}</div>}
-  </>;
-}
-function PersonCard({ user, index = 0 }: { user: PublicUser; index?: number }) {
+    pageSize: 30,
+  }), [search, selectedRole]);
+
+  const { data, isLoading, isError, refetch } = useListUsers(params, {
+    query: { queryKey: getListUsersQueryKey(params) }
+  });
+
+  const { data: suggestionsData } = useConnectionSuggestions();
+  const suggestedPeople = suggestionsData?.items?.map((item) => item.user) ?? [];
+
+  const items = data?.items ?? [];
+
+  // Curated story avatars
+  const storiesList = useMemo(() => {
+    const combined = [...suggestedPeople, ...items];
+    const uniqueMap = new Map();
+    combined.forEach((u) => {
+      if (u && !uniqueMap.has(u.id)) {
+        uniqueMap.set(u.id, u);
+      }
+    });
+    return Array.from(uniqueMap.values()).slice(0, 10);
+  }, [items, suggestedPeople]);
+
+  // Sidebar widgets: Trending & Suggested
+  const trendingPeople = useMemo(() => {
+    return items.filter((u) => u.id !== currentUser?.id).slice(0, 3);
+  }, [items, currentUser?.id]);
+
+  const sidebarSuggestions = useMemo(() => {
+    return suggestedPeople.length > 0
+      ? suggestedPeople.slice(0, 3)
+      : items.filter((u) => u.id !== currentUser?.id && !trendingPeople.some((t) => t.id === u.id)).slice(0, 3);
+  }, [suggestedPeople, items, currentUser?.id, trendingPeople]);
+
+  const scrollStoriesRight = () => {
+    if (storiesScrollRef.current) {
+      storiesScrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+    }
+  };
+
+  const handleCopyInvite = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.origin + '/register');
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
+  const STORY_RINGS = [
+    'from-purple-500 via-pink-500 to-indigo-500',
+    'from-blue-500 via-teal-400 to-emerald-500',
+    'from-orange-500 via-amber-400 to-rose-500',
+    'from-pink-500 via-rose-400 to-purple-600',
+    'from-indigo-500 via-purple-500 to-pink-500',
+    'from-cyan-500 via-blue-500 to-indigo-500',
+    'from-emerald-500 via-teal-400 to-cyan-500',
+  ];
+
   return (
-    <div data-testid={`card-person-${user.id}`} className={cx('surface group flex flex-col justify-between rounded-xl border border-border p-5 animate-rise transition-all hover:border-accent/40', `delay-${Math.min(index + 1, 3)}`)}>
-      <div>
-        <div className="flex items-start justify-between">
-          <Avatar user={user} />
-          <span className="rounded-md bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">{roleLabels[user.role] ?? user.role}</span>
+    <div className="space-y-6 animate-rise pb-16">
+      {/* 1. Header with Breadcrumb, Title & Invite Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+            <span>Amrita Connect</span>
+            <span>›</span>
+            <span className="text-foreground font-semibold">People Directory</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            People of Amrita
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+            Discover the people building, learning, and creating across our 7 campuses.
+          </p>
         </div>
-        <Link href={`/people/${user.id}`} className="mt-4 flex items-center gap-1.5 text-lg font-bold tracking-[-.04em] text-foreground hover:text-accent">
-          {user.fullName}
-          {user.verified && <Check className="h-4 w-4 text-accent" />}
-        </Link>
-        <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">{user.headline || `${user.department} · ${user.campus}`}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-          <span>{user.campus}</span>
-          <span className="text-border">·</span>
-          <span>{user.department}</span>
-          {user.graduationYear && (
-            <>
-              <span className="text-border">·</span>
-              <span className="font-semibold text-accent">Class of {user.graduationYear}</span>
-            </>
-          )}
-        </div>
-        {user.skills?.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{user.skills.slice(0, 3).map((skill) => <Tag key={skill}>{skill}</Tag>)}</div>}
+
+        <button
+          type="button"
+          onClick={() => setShowInviteModal(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-xs font-bold text-foreground hover:bg-muted hover:border-slate-400 dark:hover:border-slate-600 shadow-sm transition-all self-start sm:self-center"
+        >
+          <UserPlus className="h-4 w-4 text-muted-foreground" />
+          <span>Invite People</span>
+        </button>
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-border pt-3.5">
-        <Link href={`/people/${user.id}`} className="text-xs font-bold text-muted-foreground hover:text-foreground">
-          View Profile
-        </Link>
-        <ConnectActionButton targetUser={user} size="sm" />
+      {/* 2. Main Layout: 2 Columns (Main Feed on Left, Discovery Widgets on Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Column (8 cols): Stories + Filters + Feed */}
+        <div className="lg:col-span-8 space-y-6">
+          
+          {/* 2a. "EXPLORE BY PEOPLE" Avatar Stories Row */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-purple-400">
+                <Users className="h-3.5 w-3.5" /> EXPLORE BY PEOPLE
+              </span>
+            </div>
+
+            <div className="relative flex items-center">
+              <div
+                ref={storiesScrollRef}
+                className="flex items-center gap-4 sm:gap-5 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x w-full"
+              >
+                {/* User's own "You" avatar item with blue plus */}
+                <div className="flex flex-col items-center gap-1.5 shrink-0 snap-start">
+                  <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 shadow-md">
+                    <div className="rounded-full bg-card p-0.5">
+                      <div className="h-14 w-14 rounded-full bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-bold text-sm">
+                        {currentUser?.fullName ? initials(currentUser.fullName) : 'AM'}
+                      </div>
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 grid h-4.5 w-4.5 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-sm text-[10px] font-black">
+                      +
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-medium text-muted-foreground">You</span>
+                </div>
+
+                {/* Other members in avatar stories */}
+                {storiesList.map((person, idx) => {
+                  const ringGrad = STORY_RINGS[idx % STORY_RINGS.length];
+                  return (
+                    <Link
+                      key={`story-${person.id}`}
+                      href={`/people/${person.id}`}
+                      className="group flex flex-col items-center gap-1.5 shrink-0 snap-start transition-transform active:scale-95"
+                    >
+                      <div className={cx('relative p-0.5 rounded-full bg-gradient-to-tr shadow-md group-hover:scale-105 transition-transform', ringGrad)}>
+                        <div className="rounded-full bg-card p-0.5">
+                          {person.avatarUrl ? (
+                            <img src={person.avatarUrl} alt={person.fullName} className="h-14 w-14 rounded-full object-cover" />
+                          ) : (
+                            <div className="h-14 w-14 rounded-full bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-bold text-sm">
+                              {initials(person.fullName)}
+                            </div>
+                          )}
+                        </div>
+                        {person.verified && (
+                          <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-sm">
+                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-medium text-foreground group-hover:text-orange-500 transition-colors max-w-[64px] truncate text-center">
+                        {person.fullName.split(' ')[0]}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Scroll Right Button */}
+              <button
+                type="button"
+                aria-label="Scroll right"
+                onClick={scrollStoriesRight}
+                className="hidden sm:grid shrink-0 ml-2 h-9 w-9 place-items-center rounded-full border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:bg-muted shadow-sm transition-all active:scale-95"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* 2b. Role Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {[
+              { id: '', label: '✦ All Community' },
+              { id: 'student', label: '🎓 Students' },
+              { id: 'alumni', label: '💼 Alumni Mentors' },
+              { id: 'researcher', label: '🔬 Researchers' },
+              { id: 'faculty', label: '🏛️ Faculty' },
+            ].map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setSelectedRole(r.id)}
+                className={cx(
+                  'rounded-full px-4 py-2 text-xs font-bold transition-all border shadow-sm',
+                  selectedRole === r.id
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-transparent shadow-md scale-[1.02]'
+                    : 'bg-card/90 border-border/80 text-muted-foreground hover:text-foreground hover:border-slate-400 dark:hover:border-slate-700'
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 2c. Community Spotlight & Member Feed */}
+          <div className="space-y-4 pt-1">
+            {isLoading ? (
+              <LoadingState rows={4} />
+            ) : isError ? (
+              <ErrorState onRetry={() => refetch()} />
+            ) : items.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
+                <Search className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                <h3 className="text-base font-bold text-foreground">No people found</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  Try clearing your search query or switching to another filter.
+                </p>
+                <Button onClick={() => { setSearch(''); setSelectedRole(''); }} className="mt-4" variant="outline">
+                  Reset filters
+                </Button>
+              </div>
+            ) : (
+              items.map((person, idx) => (
+                <SpotlightPersonCard
+                  key={person.id}
+                  user={person}
+                  isSpotlight={idx === 0 && !selectedRole && !search}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Sidebar Column (4 cols): Trending + Suggestions + Banner */}
+        <div className="lg:col-span-4 space-y-6">
+          
+          {/* Widget 1: TRENDING PEOPLE */}
+          <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-500">
+                <Flame className="h-3.5 w-3.5 fill-orange-500" /> TRENDING PEOPLE
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('')}
+                className="text-xs font-semibold text-blue-500 hover:underline"
+              >
+                View All
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {trendingPeople.map((person) => (
+                <div key={`trend-${person.id}`} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar user={person} size="md" />
+                    <div className="min-w-0">
+                      <Link
+                        href={`/people/${person.id}`}
+                        className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors block truncate"
+                      >
+                        {person.fullName}
+                      </Link>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {roleLabels[person.role] ?? person.role} • {person.department?.split(' ')[0] || person.campus}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ConnectActionButton targetUser={person} size="sm" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Widget 2: SUGGESTED CONNECTIONS */}
+          <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                SUGGESTED CONNECTIONS
+              </span>
+              <Link href="/matchmaker" className="text-xs font-semibold text-blue-500 hover:underline">
+                See All
+              </Link>
+            </div>
+
+            <div className="space-y-3.5">
+              {sidebarSuggestions.map((person) => (
+                <div key={`sug-${person.id}`} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar user={person} size="md" />
+                    <div className="min-w-0">
+                      <Link
+                        href={`/people/${person.id}`}
+                        className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors block truncate"
+                      >
+                        {person.fullName}
+                      </Link>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {roleLabels[person.role] ?? person.role} • {person.department?.split(' ')[0] || person.campus}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ConnectActionButton targetUser={person} size="sm" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Widget 3: "Build your network" Banner Card */}
+          <div className="relative rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/80 via-purple-950/50 to-slate-900 p-5 shadow-lg overflow-hidden">
+            <div className="absolute top-0 right-0 h-32 w-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <h3 className="text-sm font-extrabold text-white">
+              Build your network
+            </h3>
+            <p className="mt-1 text-xs text-slate-300 max-w-[200px] leading-relaxed">
+              Connect with amazing people across Amrita.
+            </p>
+
+            <div className="mt-4 flex items-center justify-between">
+              <Link
+                href="/connections"
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:opacity-90 active:scale-95 transition-all"
+              >
+                Explore Network
+              </Link>
+
+              {/* Overlapping Connected Avatar Art */}
+              <div className="flex -space-x-2">
+                <div className="h-7 w-7 rounded-full bg-purple-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
+                  AP
+                </div>
+                <div className="h-7 w-7 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
+                  BL
+                </div>
+                <div className="h-7 w-7 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
+                  CH
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Invite People Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Invite to Amrita Connect</h3>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Share this invite link with your batchmates, professors, or research teammates so they can join your Amrita Connect network.
+            </p>
+
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-2 text-xs">
+              <input
+                type="text"
+                readOnly
+                value={typeof window !== 'undefined' ? `${window.location.origin}/register` : 'https://connect.amrita.edu/register'}
+                className="w-full bg-transparent px-2 text-foreground outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleCopyInvite}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all shrink-0"
+              >
+                {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedLink ? 'Copied!' : 'Copy'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   COMMUNITY SPOTLIGHT / PERSON FEED CARD (Matching Reference Image)
+   ========================================================================= */
+
+function SpotlightPersonCard({ user, isSpotlight = false }: { user: PublicUser; isSpotlight?: boolean }) {
+  const roleBadgeColors: Record<string, string> = {
+    student: 'bg-amber-500/15 text-amber-500 dark:text-amber-400 border-amber-500/30',
+    alumni: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    faculty: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+    researcher: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    admin: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
+  };
+
+  const badgeClass = roleBadgeColors[user.role] || roleBadgeColors.student;
+
+  return (
+    <div
+      data-testid={`card-person-${user.id}`}
+      className="group relative rounded-2xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-slate-400 dark:hover:border-slate-700 transition-all backdrop-blur-md"
+    >
+      {/* Top Banner Tag & More Button */}
+      <div className="flex items-center justify-between mb-4">
+        {isSpotlight ? (
+          <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-500">
+            <Sparkles className="h-3.5 w-3.5 fill-orange-500" /> COMMUNITY SPOTLIGHT
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground font-medium">
+            {user.campus} Campus
+          </span>
+        )}
+
+        <button
+          type="button"
+          aria-label="More options"
+          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition-colors"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+        {/* Large Avatar with glowing ring */}
+        <div className="relative shrink-0">
+          <div className="p-0.5 rounded-full bg-gradient-to-tr from-orange-500 via-amber-400 to-purple-600 shadow-md">
+            <div className="rounded-full bg-card p-0.5">
+              <Avatar user={user} size="lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 min-w-0 space-y-2.5">
+          {/* Name + Verified Badge + Role Badge */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/people/${user.id}`}
+              className="text-base sm:text-lg font-extrabold text-foreground hover:text-orange-500 transition-colors"
+            >
+              {user.fullName}
+            </Link>
+            
+            {user.verified && (
+              <div title="Verified Amrita Member" className="grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white">
+                <Check className="h-2.5 w-2.5 stroke-[3]" />
+              </div>
+            )}
+
+            <span className={cx('rounded-full border px-2.5 py-0.5 text-[10px] font-semibold', badgeClass)}>
+              {roleLabels[user.role] ?? user.role}
+            </span>
+          </div>
+
+          {/* Headline */}
+          <p className="text-xs font-semibold text-foreground/80">
+            {user.headline || `${user.department} • Amrita ${user.campus}`}
+          </p>
+
+          {/* Bio Quote (if present) */}
+          {user.bio && (
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
+              "{user.bio}"
+            </p>
+          )}
+
+          {/* Skills Tags */}
+          {user.skills && user.skills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {user.skills.slice(0, 4).map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-lg bg-secondary/80 text-secondary-foreground px-2.5 py-1 text-[11px] font-medium"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Bottom Bar: Stats & View Profile */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/60">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                <span>{user.graduationYear ? `Class of ${user.graduationYear}` : `${user.campus} Campus`}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5" />
+                <span>{user.department}</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/people/${user.id}`}
+                className="rounded-xl border border-border/80 bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all"
+              >
+                View Profile
+              </Link>
+              <ConnectActionButton targetUser={user} size="sm" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -9081,7 +10482,16 @@ function AdminPage() {
 
 function NotFound() { return <div className="grid min-h-[100dvh] place-items-center bg-background p-6 text-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-muted-foreground">404 / Off the map</div><h1 className="mt-4 text-5xl font-bold tracking-[-.06em] text-foreground">This path is not connected.</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-accent">Return home <ArrowRight className="h-4 w-4" /></Link></div></div>; }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) { const { data: user, isLoading } = useGetCurrentUser(); const [, setLocation] = useLocation(); if (isLoading) return <AppShell><LoadingState rows={4} /></AppShell>; if (!user) { setLocation('/login'); return null; } return <AppShell user={user}>{children}</AppShell>; }
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { data: user, isLoading } = useGetCurrentUser();
+  const [location, setLocation] = useLocation();
+  if (isLoading) return <AppShell><LoadingState rows={4} /></AppShell>;
+  if (!user) {
+    setLocation(`/login?redirect=${encodeURIComponent(location)}`);
+    return null;
+  }
+  return <AppShell user={user}>{children}</AppShell>;
+}
 function RoutedErrorBoundary({ children }: { children: React.ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
 function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route><Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route><Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route><Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route><Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route><Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
 
