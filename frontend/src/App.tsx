@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, BriefcaseBusiness,
   Building2, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  Compass, Copy, Flame, Globe, GraduationCap, Heart, HeartHandshake, House, Image, Layers,
+  Code, Compass, Copy, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Layers,
+
   Lightbulb, Link2, LoaderCircle, LogIn, LogOut, MapPin, Menu, MessageSquare, Moon,
+
   MoreHorizontal, Network, Pencil, Quote, Rocket, Search, Send, Settings2, Share2, ShieldCheck, Sparkles,
   Star, Sun, Trash2, Trophy, UserCheck, UserPlus, UserRoundPlus, Users, Users2, UserX, X, Zap,
 } from 'lucide-react';
@@ -84,18 +86,66 @@ function ThemeToggle({ className }: { className?: string }) {
     </button>
   );
 }
-const NAV: Array<{ href: string; label: string; icon: typeof House; roles?: readonly string[] }> = [
-  { href: '/dashboard', label: 'Overview', icon: House },
-  { href: '/feed', label: 'Community Feed', icon: Sparkles },
-  { href: '/connections', label: 'My Network', icon: Users2 },
-  { href: '/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/people', label: 'People', icon: Users },
-  { href: '/mentorship', label: 'Mentorship', icon: HeartHandshake },
-  { href: '/collaborations', label: 'Collaborate', icon: Network },
-  { href: '/opportunities', label: 'Opportunities', icon: BriefcaseBusiness },
-  { href: '/events', label: 'Events', icon: CalendarDays },
-  { href: '/admin', label: 'Admin console', icon: ShieldCheck, roles: ['admin'] },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof House;
+  roles?: readonly string[];
+}
+
+interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    group: 'Main',
+    items: [
+      { href: '/dashboard', label: 'Overview', icon: House },
+      { href: '/feed', label: 'Community Feed', icon: Sparkles },
+      { href: '/messages', label: 'Messages', icon: MessageSquare },
+    ],
+  },
+  {
+    group: 'People & Network',
+    items: [
+      { href: '/connections', label: 'My Network', icon: Users2 },
+      { href: '/matchmaker', label: 'Matchmaker', icon: Compass },
+      { href: '/people', label: 'Directory', icon: Users },
+      { href: '/campus-buddy', label: 'Campus Buddy', icon: MapPin },
+    ],
+  },
+  {
+    group: 'Academics & Labs',
+    items: [
+      { href: '/research', label: 'Research Hub', icon: BookOpen },
+      { href: '/showcase', label: 'Project Showcase', icon: Trophy },
+      { href: '/collaborations', label: 'Collaborate', icon: Network },
+      { href: '/interviews', label: 'Interview Prep', icon: GraduationCap },
+    ],
+  },
+  {
+    group: 'Career & Growth',
+    items: [
+      { href: '/help', label: 'Help Desk', icon: HelpCircle },
+      { href: '/mentorship', label: 'Mentorship', icon: HeartHandshake },
+      { href: '/opportunities', label: 'Opportunities', icon: BriefcaseBusiness },
+      { href: '/events', label: 'Events Calendar', icon: CalendarDays },
+    ],
+  },
+  {
+    group: 'Administration',
+    items: [
+      { href: '/admin', label: 'Admin Console', icon: ShieldCheck, roles: ['admin'] },
+    ],
+  },
 ];
+
+const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+
+
+
 const roleLabels: Record<string, string> = { student: 'Student', alumni: 'Alumni', faculty: 'Faculty', researcher: 'Researcher', admin: 'Staff' };
 const campuses = ['Amaravati', 'Bengaluru', 'Chennai', 'Coimbatore', 'Kochi', 'Mysuru'];
 const departments = ['Computer Science & Engineering', 'Electronics & Communication', 'Biotechnology', 'Management', 'Medicine', 'Research'];
@@ -1208,82 +1258,199 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
   const [location, setLocation] = useLocation();
   const unread = useListNotifications({ query: { queryKey: getListNotificationsQueryKey(), staleTime: 30000 } });
   const unreadCount = unread.data?.filter((n) => !n.read).length ?? 0;
-  const visibleNav = NAV.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
-  const currentLabel = visibleNav.find((item) => location.startsWith(item.href))?.label ?? 'Profile';
+  
+  const currentItem = ALL_NAV_ITEMS.find((item) => location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href)));
+  const currentLabel = currentItem?.label ?? 'Profile';
 
   const handleLogout = () => {
     clearAuthSession();
     setLocation('/login');
   };
 
-  return <div className="grain min-h-[100dvh] bg-background">
-    <aside className={cx('fixed inset-y-0 left-0 z-40 w-64 bg-sidebar px-5 py-6 text-sidebar-foreground transition-transform lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
-      <div className="flex items-center justify-between">
-        <Brand light />
-        <div className="flex items-center gap-1">
-          <ThemeToggle className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
-          <button data-testid="button-close-menu" aria-label="Close navigation menu" className="text-sidebar-foreground/60 lg:hidden" onClick={() => setOpen(false)}><X className="h-5 w-5" /></button>
+  return (
+    <div className="grain min-h-[100dvh] bg-background">
+      {/* Modern Grouped Sidebar for Desktop & Mobile Drawer */}
+      <aside
+        className={cx(
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl lg:shadow-none',
+          open ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {/* Top Header of Sidebar */}
+        <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-sidebar-border/60 px-5">
+          <Brand light />
+          <div className="flex items-center gap-1">
+            <ThemeToggle className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
+            <button
+              data-testid="button-close-menu"
+              aria-label="Close navigation menu"
+              className="rounded-lg p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="mt-10">
-        <div className="mono mb-3 px-3 text-[9px] font-bold uppercase tracking-[.2em] text-sidebar-foreground/40">{user?.role === 'admin' ? 'Platform operations' : `${roleLabels[user?.role ?? 'student']} workspace`}</div>
-        <nav className="space-y-1" aria-label="Primary navigation">
-          {visibleNav.map(({ href, label, icon: Icon }) => <Link data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} onClick={() => setOpen(false)} href={href} key={href} aria-current={location === href ? 'page' : undefined} className={cx('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium', location === href ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground')}><Icon className="h-[17px] w-[17px]" />{label}</Link>)}
-        </nav>
-      </div>
-      <div className="absolute bottom-6 left-5 right-5 space-y-2">
-        <Link data-testid="link-nav-profile" href="/profile" className="flex items-center gap-3 rounded-lg border border-sidebar-border p-3 hover:bg-sidebar-accent transition-colors">
-          <Avatar user={user} size="sm" />
-          <div className="min-w-0"><div className="truncate text-xs font-semibold">{user?.fullName ?? 'Your profile'}</div><div className="truncate text-[10px] text-sidebar-foreground/50">{user ? roleLabels[user.role] : 'Member'}</div></div>
-          <Settings2 aria-hidden="true" className="ml-auto h-4 w-4 text-sidebar-foreground/45" />
-        </Link>
-        <button
-          type="button"
-          data-testid="button-sidebar-logout"
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 transition-colors hover:bg-destructive/20 hover:text-destructive active:scale-95"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sign out</span>
-        </button>
-      </div>
-    </aside>
-    {open && <button aria-label="Close navigation overlay" className="fixed inset-0 z-30 bg-primary/30 lg:hidden" onClick={() => setOpen(false)} />}
-    <div className="lg:pl-64">
-      <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border bg-background/90 px-5 backdrop-blur-md sm:px-8">
-        <button data-testid="button-open-menu" aria-label="Open navigation menu" className="text-primary lg:hidden" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></button>
-        <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-accent-foreground" /> Amrita Connect <span className="text-border">/</span> <span className="text-primary">{currentLabel}</span></div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+
+        {/* Role & Campus Badge */}
+        <div className="shrink-0 px-4 pt-3.5 pb-1">
+          <div className="flex items-center justify-between rounded-xl bg-sidebar-accent/50 px-3.5 py-2 text-[11px] font-semibold text-sidebar-foreground/80 border border-sidebar-border/50">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              {roleLabels[user?.role ?? 'student']} Hub
+            </span>
+            <span className="mono text-[9px] uppercase tracking-wider text-accent font-bold">
+              Amrita {user?.campus || 'Campus'}
+            </span>
+          </div>
+        </div>
+
+        {/* Scrollable Navigation Groups - ZERO OVERLAP EVER */}
+        <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-5">
+          {NAV_GROUPS.map((group) => {
+            const filteredItems = group.items.filter(
+              (item) => !item.roles || (user && item.roles.includes(user.role))
+            );
+            if (filteredItems.length === 0) return null;
+
+            return (
+              <div key={group.group} className="space-y-1">
+                <div className="mono px-3 text-[9px] font-bold uppercase tracking-[.2em] text-sidebar-foreground/45 mb-1.5">
+                  {group.group}
+                </div>
+                <nav className="space-y-0.5" aria-label={group.group}>
+                  {filteredItems.map(({ href, label, icon: Icon }) => {
+                    const isActive = location === href || (href !== '/dashboard' && location.startsWith(href));
+                    return (
+                      <Link
+                        data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
+                        onClick={() => setOpen(false)}
+                        href={href}
+                        key={href}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={cx(
+                          'flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
+                          isActive
+                            ? 'bg-sidebar-accent text-accent font-bold shadow-sm ring-1 ring-accent/30'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                        )}
+                      >
+                        <Icon className={cx('h-4 w-4 shrink-0', isActive ? 'text-accent' : 'text-sidebar-foreground/50')} />
+                        <span className="truncate">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Fixed User Profile & Logout Footer in Flex Flow */}
+        <div className="shrink-0 border-t border-sidebar-border/70 p-3 space-y-1.5 bg-sidebar/95 backdrop-blur-sm">
           <Link
-            data-testid="link-messages-header"
-            aria-label="Messages"
-            href="/messages"
-            className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
+            data-testid="link-nav-profile"
+            href="/profile"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 rounded-xl border border-sidebar-border/80 bg-sidebar-accent/30 p-2.5 hover:bg-sidebar-accent transition-all group"
           >
-            <MessageSquare aria-hidden="true" className="h-[18px] w-[18px]" />
+            <Avatar user={user} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-bold text-sidebar-foreground group-hover:text-accent">
+                {user?.fullName ?? 'Your Profile'}
+              </div>
+              <div className="truncate text-[10px] text-sidebar-foreground/50">
+                {user?.headline || `${roleLabels[user?.role ?? 'student']} · ${user?.department || 'Amrita'}`}
+              </div>
+            </div>
+            <Settings2 aria-hidden="true" className="h-4 w-4 shrink-0 text-sidebar-foreground/45 group-hover:text-accent" />
           </Link>
-          <Link data-testid="link-notifications-header" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} href="/notifications" className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-primary"><Bell aria-hidden="true" className="h-[18px] w-[18px]" />{unreadCount > 0 && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />}</Link>
-          <Link data-testid="link-profile-header" aria-label="Open your profile" href="/profile" className="ml-1"><Avatar user={user} size="sm" /></Link>
 
           <button
             type="button"
-            data-testid="button-header-logout"
-            aria-label="Sign out"
-            title="Sign out"
+            data-testid="button-sidebar-logout"
             onClick={handleLogout}
-            className="ml-1 inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+            className="flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-sidebar-foreground/50 transition-colors hover:bg-destructive/15 hover:text-destructive active:scale-95"
           >
-            <LogOut className="h-[18px] w-[18px]" />
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Sign out</span>
           </button>
         </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-10">{children}</main>
+      </aside>
+
+      {/* Mobile Backdrop */}
+      {open && (
+        <div
+          aria-label="Close navigation overlay"
+          className="fixed inset-0 z-30 bg-primary/40 backdrop-blur-sm transition-opacity lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Main Content Viewport */}
+      <div className="lg:pl-72 flex min-h-screen flex-col">
+        {/* Top Sticky Header */}
+        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border bg-background/90 px-4 sm:px-8 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <button
+              data-testid="button-open-menu"
+              aria-label="Open navigation menu"
+              className="rounded-lg p-2 text-foreground hover:bg-muted lg:hidden"
+              onClick={() => setOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground font-medium">
+              <span className="h-2 w-2 rounded-full bg-accent" />
+              <span className="hidden sm:inline">Amrita Connect</span>
+              <span className="text-border hidden sm:inline">/</span>
+              <span className="font-bold text-foreground">{currentLabel}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <ThemeToggle />
+            <Link
+              data-testid="link-messages-header"
+              aria-label="Messages"
+              href="/messages"
+              className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <MessageSquare aria-hidden="true" className="h-[18px] w-[18px]" />
+            </Link>
+            <Link
+              data-testid="link-notifications-header"
+              aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              href="/notifications"
+              className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <Bell aria-hidden="true" className="h-[18px] w-[18px]" />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-background"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
+            <Link data-testid="link-profile-header" aria-label="Open your profile" href="/profile" className="ml-1">
+              <Avatar user={user} size="sm" />
+            </Link>
+          </div>
+        </header>
+
+        {/* Page Container */}
+        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-8 sm:py-8 lg:py-10">
+          {children}
+        </main>
+      </div>
     </div>
-  </div>;
+  );
 }
 
 function Dashboard() {
+
   const { data, isLoading, isError, refetch } = useGetDashboardSummary();
   const { data: user } = useGetCurrentUser();
   const copy = dashboardCopy[user?.role ?? 'student'];
@@ -1345,30 +1512,150 @@ function Dashboard() {
       </section>
     </div>
 
-    {/* Community Feed Shortcut Banner */}
-    <section className="mt-6 rounded-2xl border border-border bg-gradient-to-r from-card via-secondary/30 to-card p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/20 text-accent">
-            <Sparkles className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="mono text-[10px] font-bold uppercase tracking-[.2em] text-accent">Amrita Community Feed</div>
-            <h3 className="mt-0.5 text-lg font-bold text-foreground">See what peers & alumni are sharing across campuses</h3>
-            <p className="text-xs text-muted-foreground">Discover interview experiences, achievements, research updates, and open questions.</p>
-          </div>
-        </div>
+    {/* Quick Feature Hubs Grid */}
+    <div className="mt-8">
+      <SectionHeader eyebrow="Explore Ecosystem" title="Campus Collaboration Hubs" />
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Community Feed */}
         <Link
-          data-testid="link-dashboard-open-feed"
           href="/feed"
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground hover:opacity-90 transition-all shadow-sm"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
         >
-          Explore Campus Feed <ArrowRight className="h-4 w-4" />
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/20 text-accent group-hover:scale-105 transition-transform">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-accent transition-colors">
+              Community Feed
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Campus updates, achievements, hackathon announcements, and open questions.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-accent">Join Discussions →</div>
+        </Link>
+
+        {/* Teammate Matchmaker */}
+        <Link
+          href="/matchmaker"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-primary font-bold group-hover:scale-105 transition-transform">
+                <Compass className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-accent transition-colors">
+              Teammate Matchmaker
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Synergy engine matching members with complementary skills across 7 campuses.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-accent">Find Teammates →</div>
+        </Link>
+
+        {/* Research Hub */}
+        <Link
+          href="/research"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-500/20 text-cyan-500 font-bold group-hover:scale-105 transition-transform">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-cyan-500 transition-colors">
+              Research & Labs
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Funded faculty grants (HuT Labs, ACCI), student assistant roles, and IEEE paper calls.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-cyan-500">Explore Labs →</div>
+        </Link>
+
+        {/* Project Showcase */}
+        <Link
+          href="/showcase"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/20 text-amber-500 font-bold group-hover:scale-105 transition-transform">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-amber-500 transition-colors">
+              Project Showcase
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Hackathon winning prototypes, GitHub repositories, and live demo apps.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-amber-500">View Demos →</div>
+        </Link>
+
+        {/* Campus Buddy */}
+        <Link
+          href="/campus-buddy"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/20 text-emerald-500 font-bold group-hover:scale-105 transition-transform">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-emerald-500 transition-colors">
+              Campus Buddy
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Visiting another campus? Connect with local student guides for hackathons and lab visits.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-emerald-500">Find Guides →</div>
+        </Link>
+
+        {/* Interview Prep & Guidance */}
+        <Link
+          href="/interviews"
+          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 p-5 shadow-sm transition-all hover:border-accent/50 hover:shadow-md"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-accent font-bold group-hover:scale-105 transition-transform">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
+            </div>
+            <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-accent transition-colors">
+              Interview Prep
+            </h4>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Round breakdowns, questions, and 1-click guidance requests from placed seniors.
+            </p>
+          </div>
+          <div className="mt-4 mono text-[10px] font-bold uppercase text-accent">Read Experiences →</div>
         </Link>
       </div>
-    </section>
+    </div>
 
-    <section className="mt-6 rounded-xl bg-primary p-6 text-primary-foreground sm:p-8"><div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-primary-foreground/45">A small nudge</div><h2 className="mt-2 text-2xl font-bold tracking-[-.04em]">Your next connection may start with a question.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/60">Look for someone whose experience meets the edge of your curiosity.</p></div><Link data-testid="link-dashboard-mentorship" href="/mentorship" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-primary hover:brightness-95">Find a mentor <HeartHandshake className="h-4 w-4" /></Link></div></section>
+
+    <section className="mt-6 rounded-xl bg-primary p-6 text-primary-foreground sm:p-8">
+
+
+
+<div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-primary-foreground/45">A small nudge</div><h2 className="mt-2 text-2xl font-bold tracking-[-.04em]">Your next connection may start with a question.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/60">Look for someone whose experience meets the edge of your curiosity.</p></div><Link data-testid="link-dashboard-mentorship" href="/mentorship" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-primary hover:brightness-95">Find a mentor <HeartHandshake className="h-4 w-4" /></Link></div></section>
   </>;
 }
 function Metric({ label, value, detail, progress, accent }: { label: string; value: string; detail: string; progress?: number; accent?: boolean }) { return <div className={cx('surface rounded-xl border border-border p-5', accent && 'bg-secondary/40')}><div className="flex items-start justify-between"><span className="text-xs font-semibold text-muted-foreground">{label}</span>{accent && <Sparkles className="h-4 w-4 text-accent" />}</div><div data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`} className="mt-4 text-3xl font-bold tracking-[-.06em] text-foreground">{value}</div>{progress !== undefined ? <div className="mt-3 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-accent" style={{ width: `${progress}%` }} /></div> : <p className="mt-3 text-xs text-muted-foreground">{detail}</p>} {progress !== undefined && <p className="mt-2 text-xs text-muted-foreground">{detail}</p>}</div>; }
@@ -3209,7 +3496,4420 @@ function MessagesPage() {
   );
 }
 
+interface MatchmakerCandidate {
+
+  user: PublicUser;
+  score: number;
+  matchPercentage: number;
+  matchedSkills: string[];
+  reasons: string[];
+}
+
+interface MatchmakerResponse {
+  items: MatchmakerCandidate[];
+  total: number;
+  intent: string;
+  requestedSkills: string[];
+}
+
+function useMatchmaker(params: {
+  intent: string;
+  skills: string;
+  campus?: string;
+  department?: string;
+  role?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.intent) q.set('intent', params.intent);
+  if (params.skills) q.set('skills', params.skills);
+  if (params.campus) q.set('campus', params.campus);
+  if (params.department) q.set('department', params.department);
+  if (params.role) q.set('role', params.role);
+
+  const queryKey = ['matchmaker', params];
+  return {
+    ...useQuery({
+      queryKey,
+      queryFn: () => apiFetch<MatchmakerResponse>(`/matchmaker/find?${q.toString()}`),
+    }),
+    queryKey,
+  };
+}
+
+function PitchModal({
+  targetUser,
+  intent,
+  onClose,
+}: {
+  targetUser: PublicUser;
+  intent: string;
+  onClose: () => void;
+}) {
+  const [projectName, setProjectName] = useState('');
+  const [message, setMessage] = useState(
+    `Hi ${targetUser.fullName.split(' ')[0]}, I came across your profile on Amrita Matchmaker. We are putting together a team and would love to collaborate with you on this project!`
+  );
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+
+  const pitchMutation = useMutation({
+    mutationFn: (body: { targetUserId: string; intent: string; projectName: string; message: string }) =>
+      apiFetch<{ success: boolean; messageId: string }>('/matchmaker/pitch', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      alert(`🎉 Pitch sent to ${targetUser.fullName}! You can continue the chat in Messages.`);
+      onClose();
+      setLocation(`/messages/${targetUser.id}`);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    pitchMutation.mutate({
+      targetUserId: targetUser.id,
+      intent,
+      projectName: projectName.trim(),
+      message: message.trim(),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.2em] text-accent font-bold">
+              Team Invitation
+            </div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
+              Pitch your project to {targetUser.fullName.split(' ')[0]}
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3">
+          <Avatar user={targetUser} size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-foreground">{targetUser.fullName}</span>
+              <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[9px] font-bold text-accent">
+                {roleLabels[targetUser.role] ?? targetUser.role}
+              </span>
+            </div>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {targetUser.department} · Amrita {targetUser.campus}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Project / Hackathon Title
+            </label>
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="e.g. Smart India Hackathon 2026 / Multimodal AI Lab"
+              className="mt-1.5 w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Your Pitch Message
+            </label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Explain the problem statement, what role you're looking for, and why they would be a great fit..."
+              className="mt-1.5 w-full resize-none rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              data-testid="button-submit-pitch"
+              type="submit"
+              disabled={pitchMutation.isPending || !message.trim()}
+              className="font-bold"
+            >
+              {pitchMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send Team Pitch
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const POPULAR_SKILLS = [
+  'Python',
+  'React',
+  'Machine Learning',
+  'System Design',
+  'UI/UX',
+  'Node.js',
+  'PyTorch',
+  'IoT/Embedded',
+  'Cloud/AWS',
+  'Data Science',
+  'Java',
+  'C++',
+  'Flutter',
+  'Blockchain',
+];
+
+const INTENT_OPTIONS = [
+  {
+    id: 'hackathon',
+    label: 'Hackathons & SIH',
+    desc: 'Smart India Hackathon, internal sprints, and student hackathons',
+    icon: Sparkles,
+  },
+  {
+    id: 'research',
+    label: 'Research & Papers',
+    desc: 'Faculty labs, research publications, and IEEE paper co-authors',
+    icon: Compass,
+  },
+  {
+    id: 'project',
+    label: 'Side Projects & Startups',
+    desc: 'Co-builders, open-source projects, and student tech ventures',
+    icon: Network,
+  },
+  {
+    id: 'mentorship',
+    label: 'Career Mentorship',
+    desc: 'Alumni guides for interviews, resume reviews, and product engineering',
+    icon: HeartHandshake,
+  },
+];
+
+function MatchmakerPage() {
+  const [intent, setIntent] = useState('hackathon');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(['React', 'Python']);
+  const [customSkill, setCustomSkill] = useState('');
+  const [campus, setCampus] = useState('');
+  const [department, setDepartment] = useState('');
+  const [pitchTarget, setPitchTarget] = useState<PublicUser | null>(null);
+
+  const { data, isLoading, isError, refetch } = useMatchmaker({
+    intent,
+    skills: selectedSkills.join(','),
+    campus: campus || undefined,
+    department: department || undefined,
+  });
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
+  };
+
+  const handleAddCustomSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customSkill.trim()) return;
+    const s = customSkill.trim();
+    if (!selectedSkills.includes(s)) {
+      setSelectedSkills((prev) => [...prev, s]);
+    }
+    setCustomSkill('');
+  };
+
+  const matches = data?.items ?? [];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="AI-Powered Discovery"
+        title="Smart Teammate & Collaborator Matchmaker."
+        detail="Discover complementary peers, mentors, and research partners across all 7 Amrita campuses."
+      />
+
+      {/* Intent Selector Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 animate-rise">
+        {INTENT_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          const isActive = intent === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setIntent(opt.id)}
+              className={cx(
+                'flex flex-col text-left rounded-2xl border p-4.5 transition-all shadow-sm',
+                isActive
+                  ? 'border-accent bg-accent/10 ring-2 ring-accent/30'
+                  : 'border-border bg-card hover:bg-secondary/40'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className={cx(
+                    'grid h-10 w-10 place-items-center rounded-xl font-bold',
+                    isActive ? 'bg-accent text-primary' : 'bg-secondary text-accent'
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                {isActive && (
+                  <span className="flex h-2 w-2 rounded-full bg-accent animate-pulse" />
+                )}
+              </div>
+              <h3 className="mt-3 text-sm font-bold text-foreground">{opt.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{opt.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filter / Skills Panel */}
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm animate-rise delay-1">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex-1">
+            <label className="mono text-[10px] uppercase tracking-[.18em] font-bold text-muted-foreground">
+              Skills Your Team Needs
+            </label>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {POPULAR_SKILLS.map((skill) => {
+                const isSelected = selectedSkills.includes(skill);
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    className={cx(
+                      'rounded-lg px-2.5 py-1 text-xs font-semibold transition-all active:scale-95',
+                      isSelected
+                        ? 'bg-accent text-primary shadow-xs'
+                        : 'border border-border bg-secondary/50 text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {isSelected ? `✓ ${skill}` : `+ ${skill}`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Add custom skill input */}
+          <form onSubmit={handleAddCustomSkill} className="flex items-center gap-2 shrink-0">
+            <input
+              type="text"
+              value={customSkill}
+              onChange={(e) => setCustomSkill(e.target.value)}
+              placeholder="Add skill tag..."
+              className="w-36 rounded-xl border border-input bg-card px-3 py-1.5 text-xs outline-none focus:border-accent"
+            />
+            <Button type="submit" variant="outline" className="px-3 py-1.5 text-xs">
+              Add
+            </Button>
+          </form>
+        </div>
+
+        {/* Campus & Department Filters */}
+        <div className="mt-4 pt-4 border-t border-border grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <SelectField
+            id="matchmaker-campus"
+            label="Filter by Campus"
+            value={campus}
+            onChange={(e) => setCampus(e.target.value)}
+            options={[{ value: '', label: 'All Campuses' }, ...campuses.map((c) => ({ value: c, label: c }))]}
+          />
+          <SelectField
+            id="matchmaker-department"
+            label="Filter by Department"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            options={[{ value: '', label: 'All Departments' }, ...departments.map((d) => ({ value: d, label: d }))]}
+          />
+          <div className="flex items-end">
+            <Button
+              type="button"
+              variant="quiet"
+              onClick={() => {
+                setCampus('');
+                setDepartment('');
+                setSelectedSkills(['React', 'Python']);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground h-10"
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Scored Matches Results */}
+      <section className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-foreground">
+            Recommended Matches ({matches.length})
+          </h2>
+          <span className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Ranked by synergy & skill fit
+          </span>
+        </div>
+
+        {isLoading ? (
+          <LoadingState rows={4} />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
+        ) : matches.length === 0 ? (
+          <EmptyState
+            icon={Compass}
+            title="No matches found"
+            detail="Try relaxing your filters or selecting fewer skill requirements."
+            action={
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedSkills([]);
+                  setCampus('');
+                  setDepartment('');
+                }}
+              >
+                Clear all filters
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {matches.map(({ user, matchPercentage, matchedSkills, reasons }) => (
+              <div
+                key={user.id}
+                className="surface flex flex-col justify-between rounded-2xl border border-border p-5 shadow-sm transition-all hover:border-accent/40 animate-rise"
+              >
+                <div>
+                  {/* Card Header with Match Percentage Gauge */}
+                  <div className="flex items-start justify-between">
+                    <Avatar user={user} size="lg" />
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-bold text-accent">
+                        <Sparkles className="h-3 w-3" /> {matchPercentage}% Match
+                      </span>
+                      <div className="mt-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        {roleLabels[user.role] ?? user.role}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/people/${user.id}`}
+                    className="mt-3 block text-lg font-bold text-foreground hover:text-accent transition-colors"
+                  >
+                    {user.fullName}
+                  </Link>
+                  <p className="line-clamp-2 text-xs text-muted-foreground mt-0.5">
+                    {user.headline || `${user.department} · Amrita ${user.campus}`}
+                  </p>
+
+                  {/* Matched skills tags */}
+                  {matchedSkills.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {matchedSkills.map((sk) => (
+                        <span
+                          key={sk}
+                          className="rounded-md bg-accent px-2 py-0.5 text-[10px] font-bold text-primary"
+                        >
+                          ✓ {sk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Synergy reasons list */}
+                  <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-3 space-y-1.5">
+                    <div className="mono text-[9px] uppercase tracking-wider font-bold text-accent">
+                      Why this match:
+                    </div>
+                    {reasons.map((reason, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-accent shrink-0" />
+                        <span>{reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Action Footer */}
+                <div className="mt-5 flex items-center justify-between gap-2 border-t border-border pt-3.5">
+                  <Button
+                    onClick={() => setPitchTarget(user)}
+                    className="flex-1 py-2 text-xs font-bold shadow-xs"
+                  >
+                    <Send className="h-3.5 w-3.5" /> Pitch Project
+                  </Button>
+                  <Link
+                    href={`/messages/${user.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-muted transition-colors"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                  </Link>
+                  <ConnectActionButton targetUser={user} size="sm" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {pitchTarget && (
+        <PitchModal
+          targetUser={pitchTarget}
+          intent={intent}
+          onClose={() => setPitchTarget(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ==========================================
+// INTERVIEW EXPERIENCES & MENTORSHIP
+// ==========================================
+
+interface InterviewRound {
+  roundNumber: number;
+  roundName: string;
+  description: string;
+  durationMinutes?: number;
+}
+
+interface InterviewExperience {
+  id: string;
+  author: PublicUser;
+  company: string;
+  role: string;
+  employmentType: string;
+  batch?: number;
+  campus: string;
+  outcome: 'Offered' | 'Not Selected' | 'In Progress' | 'Declined Offer';
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Challenging';
+  interviewDate: string;
+  rounds: InterviewRound[];
+  keyTopics: string[];
+  overallExperience: string;
+  prepAdvice: string;
+  likesCount: number;
+  isLiked: boolean;
+  isSaved: boolean;
+  isAuthor: boolean;
+  createdAt: string;
+}
+
+function useListInterviews(params: {
+  search?: string;
+  company?: string;
+  role?: string;
+  outcome?: string;
+  difficulty?: string;
+  campus?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const queryStr = new URLSearchParams();
+  if (params.search) queryStr.set('search', params.search);
+  if (params.company) queryStr.set('company', params.company);
+  if (params.role) queryStr.set('role', params.role);
+  if (params.outcome) queryStr.set('outcome', params.outcome);
+  if (params.difficulty) queryStr.set('difficulty', params.difficulty);
+  if (params.campus) queryStr.set('campus', params.campus);
+  if (params.page) queryStr.set('page', String(params.page));
+  if (params.pageSize) queryStr.set('pageSize', String(params.pageSize));
+
+  return useQuery({
+    queryKey: ['interviews', params],
+    queryFn: () =>
+      apiFetch<{ items: InterviewExperience[]; total: number; page: number; pageSize: number }>(
+        `/interviews?${queryStr.toString()}`
+      ),
+  });
+}
+
+function InterviewGuidanceModal({
+  interview,
+  onClose,
+}: {
+  interview: InterviewExperience;
+  onClose: () => void;
+}) {
+  const [message, setMessage] = useState(
+    `Hi ${interview.author?.fullName?.split(' ')[0] || 'there'}! I saw your interview experience for ${interview.company} (${interview.role}) on Amrita Connect. Could you share some tips on how you prepared for ${interview.rounds?.[0]?.roundName || 'the technical rounds'}?`
+  );
+  const [, setLocation] = useLocation();
+
+  const guidanceMutation = useMutation({
+    mutationFn: (body: { message: string }) =>
+      apiFetch<{ success: boolean; message: string }>(`/interviews/${interview.id}/request-guidance`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (res) => {
+      alert(res.message);
+      onClose();
+      setLocation(`/messages/${interview.author.id}`);
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/20 text-accent font-bold">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="mono text-[10px] font-bold uppercase tracking-wider text-accent">Interview Guidance</div>
+              <h3 className="text-lg font-bold text-foreground">Ask {interview.author?.fullName}</h3>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Send a direct inquiry about their interview rounds, online assessment questions, or advice for cracking <strong className="text-foreground">{interview.company}</strong>.
+        </p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!message.trim()) return;
+            guidanceMutation.mutate({ message: message.trim() });
+          }}
+          className="mt-4 space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Your Question / Message</label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={guidanceMutation.isPending || !message.trim()} className="font-bold">
+              {guidanceMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send Question via Chat
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function InterviewDetailModal({
+  interview,
+  onClose,
+  onGuidance,
+}: {
+  interview: InterviewExperience;
+  onClose: () => void;
+  onGuidance: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/10 to-accent/20 text-xl font-bold text-foreground border border-border">
+              {interview.company.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cx(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                    interview.outcome === 'Offered'
+                      ? 'bg-emerald-500/15 text-emerald-500'
+                      : interview.outcome === 'In Progress'
+                      ? 'bg-accent/20 text-accent'
+                      : 'bg-destructive/15 text-destructive'
+                  )}
+                >
+                  {interview.outcome}
+                </span>
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                  {interview.difficulty} Difficulty
+                </span>
+                <span className="mono text-[10px] text-muted-foreground">{interview.interviewDate}</span>
+              </div>
+              <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
+                {interview.company} · {interview.role}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {interview.employmentType} · Amrita {interview.campus}
+              </p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Key topics chips */}
+        {interview.keyTopics?.length > 0 && (
+          <div className="mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Key Topics Covered</div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {interview.keyTopics.map((t) => (
+                <Tag key={t} warm>
+                  {t}
+                </Tag>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Overall Experience */}
+        <div className="mt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Interview Experience Summary</h3>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">{interview.overallExperience}</p>
+        </div>
+
+        {/* Rounds Breakdown */}
+        {interview.rounds?.length > 0 && (
+          <div className="mt-6 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Rounds Breakdown ({interview.rounds.length} Rounds)
+            </h3>
+            <div className="space-y-3">
+              {interview.rounds.map((round) => (
+                <div key={round.roundNumber} className="rounded-xl border border-border bg-secondary/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-bold text-primary">
+                        {round.roundNumber}
+                      </span>
+                      <h4 className="text-sm font-bold text-foreground">{round.roundName}</h4>
+                    </div>
+                    {round.durationMinutes && (
+                      <span className="mono text-[10px] text-muted-foreground">{round.durationMinutes} mins</span>
+                    )}
+                  </div>
+                  <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+                    {round.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Prep Advice Callout */}
+        <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4">
+          <div className="flex items-center gap-2 text-xs font-bold text-accent uppercase tracking-wider">
+            <Sparkles className="h-4 w-4" /> Advice for Amrita Juniors & Peers
+          </div>
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground font-medium">
+            {interview.prepAdvice}
+          </p>
+        </div>
+
+        {/* Author Footer */}
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-border pt-4">
+          <div className="flex items-center gap-3">
+            <Avatar user={interview.author} size="md" />
+            <div>
+              <Link href={`/people/${interview.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                {interview.author.fullName}
+              </Link>
+              <p className="text-[10px] text-muted-foreground">
+                {interview.author.headline || `${roleLabels[interview.author.role]} · Amrita ${interview.author.campus}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!interview.isAuthor && (
+              <Button onClick={onGuidance} className="font-bold text-xs">
+                <MessageSquare className="h-3.5 w-3.5" /> Ask {interview.author.fullName.split(' ')[0]} for Prep Advice
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShareInterviewModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    company: '',
+    role: '',
+    employmentType: 'Full-time',
+    outcome: 'Offered',
+    difficulty: 'Medium',
+    interviewDate: new Date().toISOString().slice(0, 7),
+    keyTopics: '',
+    overallExperience: '',
+    prepAdvice: '',
+  });
+
+  const [rounds, setRounds] = useState<Array<{ roundNumber: number; roundName: string; description: string; durationMinutes: number }>>([
+    {
+      roundNumber: 1,
+      roundName: 'Online Coding Assessment (OA)',
+      description: '',
+      durationMinutes: 60,
+    },
+    {
+      roundNumber: 2,
+      roundName: 'Technical DSA / Coding Round',
+      description: '',
+      durationMinutes: 45,
+    },
+  ]);
+
+  const addRound = () => {
+    setRounds((prev) => [
+      ...prev,
+      {
+        roundNumber: prev.length + 1,
+        roundName: `Round ${prev.length + 1} (e.g. System Design / Managerial)`,
+        description: '',
+        durationMinutes: 45,
+      },
+    ]);
+  };
+
+  const removeRound = (idx: number) => {
+    setRounds((prev) => prev.filter((_, i) => i !== idx).map((r, i) => ({ ...r, roundNumber: i + 1 })));
+  };
+
+  const updateRound = (idx: number, field: string, value: any) => {
+    setRounds((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
+  const shareMutation = useMutation({
+    mutationFn: (body: any) =>
+      apiFetch<{ id: string }>(`/interviews`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    shareMutation.mutate({
+      ...form,
+      keyTopics: form.keyTopics.split(',').map((t) => t.trim()).filter(Boolean),
+      rounds,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Community Knowledge</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Share an Interview Experience</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="company-name"
+              label="Company Name"
+              placeholder="e.g. Microsoft, Google, Cisco, Amazon"
+              value={form.company}
+              onChange={(e) => setForm({ ...form, company: e.target.value })}
+              required
+            />
+            <Field
+              id="role-name"
+              label="Job Role"
+              placeholder="e.g. SDE-1, Cloud Consultant, AI Researcher"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SelectField
+              id="outcome"
+              label="Selection Outcome"
+              value={form.outcome}
+              onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+              options={['Offered', 'Not Selected', 'In Progress', 'Declined Offer'].map((v) => ({ value: v, label: v }))}
+            />
+            <SelectField
+              id="difficulty"
+              label="Difficulty Rating"
+              value={form.difficulty}
+              onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+              options={['Easy', 'Medium', 'Hard', 'Challenging'].map((v) => ({ value: v, label: v }))}
+            />
+            <SelectField
+              id="employment-type"
+              label="Employment Type"
+              value={form.employmentType}
+              onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
+              options={['Full-time', 'Internship', '6-Month Co-op'].map((v) => ({ value: v, label: v }))}
+            />
+          </div>
+
+          <Field
+            id="key-topics"
+            label="Key Topics Asked (comma-separated)"
+            placeholder="e.g. Dynamic Programming, System Design, Operating Systems, SQL"
+            value={form.keyTopics}
+            onChange={(e) => setForm({ ...form, keyTopics: e.target.value })}
+            required
+          />
+
+          {/* Rounds List */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground">Interview Rounds Breakdown</label>
+              <button
+                type="button"
+                onClick={addRound}
+                className="text-xs font-bold text-accent hover:underline flex items-center gap-1"
+              >
+                + Add Another Round
+              </button>
+            </div>
+
+            {rounds.map((round, idx) => (
+              <div key={idx} className="rounded-xl border border-border bg-secondary/30 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent">
+                    Round {round.roundNumber}
+                  </span>
+                  <input
+                    value={round.roundName}
+                    onChange={(e) => updateRound(idx, 'roundName', e.target.value)}
+                    placeholder="Round Title (e.g. System Design)"
+                    className="flex-1 rounded-lg border border-input bg-card px-2.5 py-1 text-xs font-bold outline-none focus:border-accent"
+                    required
+                  />
+                  {rounds.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeRound(idx)}
+                      className="p-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  rows={2}
+                  value={round.description}
+                  onChange={(e) => updateRound(idx, 'description', e.target.value)}
+                  placeholder="What specific questions, coding problems, or scenarios were asked in this round?"
+                  className="w-full rounded-lg border border-input bg-card p-2.5 text-xs outline-none focus:border-accent"
+                  required
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Overall Experience Summary</label>
+            <textarea
+              rows={3}
+              value={form.overallExperience}
+              onChange={(e) => setForm({ ...form, overallExperience: e.target.value })}
+              placeholder="How was the recruitment process? Interviewer demeanor, speed of feedback, etc..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Advice & Tips for Amrita Juniors</label>
+            <textarea
+              rows={3}
+              value={form.prepAdvice}
+              onChange={(e) => setForm({ ...form, prepAdvice: e.target.value })}
+              placeholder="What resources, LeetCode patterns, or campus coursework helped the most?"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={shareMutation.isPending} className="font-bold">
+              {shareMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Publish Experience
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function InterviewCard({
+  item,
+  onSelect,
+  onGuidance,
+}: {
+  item: InterviewExperience;
+  onSelect: () => void;
+  onGuidance: () => void;
+}) {
+  const queryClient = useQueryClient();
+
+  const likeMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ isLiked: boolean; likesCount: number }>(`/interviews/${item.id}/like`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ isSaved: boolean }>(`/interviews/${item.id}/save`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
+  });
+
+  return (
+    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary text-base font-bold text-foreground border border-border">
+              {item.company.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={cx(
+                    'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                    item.outcome === 'Offered'
+                      ? 'bg-emerald-500/15 text-emerald-500'
+                      : item.outcome === 'In Progress'
+                      ? 'bg-accent/20 text-accent'
+                      : 'bg-destructive/15 text-destructive'
+                  )}
+                >
+                  {item.outcome}
+                </span>
+                <span className="rounded bg-secondary/80 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                  {item.difficulty}
+                </span>
+              </div>
+              <h3
+                onClick={onSelect}
+                className="mt-1 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
+              >
+                {item.company} · {item.role}
+              </h3>
+            </div>
+          </div>
+          <span className="mono text-[10px] text-muted-foreground">{item.interviewDate}</span>
+        </div>
+
+        <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.overallExperience}</p>
+
+        {/* Rounds Timeline Preview */}
+        {item.rounds?.length > 0 && (
+          <div className="mt-3.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground bg-secondary/30 p-2.5 rounded-xl border border-border">
+            <span className="font-bold text-foreground mr-1">Rounds:</span>
+            {item.rounds.map((r, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <span className="rounded bg-accent/20 px-1.5 py-0.2 font-bold text-accent text-[10px]">
+                  {r.roundName.split(' ')[0]}
+                </span>
+                {i < item.rounds.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground/60" />}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Key topics chips */}
+        <div className="mt-3 flex flex-wrap gap-1">
+          {item.keyTopics?.slice(0, 4).map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
+          {item.keyTopics?.length > 4 && (
+            <span className="text-[10px] text-muted-foreground self-center">+{item.keyTopics.length - 4} more</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Avatar user={item.author} size="sm" />
+          <div>
+            <Link href={`/people/${item.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+              {item.author.fullName}
+            </Link>
+            <p className="text-[10px] text-muted-foreground">Amrita {item.author.campus} {item.batch ? `· '${item.batch}` : ''}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={() => likeMutation.mutate()}
+            className={cx(
+              'inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all',
+              item.isLiked
+                ? 'border-accent bg-accent/20 text-accent'
+                : 'border-border text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Heart className={cx('h-3.5 w-3.5', item.isLiked && 'fill-accent')} />
+            {item.likesCount > 0 && item.likesCount}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => saveMutation.mutate()}
+            className={cx(
+              'rounded-lg border p-1.5 transition-all',
+              item.isSaved
+                ? 'border-accent bg-accent/20 text-accent'
+                : 'border-border text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Bookmark className={cx('h-3.5 w-3.5', item.isSaved && 'fill-accent')} />
+          </button>
+
+          {!item.isAuthor && (
+            <Button variant="quiet" className="px-2.5 py-1.5 text-xs font-bold" onClick={onGuidance}>
+              Ask Tips
+            </Button>
+          )}
+
+          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
+            Read Experience <ArrowRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InterviewsPage() {
+  const [search, setSearch] = useState('');
+  const [company, setCompany] = useState('');
+  const [outcome, setOutcome] = useState('');
+  const [difficulty, setDifficulty] = useState('');
+  const [showShare, setShowShare] = useState(false);
+  const [selectedInterview, setSelectedInterview] = useState<InterviewExperience | null>(null);
+  const [guidanceTarget, setGuidanceTarget] = useState<InterviewExperience | null>(null);
+
+  const params = useMemo(
+    () => ({
+      search: search || undefined,
+      company: company || undefined,
+      outcome: outcome || undefined,
+      difficulty: difficulty || undefined,
+      page: 1,
+      pageSize: 20,
+    }),
+    [search, company, outcome, difficulty]
+  );
+
+  const { data, isLoading, isError, refetch } = useListInterviews(params);
+  const items = data?.items ?? [];
+
+  const topCompanies = ['Microsoft', 'Google', 'Amazon', 'Cisco', 'TCS', 'Infosys', 'Intel', 'Bosch'];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Career & Placements"
+        title="Amrita Interview Experience Hub."
+        detail="Real interview questions, coding round breakdowns, and preparation advice shared by peers and alumni across all campuses."
+        action={
+          <Button data-testid="button-share-interview" onClick={() => setShowShare(true)}>
+            <Pencil className="h-4 w-4" /> Share Experience
+          </Button>
+        }
+      />
+
+      {/* Top Company Quick Tags */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => setCompany('')}
+          className={cx(
+            'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+            company === ''
+              ? 'bg-primary text-primary-foreground'
+              : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+          )}
+        >
+          All Companies
+        </button>
+        {topCompanies.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCompany(company === c ? '' : c)}
+            className={cx(
+              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+              company === c
+                ? 'bg-accent text-primary'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <label className="relative block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            data-testid="input-interviews-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by company, role, DSA topics, or questions..."
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+
+        <select
+          value={outcome}
+          onChange={(e) => setOutcome(e.target.value)}
+          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none focus:border-accent"
+        >
+          <option value="">All Outcomes</option>
+          <option value="Offered">Offered Only 🎉</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Not Selected">Not Selected</option>
+        </select>
+
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none focus:border-accent"
+        >
+          <option value="">All Difficulties</option>
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+          <option value="Challenging">Challenging</option>
+        </select>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={GraduationCap}
+          title="No interview experiences match your filters"
+          detail="Be the first to share your interview rounds for this company to guide juniors and peers!"
+          action={<Button onClick={() => setShowShare(true)}>Share the first experience</Button>}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {items.map((item) => (
+            <InterviewCard
+              key={item.id}
+              item={item}
+              onSelect={() => setSelectedInterview(item)}
+              onGuidance={() => setGuidanceTarget(item)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedInterview && (
+        <InterviewDetailModal
+          interview={selectedInterview}
+          onClose={() => setSelectedInterview(null)}
+          onGuidance={() => {
+            setGuidanceTarget(selectedInterview);
+            setSelectedInterview(null);
+          }}
+        />
+      )}
+
+      {guidanceTarget && (
+        <InterviewGuidanceModal
+          interview={guidanceTarget}
+          onClose={() => setGuidanceTarget(null)}
+        />
+      )}
+
+      {showShare && <ShareInterviewModal onClose={() => setShowShare(false)} />}
+    </>
+  );
+}
+
+// ==========================================
+// HELP & QUESTION SYSTEM ("I NEED HELP" MATCHING)
+// ==========================================
+
+interface HelpReply {
+  id: string;
+  author: PublicUser;
+  text: string;
+  isSolution: boolean;
+  upvotesCount: number;
+  isUpvoted: boolean;
+  isAuthor: boolean;
+  createdAt: string;
+}
+
+interface HelpRequest {
+  id: string;
+  author: PublicUser;
+  title: string;
+  description: string;
+  category: 'Academic' | 'Project / Coding' | 'Hackathon' | 'Placements / Career' | 'Campus Life' | 'General';
+  urgency: 'Normal' | 'High' | 'Urgent';
+  tags: string[];
+  status: 'open' | 'solved';
+  campus: string;
+  department: string;
+  upvotesCount: number;
+  isUpvoted: boolean;
+  replies?: HelpReply[];
+  repliesCount: number;
+  hasAcceptedSolution: boolean;
+  isAuthor: boolean;
+  createdAt: string;
+}
+
+function useListHelpRequests(params: {
+  search?: string;
+  category?: string;
+  urgency?: string;
+  status?: string;
+  campus?: string;
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const queryStr = new URLSearchParams();
+  if (params.search) queryStr.set('search', params.search);
+  if (params.category) queryStr.set('category', params.category);
+  if (params.urgency) queryStr.set('urgency', params.urgency);
+  if (params.status && params.status !== 'all') queryStr.set('status', params.status);
+  if (params.campus) queryStr.set('campus', params.campus);
+  if (params.tag) queryStr.set('tag', params.tag);
+  if (params.page) queryStr.set('page', String(params.page));
+  if (params.pageSize) queryStr.set('pageSize', String(params.pageSize));
+
+  return useQuery({
+    queryKey: ['help-requests', params],
+    queryFn: () =>
+      apiFetch<{ items: HelpRequest[]; total: number; page: number; pageSize: number }>(
+        `/help-requests?${queryStr.toString()}`
+      ),
+  });
+}
+
+function useHelpRequestDetail(id: string | null) {
+  return useQuery({
+    queryKey: ['help-request-detail', id],
+    queryFn: () => apiFetch<HelpRequest>(`/help-requests/${id}`),
+    enabled: !!id,
+  });
+}
+
+function useSuggestedHelpers(id: string | null) {
+  return useQuery({
+    queryKey: ['help-request-helpers', id],
+    queryFn: () => apiFetch<{ items: Array<{ user: PublicUser; score: number; reasons: string[] }> }>(`/help-requests/${id}/suggested-helpers`),
+    enabled: !!id,
+  });
+}
+
+function HelpDetailModal({
+  requestId,
+  onClose,
+  onRefresh,
+}: {
+  requestId: string;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: item, isLoading, refetch } = useHelpRequestDetail(requestId);
+  const { data: helpersData } = useSuggestedHelpers(requestId);
+  const [replyText, setReplyText] = useState('');
+
+  const replyMutation = useMutation({
+    mutationFn: (text: string) =>
+      apiFetch<{ success: boolean }>(`/help-requests/${requestId}/replies`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }),
+    onSuccess: () => {
+      setReplyText('');
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+      onRefresh();
+    },
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: (replyId: string) =>
+      apiFetch<{ success: boolean }>(`/help-requests/${requestId}/replies/${replyId}/accept`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+      onRefresh();
+    },
+  });
+
+  const questionUpvoteMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>(`/help-requests/${requestId}/upvote`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+    },
+  });
+
+  const replyUpvoteMutation = useMutation({
+    mutationFn: (replyId: string) =>
+      apiFetch<{ success: boolean }>(`/help-requests/${requestId}/replies/${replyId}/upvote`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const handlePostReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+    replyMutation.mutate(replyText.trim());
+  };
+
+  const helpers = helpersData?.items ?? [];
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        {isLoading || !item ? (
+          <LoadingState rows={4} />
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tag warm>{item.category}</Tag>
+                  <span
+                    className={cx(
+                      'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                      item.urgency === 'Urgent'
+                        ? 'bg-rose-500/20 text-rose-500 font-bold'
+                        : item.urgency === 'High'
+                        ? 'bg-amber-500/20 text-amber-500'
+                        : 'bg-secondary text-muted-foreground'
+                    )}
+                  >
+                    {item.urgency}
+                  </span>
+                  <span
+                    className={cx(
+                      'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                      item.status === 'solved'
+                        ? 'bg-emerald-500/15 text-emerald-500'
+                        : 'bg-accent/20 text-accent'
+                    )}
+                  >
+                    {item.status === 'solved' ? '✓ Solved' : '⏱ Open'}
+                  </span>
+                  <span className="mono text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+                </div>
+                <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{item.title}</h2>
+              </div>
+              <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Tags */}
+            {item.tags?.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {item.tags.map((t) => (
+                  <Tag key={t}>{t}</Tag>
+                ))}
+              </div>
+            )}
+
+            {/* Question description */}
+            <div className="mt-4 rounded-xl border border-border bg-secondary/20 p-4">
+              <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{item.description}</p>
+              <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+                <div className="flex items-center gap-2">
+                  <Avatar user={item.author} size="sm" />
+                  <div>
+                    <Link href={`/people/${item.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                      {item.author.fullName}
+                    </Link>
+                    <p className="text-[10px] text-muted-foreground">Amrita {item.campus} · {item.department}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => questionUpvoteMutation.mutate()}
+                  className={cx(
+                    'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all',
+                    item.isUpvoted
+                      ? 'border-accent bg-accent/20 text-accent'
+                      : 'border-border text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Flame className={cx('h-4 w-4', item.isUpvoted && 'fill-accent')} />
+                  Upvote ({item.upvotesCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Suggested Helpers Synergy Box */}
+            {helpers.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/10 via-card to-card p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-bold text-accent uppercase tracking-wider">
+                  <Compass className="h-4 w-4" /> Peers & Mentors Who Can Help With This Topic
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Matched based on your tags & their profile skills and "I Can Help With" endorsements.
+                </p>
+
+                <div className="mt-3 divide-y divide-border rounded-xl border border-border bg-card">
+                  {helpers.map(({ user, reasons }) => (
+                    <div key={user.id} className="flex items-center justify-between p-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar user={user} size="sm" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Link href={`/people/${user.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                              {user.fullName}
+                            </Link>
+                            <span className="rounded bg-accent/20 px-1.5 py-0.2 text-[9px] font-bold text-accent">
+                              {roleLabels[user.role]}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {reasons.map((r, i) => (
+                              <span key={i} className="text-[10px] text-muted-foreground">
+                                • {r}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/messages/${user.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-sm"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 text-accent" /> Ask in Chat
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Answers & Solutions Stream */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Answers & Discussions ({item.replies?.length || 0})
+                </h3>
+              </div>
+
+              {(!item.replies || item.replies.length === 0) ? (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                  No answers yet. Be the first to help out a fellow Amrita peer!
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {item.replies.map((reply) => (
+                    <div
+                      key={reply.id}
+                      className={cx(
+                        'rounded-xl border p-4 transition-all',
+                        reply.isSolution
+                          ? 'border-emerald-500/50 bg-emerald-500/5 shadow-sm'
+                          : 'border-border bg-card'
+                      )}
+                    >
+                      {reply.isSolution && (
+                        <div className="mb-2.5 flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+                          <CheckCircle2 className="h-4 w-4" /> Accepted Solution by Author
+                        </div>
+                      )}
+
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar user={reply.author} size="sm" />
+                          <div>
+                            <Link href={`/people/${reply.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                              {reply.author.fullName}
+                            </Link>
+                            <p className="text-[10px] text-muted-foreground">
+                              {reply.author.department} · {relative(reply.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => replyUpvoteMutation.mutate(reply.id)}
+                            className={cx(
+                              'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-all',
+                              reply.isUpvoted
+                                ? 'border-accent bg-accent/20 text-accent'
+                                : 'border-border text-muted-foreground hover:text-foreground'
+                            )}
+                          >
+                            <Flame className={cx('h-3.5 w-3.5', reply.isUpvoted && 'fill-accent')} />
+                            {reply.upvotesCount > 0 && reply.upvotesCount}
+                          </button>
+
+                          {item.isAuthor && !reply.isSolution && (
+                            <Button
+                              variant="outline"
+                              onClick={() => acceptMutation.mutate(reply.id)}
+                              disabled={acceptMutation.isPending}
+                              className="px-2.5 py-1 text-xs font-bold text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                            >
+                              <Check className="h-3.5 w-3.5" /> Accept Solution
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-foreground">{reply.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Reply Composer */}
+            <form onSubmit={handlePostReply} className="mt-6 border-t border-border pt-4">
+              <label className="block text-xs font-bold text-foreground mb-1.5">Write an Answer or Share Advice</label>
+              <textarea
+                rows={3}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Share your solution, helpful code snippet, or link to relevant documentation..."
+                className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+                required
+              />
+              <div className="mt-2.5 flex justify-end">
+                <Button type="submit" disabled={replyMutation.isPending || !replyText.trim()} className="font-bold text-xs">
+                  {replyMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Post Answer
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AskHelpModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    category: 'Academic',
+    urgency: 'Normal',
+    tags: '',
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (body: any) =>
+      apiFetch<{ id: string }>(`/help-requests`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({
+      ...form,
+      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Community Help Desk</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Ask for Help or Advice</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <Field
+            id="help-title"
+            label="Question / Topic Title"
+            placeholder="e.g. How to resolve PyTorch CUDA out-of-memory during LoRA training?"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              id="help-category"
+              label="Category"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              options={['Academic', 'Project / Coding', 'Hackathon', 'Placements / Career', 'Campus Life', 'General'].map((v) => ({ value: v, label: v }))}
+            />
+            <SelectField
+              id="help-urgency"
+              label="Urgency Level"
+              value={form.urgency}
+              onChange={(e) => setForm({ ...form, urgency: e.target.value })}
+              options={['Normal', 'High', 'Urgent'].map((v) => ({ value: v, label: v }))}
+            />
+          </div>
+
+          <Field
+            id="help-tags"
+            label="Topic Tags (comma-separated)"
+            placeholder="e.g. Python, PyTorch, CUDA, Machine Learning"
+            value={form.tags}
+            onChange={(e) => setForm({ ...form, tags: e.target.value })}
+            required
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Details / Error Stack / Problem Description</label>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Provide background context, code snippets, what you have tried, and specific questions..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending} className="font-bold">
+              {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Publish Question
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function HelpCard({
+  item,
+  onSelect,
+}: {
+  item: HelpRequest;
+  onSelect: () => void;
+}) {
+  const queryClient = useQueryClient();
+
+  const upvoteMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ isUpvoted: boolean; upvotesCount: number }>(`/help-requests/${item.id}/upvote`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['help-requests'] }),
+  });
+
+  return (
+    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Tag warm>{item.category}</Tag>
+            <span
+              className={cx(
+                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                item.urgency === 'Urgent'
+                  ? 'bg-rose-500/20 text-rose-500 font-bold'
+                  : item.urgency === 'High'
+                  ? 'bg-amber-500/20 text-amber-500'
+                  : 'bg-secondary text-muted-foreground'
+              )}
+            >
+              {item.urgency}
+            </span>
+            <span
+              className={cx(
+                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                item.status === 'solved'
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : 'bg-accent/20 text-accent'
+              )}
+            >
+              {item.status === 'solved' ? '✓ Solved' : '⏱ Open'}
+            </span>
+          </div>
+          <span className="mono text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+        </div>
+
+        <h3
+          onClick={onSelect}
+          className="mt-3 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
+        >
+          {item.title}
+        </h3>
+
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
+
+        {/* Tags chips */}
+        <div className="mt-3.5 flex flex-wrap gap-1">
+          {item.tags?.map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Avatar user={item.author} size="sm" />
+          <div>
+            <Link href={`/people/${item.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+              {item.author.fullName}
+            </Link>
+            <p className="text-[10px] text-muted-foreground">Amrita {item.campus}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={() => upvoteMutation.mutate()}
+            className={cx(
+              'inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all',
+              item.isUpvoted
+                ? 'border-accent bg-accent/20 text-accent'
+                : 'border-border text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Flame className={cx('h-3.5 w-3.5', item.isUpvoted && 'fill-accent')} />
+            {item.upvotesCount > 0 && item.upvotesCount}
+          </button>
+
+          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
+            <MessageSquare className="h-3.5 w-3.5" />
+            {item.repliesCount} {item.repliesCount === 1 ? 'Answer' : 'Answers'}
+            <ArrowRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpDeskPage() {
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [status, setStatus] = useState('all');
+  const [showAsk, setShowAsk] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const params = useMemo(
+    () => ({
+      search: search || undefined,
+      category: category || undefined,
+      status: status || undefined,
+      page: 1,
+      pageSize: 20,
+    }),
+    [search, category, status]
+  );
+
+  const { data, isLoading, isError, refetch } = useListHelpRequests(params);
+  const items = data?.items ?? [];
+
+  const categories = ['', 'Academic', 'Project / Coding', 'Hackathon', 'Placements / Career', 'Campus Life'];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Peer Support"
+        title="Amrita Help & Doubts Desk."
+        detail="Ask technical blockers, syllabus questions, and placement doubts — get matched with peers & alumni who have the answers."
+        action={
+          <Button data-testid="button-ask-help" onClick={() => setShowAsk(true)}>
+            <HelpCircle className="h-4 w-4" /> Ask for Help
+          </Button>
+        }
+      />
+
+      {/* Category Pills */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setCategory(cat)}
+            className={cx(
+              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+              category === cat
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {cat || 'All Categories'}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+        <label className="relative block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            data-testid="input-help-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search questions, error messages, libraries, or course topics..."
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+
+        <div className="flex rounded-xl border border-border bg-card p-1">
+          {[
+            { label: 'All', value: 'all' },
+            { label: 'Open', value: 'open' },
+            { label: 'Solved ✓', value: 'solved' },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setStatus(tab.value)}
+              className={cx(
+                'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+                status === tab.value ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={HelpCircle}
+          title="No help requests found"
+          detail="Need clarification on a project or course? Ask your question and we'll match you with the right peers."
+          action={<Button onClick={() => setShowAsk(true)}>Ask the first question</Button>}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {items.map((item) => (
+            <HelpCard
+              key={item.id}
+              item={item}
+              onSelect={() => setSelectedId(item.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedId && (
+        <HelpDetailModal
+          requestId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onRefresh={() => refetch()}
+        />
+      )}
+
+      {showAsk && <AskHelpModal onClose={() => setShowAsk(false)} />}
+    </>
+  );
+}
+
+// ==========================================
+// CROSS-CAMPUS CAMPUS BUDDY & LOCAL GUIDES
+// ==========================================
+
+interface CampusGuideInfo {
+  campus: string;
+  tagline: string;
+  highlights: string[];
+  transit: string;
+  foodSpots: string;
+  hackathonHostels: string;
+}
+
+interface CampusBuddyHost {
+  id: string;
+  user: PublicUser;
+  campus: string;
+  department: string;
+  servicesOffered: string[];
+  bio: string;
+  languages: string[];
+  availability: 'Available' | 'Busy' | 'Away';
+  rating: number;
+  reviewsCount: number;
+  createdAt: string;
+}
+
+interface CampusBuddyRequestItem {
+  id: string;
+  requester?: PublicUser;
+  host?: PublicUser;
+  targetCampus: string;
+  visitReason: string;
+  visitDates: string;
+  notes: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+}
+
+function useListCampusBuddies(params: {
+  campus?: string;
+  service?: string;
+  search?: string;
+  availability?: string;
+}) {
+  const queryStr = new URLSearchParams();
+  if (params.campus) queryStr.set('campus', params.campus);
+  if (params.service) queryStr.set('service', params.service);
+  if (params.search) queryStr.set('search', params.search);
+  if (params.availability) queryStr.set('availability', params.availability);
+
+  return useQuery({
+    queryKey: ['campus-buddies', params],
+    queryFn: () =>
+      apiFetch<{ items: CampusBuddyHost[] }>(`/campus-buddies?${queryStr.toString()}`),
+  });
+}
+
+function useCampusGuide(campus: string) {
+  return useQuery({
+    queryKey: ['campus-guide', campus],
+    queryFn: () => apiFetch<{ success: boolean; guide: CampusGuideInfo }>(`/campus-buddies/guide/${campus}`),
+    enabled: !!campus,
+  });
+}
+
+function useMyHostProfile() {
+  return useQuery({
+    queryKey: ['my-campus-buddy-profile'],
+    queryFn: () => apiFetch<{ isHost: boolean; profile: CampusBuddyHost | null }>(`/campus-buddies/my-host-profile`),
+  });
+}
+
+function useMyBuddyRequests() {
+  return useQuery({
+    queryKey: ['my-campus-buddy-requests'],
+    queryFn: () =>
+      apiFetch<{ incoming: CampusBuddyRequestItem[]; outgoing: CampusBuddyRequestItem[] }>(
+        `/campus-buddies/my-requests`
+      ),
+  });
+}
+
+function CampusGuideSpotlight({ campus }: { campus: string }) {
+  const { data } = useCampusGuide(campus);
+  const guide = data?.guide;
+  if (!guide) return null;
+
+  return (
+    <div className="mb-6 rounded-2xl border border-accent/30 bg-gradient-to-br from-card via-card to-accent/5 p-6 shadow-sm">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="mono text-[10px] font-bold uppercase tracking-[.2em] text-accent">Amrita Campus Guide</div>
+          <h3 className="mt-1 text-xl font-bold tracking-[-.03em] text-foreground">
+            Amrita Vishwa Vidyapeetham · {guide.campus}
+          </h3>
+          <p className="text-xs text-muted-foreground">{guide.tagline}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-border bg-card p-3.5">
+          <div className="mono text-[9px] font-bold uppercase tracking-wider text-accent flex items-center gap-1">
+            <Rocket className="h-3 w-3" /> Campus Highlights
+          </div>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {guide.highlights.map((h, i) => (
+              <li key={i} className="line-clamp-2">• {h}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3.5">
+          <div className="mono text-[9px] font-bold uppercase tracking-wider text-accent flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> Transit & Arrival
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{guide.transit}</p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3.5">
+          <div className="mono text-[9px] font-bold uppercase tracking-wider text-accent flex items-center gap-1">
+            <Flame className="h-3 w-3" /> Food & Canteens
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{guide.foodSpots}</p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3.5">
+          <div className="mono text-[9px] font-bold uppercase tracking-wider text-accent flex items-center gap-1">
+            <Building2 className="h-3 w-3" /> Hackathon Stays
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{guide.hackathonHostels}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequestBuddyModal({
+  host,
+  onClose,
+}: {
+  host: CampusBuddyHost;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [reason, setReason] = useState('Hackathon / Competition');
+  const [dates, setDates] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const requestMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean; message: string }>(`/campus-buddies/request`, {
+        method: 'POST',
+        body: JSON.stringify({
+          hostUserId: host.user.id,
+          targetCampus: host.campus,
+          visitReason: reason,
+          visitDates: dates,
+          notes,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-campus-buddy-requests'] });
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    requestMutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Campus Visit Guide</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Request Campus Buddy</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+          <Avatar user={host.user} size="md" />
+          <div>
+            <div className="text-sm font-bold text-foreground">{host.user.fullName}</div>
+            <div className="text-xs text-muted-foreground">Amrita {host.campus} · {host.department}</div>
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <SelectField
+            id="visit-reason"
+            label="Reason for Visit"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            options={[
+              { value: 'Hackathon / Competition', label: 'Hackathon / Tech Competition' },
+              { value: 'Campus Tour', label: 'Campus Tour & Exploration' },
+              { value: 'Research & Lab Visit', label: 'Research & Lab Visit' },
+              { value: 'Inter-Campus Transfer', label: 'Inter-Campus Transfer / Official Visit' },
+              { value: 'General Visit', label: 'General Peer Meetup' },
+            ]}
+          />
+
+          <Field
+            id="visit-dates"
+            label="Expected Dates of Visit"
+            placeholder="e.g. Oct 24 - Oct 26, 2026"
+            value={dates}
+            onChange={(e) => setDates(e.target.value)}
+            required
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Message to Host (optional)</label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Tell them what specific labs you want to see, accommodation advice needed, or arrival times..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={requestMutation.isPending || !dates.trim()} className="font-bold">
+              {requestMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send Visit Request
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function RegisterBuddyModal({
+  initialData,
+  onClose,
+}: {
+  initialData?: CampusBuddyHost | null;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: user } = useGetCurrentUser();
+
+  const [campus, setCampus] = useState(initialData?.campus || user?.campus || 'Bengaluru');
+  const [department, setDepartment] = useState(initialData?.department || user?.department || 'Computer Science & Engineering');
+  const [bio, setBio] = useState(initialData?.bio || '');
+  const [services, setServices] = useState<string[]>(
+    initialData?.servicesOffered || ['Campus Tour', 'Hackathon Host / Stay Advice', 'Local Food & Transport Guide']
+  );
+  const [languages, setLanguages] = useState(initialData?.languages?.join(', ') || 'English, Hindi');
+  const [availability, setAvailability] = useState<'Available' | 'Busy' | 'Away'>(initialData?.availability || 'Available');
+
+  const registerMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>(`/campus-buddies/register-host`, {
+        method: 'POST',
+        body: JSON.stringify({
+          campus,
+          department,
+          servicesOffered: services,
+          bio,
+          languages: languages.split(',').map((l) => l.trim()).filter(Boolean),
+          availability,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-campus-buddy-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['campus-buddies'] });
+      onClose();
+    },
+  });
+
+  const availableServices = [
+    'Campus Tour',
+    'Hackathon Host / Stay Advice',
+    'Lab & Research Guide',
+    'Local Food & Transport Guide',
+    'Library & Study Spot Tour',
+    'Tech Industry & Placement Guide',
+    'Research Symposium Host',
+  ];
+
+  const toggleService = (s: string) => {
+    setServices((prev) => (prev.includes(s) ? prev.filter((item) => item !== s) : [...prev, s]));
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    registerMutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Volunteer & Host</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
+              {initialData ? 'Update Buddy Profile' : 'Become a Campus Buddy'}
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              id="buddy-campus"
+              label="Campus"
+              value={campus}
+              onChange={(e) => setCampus(e.target.value)}
+              options={campuses.map((c) => ({ value: c, label: c }))}
+            />
+            <SelectField
+              id="buddy-availability"
+              label="Current Availability"
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value as any)}
+              options={[
+                { value: 'Available', label: '🟢 Available' },
+                { value: 'Busy', label: '🟡 Busy with Exams' },
+                { value: 'Away', label: '⚪ Away' },
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">Services You Can Offer Visiting Peers</label>
+            <div className="flex flex-wrap gap-2">
+              {availableServices.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleService(s)}
+                  className={cx(
+                    'rounded-xl px-3 py-1.5 text-xs font-bold transition-all border',
+                    services.includes(s)
+                      ? 'border-accent bg-accent text-primary'
+                      : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {services.includes(s) ? '✓ ' : '+ '}
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Field
+            id="buddy-languages"
+            label="Languages Spoken (comma-separated)"
+            placeholder="e.g. English, Kannada, Hindi, Tamil"
+            value={languages}
+            onChange={(e) => setLanguages(e.target.value)}
+            required
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Host Bio & Welcome Note</label>
+            <textarea
+              rows={3}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="e.g. 3rd year CSE student at Bengaluru campus. Excited to show visitors our Robotics lab and share Bangalore travel tips!"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={registerMutation.isPending || !bio.trim()} className="font-bold">
+              {registerMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Host Profile
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function MyBuddyRequestsModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading, refetch } = useMyBuddyRequests();
+
+  const respondMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiFetch<{ success: boolean }>(`/campus-buddies/requests/${id}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['my-campus-buddy-requests'] });
+    },
+  });
+
+  const incoming = data?.incoming ?? [];
+  const outgoing = data?.outgoing ?? [];
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Visits & Connections</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">My Campus Buddy Requests</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <LoadingState rows={3} />
+        ) : (
+          <div className="mt-6 space-y-6">
+            {/* Incoming Requests (For Hosts) */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                Incoming Visit Requests ({incoming.length})
+              </h3>
+              {incoming.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No incoming visitor requests at the moment.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {incoming.map((req) => (
+                    <div key={req.id} className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                          {req.requester && <Avatar user={req.requester} size="sm" />}
+                          <div>
+                            <div className="text-xs font-bold text-foreground">{req.requester?.fullName}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Visiting Amrita {req.targetCampus} · {req.visitDates}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={cx(
+                            'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase self-start sm:self-auto',
+                            req.status === 'accepted'
+                              ? 'bg-emerald-500/20 text-emerald-500'
+                              : req.status === 'declined'
+                              ? 'bg-rose-500/20 text-rose-500'
+                              : 'bg-amber-500/20 text-amber-500'
+                          )}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 text-xs text-foreground bg-secondary/30 p-2.5 rounded-lg">
+                        <span className="font-bold text-accent">{req.visitReason}: </span>
+                        {req.notes || 'No extra notes provided.'}
+                      </div>
+
+                      {req.status === 'pending' && (
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            className="text-rose-500 border-rose-500/30 px-3 py-1 text-xs font-bold"
+                            onClick={() => respondMutation.mutate({ id: req.id, status: 'declined' })}
+                            disabled={respondMutation.isPending}
+                          >
+                            Decline
+                          </Button>
+                          <Button
+                            className="px-3 py-1 text-xs font-bold"
+                            onClick={() => respondMutation.mutate({ id: req.id, status: 'accepted' })}
+                            disabled={respondMutation.isPending}
+                          >
+                            Accept & Connect
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Outgoing Requests (For Visitors) */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                Sent Guide Requests ({outgoing.length})
+              </h3>
+              {outgoing.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  You haven't requested any campus buddy guides yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {outgoing.map((req) => (
+                    <div key={req.id} className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {req.host && <Avatar user={req.host} size="sm" />}
+                          <div>
+                            <div className="text-xs font-bold text-foreground">Host: {req.host?.fullName}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Amrita {req.targetCampus} · {req.visitDates}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={cx(
+                            'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase',
+                            req.status === 'accepted'
+                              ? 'bg-emerald-500/20 text-emerald-500'
+                              : req.status === 'declined'
+                              ? 'bg-rose-500/20 text-rose-500'
+                              : 'bg-amber-500/20 text-amber-500'
+                          )}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+
+                      {req.host && req.status === 'accepted' && (
+                        <div className="mt-3 flex justify-end">
+                          <Link
+                            href={`/messages/${req.host.id}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-primary"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" /> Message Host
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CampusBuddyPage() {
+  const { data: hostProfileData } = useMyHostProfile();
+  const [selectedCampus, setSelectedCampus] = useState('Bengaluru');
+  const [search, setSearch] = useState('');
+  const [selectedHostForRequest, setSelectedHostForRequest] = useState<CampusBuddyHost | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
+
+  const params = useMemo(
+    () => ({
+      campus: selectedCampus || undefined,
+      search: search || undefined,
+    }),
+    [selectedCampus, search]
+  );
+
+  const { data, isLoading, isError, refetch } = useListCampusBuddies(params);
+  const items = data?.items ?? [];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Inter-Campus Network"
+        title="Cross-Campus Buddy & Host."
+        detail="Traveling to another Amrita campus for hackathons, research symposiums, or sports? Connect with welcoming peer hosts and local guides."
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setShowRequests(true)}>
+              <CalendarDays className="h-4 w-4" /> My Visit Requests
+            </Button>
+            <Button onClick={() => setShowRegister(true)}>
+              <MapPin className="h-4 w-4" />
+              {hostProfileData?.isHost ? 'Edit Buddy Profile' : 'Become a Campus Buddy'}
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Campus Selector Pills */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+        {campuses.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setSelectedCampus(c)}
+            className={cx(
+              'rounded-xl px-4 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+              selectedCampus === c
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {/* Campus Guide Spotlight Card */}
+      <CampusGuideSpotlight campus={selectedCampus} />
+
+      {/* Search Input */}
+      <div className="mb-6">
+        <label className="relative block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${selectedCampus} hosts by name, languages, or services offered...`}
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+      </div>
+
+      {/* Campus Buddies Roster */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          Local Campus Buddies & Hosts in {selectedCampus} ({items.length})
+        </h2>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={MapPin}
+          title={`No buddy hosts registered in ${selectedCampus} yet`}
+          detail="Be the first to represent your campus and welcome visiting peers!"
+          action={<Button onClick={() => setShowRegister(true)}>Register as a Host</Button>}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-3">
+          {items.map((host) => (
+            <div
+              key={host.id}
+              className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar user={host.user} size="md" />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/people/${host.user.id}`} className="text-sm font-bold text-foreground hover:text-accent">
+                          {host.user.fullName}
+                        </Link>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{roleLabels[host.user.role]} · {host.department}</p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={cx(
+                      'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                      host.availability === 'Available'
+                        ? 'bg-emerald-500/15 text-emerald-500'
+                        : host.availability === 'Busy'
+                        ? 'bg-amber-500/15 text-amber-500'
+                        : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {host.availability}
+                  </span>
+                </div>
+
+                <p className="mt-3.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{host.bio}</p>
+
+                {/* Services Chips */}
+                <div className="mt-4 flex flex-wrap gap-1">
+                  {host.servicesOffered.map((s) => (
+                    <Tag key={s}>{s}</Tag>
+                  ))}
+                </div>
+
+                {/* Languages */}
+                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <Globe className="h-3 w-3 text-accent" />
+                  <span>Speaks: {host.languages.join(', ')}</span>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
+                <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                  <Star className="h-3.5 w-3.5 fill-amber-500" />
+                  <span>{host.rating}</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">({host.reviewsCount} reviews)</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`/messages/${host.user.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card p-2 text-xs font-bold text-foreground hover:bg-muted"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 text-accent" />
+                  </Link>
+
+                  <Button
+                    variant="outline"
+                    className="px-3 py-1.5 text-xs font-bold"
+                    onClick={() => setSelectedHostForRequest(host)}
+                  >
+                    Request Guide <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedHostForRequest && (
+        <RequestBuddyModal
+          host={selectedHostForRequest}
+          onClose={() => setSelectedHostForRequest(null)}
+        />
+      )}
+
+      {showRegister && (
+        <RegisterBuddyModal
+          initialData={hostProfileData?.profile}
+          onClose={() => setShowRegister(false)}
+        />
+      )}
+
+      {showRequests && <MyBuddyRequestsModal onClose={() => setShowRequests(false)} />}
+    </>
+  );
+}
+
+// ==========================================
+// RESEARCH & FACULTY COLLABORATION HUB
+// ==========================================
+
+interface OpenPosition {
+  roleTitle: string;
+  spots: number;
+  prerequisites: string[];
+}
+
+interface Publication {
+  title: string;
+  venue: string;
+  link?: string;
+}
+
+interface ResearchApplication {
+  id: string;
+  applicant: PublicUser;
+  roleAppliedFor?: string;
+  statementOfInterest: string;
+  relevantSkills: string[];
+  status: 'pending' | 'accepted' | 'declined';
+  appliedAt: string;
+}
+
+interface ResearchProject {
+  id: string;
+  principalInvestigator: PublicUser;
+  coInvestigators?: PublicUser[];
+  title: string;
+  labName: string;
+  fundingSource?: string;
+  campus: string;
+  department: string;
+  category: string;
+  abstract: string;
+  objectives: string[];
+  openPositions: OpenPosition[];
+  publications: Publication[];
+  status: 'recruiting' | 'active' | 'completed';
+  applicationsCount: number;
+  applications?: ResearchApplication[];
+  myApplication?: {
+    id: string;
+    roleAppliedFor?: string;
+    status: string;
+    appliedAt: string;
+  } | null;
+  isBookmarked: boolean;
+  isPI: boolean;
+  createdAt: string;
+}
+
+function useListResearchProjects(params: {
+  campus?: string;
+  category?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const queryStr = new URLSearchParams();
+  if (params.campus) queryStr.set('campus', params.campus);
+  if (params.category) queryStr.set('category', params.category);
+  if (params.status && params.status !== 'all') queryStr.set('status', params.status);
+  if (params.search) queryStr.set('search', params.search);
+  if (params.page) queryStr.set('page', String(params.page));
+  if (params.pageSize) queryStr.set('pageSize', String(params.pageSize));
+
+  return useQuery({
+    queryKey: ['research-projects', params],
+    queryFn: () =>
+      apiFetch<{ items: ResearchProject[]; total: number; page: number; pageSize: number }>(
+        `/research-projects?${queryStr.toString()}`
+      ),
+  });
+}
+
+function useResearchProjectDetail(id: string | null) {
+  return useQuery({
+    queryKey: ['research-project-detail', id],
+    queryFn: () => apiFetch<ResearchProject>(`/research-projects/${id}`),
+    enabled: !!id,
+  });
+}
+
+function ApplyResearchModal({
+  project,
+  onClose,
+  onSuccess,
+}: {
+  project: ResearchProject;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [role, setRole] = useState(
+    project.openPositions?.[0]?.roleTitle || 'Research Assistant'
+  );
+  const [statement, setStatement] = useState('');
+  const [skills, setSkills] = useState('');
+
+  const applyMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean; message: string }>(`/research-projects/${project.id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({
+          roleAppliedFor: role,
+          statementOfInterest: statement,
+          relevantSkills: skills.split(',').map((s) => s.trim()).filter(Boolean),
+        }),
+      }),
+    onSuccess: () => {
+      onSuccess();
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    applyMutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Research Collaboration</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Express Research Interest</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-3.5">
+          <div className="text-xs font-bold text-foreground">{project.title}</div>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            PI: Prof. {project.principalInvestigator.fullName} · {project.labName} (Amrita {project.campus})
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          {project.openPositions?.length > 0 ? (
+            <SelectField
+              id="apply-role"
+              label="Select Role / Position"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              options={project.openPositions.map((p) => ({
+                value: p.roleTitle,
+                label: `${p.roleTitle} (${p.spots} spots)`,
+              }))}
+            />
+          ) : (
+            <Field
+              id="apply-role"
+              label="Role Applied For"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              required
+            />
+          )}
+
+          <Field
+            id="apply-skills"
+            label="Relevant Skills & Technologies (comma-separated)"
+            placeholder="e.g. PyTorch, ROS2, Computer Vision, C++"
+            value={skills}
+            onChange={(e) => setSkills(e.target.value)}
+            required
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">
+              Statement of Interest & Prior Background
+            </label>
+            <textarea
+              rows={4}
+              value={statement}
+              onChange={(e) => setStatement(e.target.value)}
+              placeholder="Highlight relevant course projects, research experience, or why you want to contribute to this lab..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={applyMutation.isPending || !statement.trim()} className="font-bold">
+              {applyMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Submit Application
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CreateResearchModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { data: user } = useGetCurrentUser();
+  const [form, setForm] = useState({
+    title: '',
+    labName: '',
+    fundingSource: '',
+    campus: user?.campus || 'Coimbatore',
+    department: user?.department || 'Computer Science & Engineering',
+    category: 'Artificial Intelligence',
+    abstract: '',
+    objectives: '',
+    openRoleTitle: 'Undergraduate Research Assistant',
+    openRoleSpots: '2',
+    openRoleSkills: 'PyTorch, Python, OpenCV',
+    pubTitle: '',
+    pubVenue: '',
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => {
+      const openPositions = form.openRoleTitle.trim()
+        ? [
+            {
+              roleTitle: form.openRoleTitle.trim(),
+              spots: Number(form.openRoleSpots) || 1,
+              prerequisites: form.openRoleSkills.split(',').map((s) => s.trim()).filter(Boolean),
+            },
+          ]
+        : [];
+
+      const publications = form.pubTitle.trim()
+        ? [
+            {
+              title: form.pubTitle.trim(),
+              venue: form.pubVenue.trim() || 'IEEE / ACM Conference',
+            },
+          ]
+        : [];
+
+      return apiFetch<{ success: boolean; id: string }>(`/research-projects`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: form.title,
+          labName: form.labName,
+          fundingSource: form.fundingSource,
+          campus: form.campus,
+          department: form.department,
+          category: form.category,
+          abstract: form.abstract,
+          objectives: form.objectives.split('\n').map((o) => o.trim()).filter(Boolean),
+          openPositions,
+          publications,
+        }),
+      });
+    },
+    onSuccess: () => {
+      onSuccess();
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Faculty & Lab Initiative</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Post Research Project / Call</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <Field
+            id="proj-title"
+            label="Research Project Title"
+            placeholder="e.g. Edge-AI Autonomous Navigation for Precision Agriculture"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="proj-lab"
+              label="Lab / Research Center Name"
+              placeholder="e.g. HuT Labs / ACCI"
+              value={form.labName}
+              onChange={(e) => setForm({ ...form, labName: e.target.value })}
+              required
+            />
+            <Field
+              id="proj-funding"
+              label="Grant / Funding Source (Optional)"
+              placeholder="e.g. DST-SERB / Amrita Seed Grant - ₹15 Lakhs"
+              value={form.fundingSource}
+              onChange={(e) => setForm({ ...form, fundingSource: e.target.value })}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SelectField
+              id="proj-campus"
+              label="Campus"
+              value={form.campus}
+              onChange={(e) => setForm({ ...form, campus: e.target.value })}
+              options={campuses.map((c) => ({ value: c, label: c }))}
+            />
+            <SelectField
+              id="proj-category"
+              label="Domain Category"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              options={[
+                'Artificial Intelligence',
+                'Robotics & IoT',
+                'Biotechnology & Healthcare',
+                'Cyber Security',
+                'Sustainable Energy',
+                'Computational Systems',
+                'Interdisciplinary',
+              ].map((c) => ({ value: c, label: c }))}
+            />
+            <SelectField
+              id="proj-dept"
+              label="Department"
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
+              options={departments.map((d) => ({ value: d, label: d }))}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Project Abstract</label>
+            <textarea
+              rows={3}
+              value={form.abstract}
+              onChange={(e) => setForm({ ...form, abstract: e.target.value })}
+              placeholder="Provide a comprehensive summary of the problem statement, proposed methodology, and expected outcomes..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Key Research Objectives (one per line)</label>
+            <textarea
+              rows={3}
+              value={form.objectives}
+              onChange={(e) => setForm({ ...form, objectives: e.target.value })}
+              placeholder="Implement real-time visual odometry&#10;Deploy on Nvidia Jetson edge platform&#10;Conduct field trials in rural farmlands"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+            />
+          </div>
+
+          {/* Open Position Section */}
+          <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-accent">Open Research Role (Optional)</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                id="role-title"
+                label="Role Title"
+                placeholder="e.g. Undergraduate Research Assistant"
+                value={form.openRoleTitle}
+                onChange={(e) => setForm({ ...form, openRoleTitle: e.target.value })}
+              />
+              <Field
+                id="role-spots"
+                label="Available Spots"
+                placeholder="e.g. 2"
+                value={form.openRoleSpots}
+                onChange={(e) => setForm({ ...form, openRoleSpots: e.target.value })}
+              />
+            </div>
+            <Field
+              id="role-skills"
+              label="Prerequisite Skills (comma-separated)"
+              placeholder="e.g. PyTorch, ROS2, Python, OpenCV"
+              value={form.openRoleSkills}
+              onChange={(e) => setForm({ ...form, openRoleSkills: e.target.value })}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending || !form.title.trim()} className="font-bold">
+              {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+              Publish Research Project
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ResearchDetailModal({
+  projectId,
+  onClose,
+  onApply,
+  onRefresh,
+}: {
+  projectId: string;
+  onClose: () => void;
+  onApply: (project: ResearchProject) => void;
+  onRefresh: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: project, isLoading, refetch } = useResearchProjectDetail(projectId);
+
+  const respondMutation = useMutation({
+    mutationFn: ({ appId, status }: { appId: string; status: string }) =>
+      apiFetch<{ success: boolean }>(`/research-projects/${projectId}/applications/${appId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+      onRefresh();
+    },
+  });
+
+  if (isLoading || !project) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+          <LoadingState rows={4} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tag warm>{project.category}</Tag>
+              <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+              {project.fundingSource && (
+                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
+                  {project.fundingSource}
+                </span>
+              )}
+            </div>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{project.title}</h2>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">{project.labName} · {project.department}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* PI Card */}
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-secondary/30 p-3.5">
+          <div className="flex items-center gap-3">
+            <Avatar user={project.principalInvestigator} size="md" />
+            <div>
+              <div className="text-xs font-bold text-foreground">
+                Principal Investigator: Prof. {project.principalInvestigator.fullName}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {project.principalInvestigator.headline || `${project.principalInvestigator.department}`}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href={`/messages/${project.principalInvestigator.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
+          >
+            <MessageSquare className="h-3.5 w-3.5 text-accent" /> Message PI
+          </Link>
+        </div>
+
+        {/* Abstract */}
+        <div className="mt-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Abstract</h3>
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground">{project.abstract}</p>
+        </div>
+
+        {/* Research Objectives */}
+        {project.objectives?.length > 0 && (
+          <div className="mt-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Key Objectives</h3>
+            <ul className="mt-2 space-y-1.5">
+              {project.objectives.map((obj, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-foreground">
+                  <Check className="h-4 w-4 shrink-0 text-accent mt-0.5" />
+                  <span>{obj}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Open Positions */}
+        {project.openPositions?.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-accent/30 bg-accent/5 p-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+              <Rocket className="h-4 w-4" /> Open Student & Fellow Positions
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {project.openPositions.map((pos, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground">{pos.roleTitle}</span>
+                    <span className="rounded bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent">
+                      {pos.spots} {pos.spots === 1 ? 'Spot' : 'Spots'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {pos.prerequisites.map((p) => (
+                      <Tag key={p}>{p}</Tag>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Publications */}
+        {project.publications?.length > 0 && (
+          <div className="mt-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selected Publications</h3>
+            <div className="mt-2 space-y-2">
+              {project.publications.map((pub, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-foreground">{pub.title}</div>
+                    <div className="text-[10px] text-muted-foreground">{pub.venue}</div>
+                  </div>
+                  {pub.link && (
+                    <a
+                      href={pub.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-accent hover:underline flex items-center gap-1"
+                    >
+                      View <ArrowUpRight className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Applicant Review Queue (For Principal Investigator Only) */}
+        {project.isPI && project.applications && (
+          <div className="mt-6 border-t border-border pt-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Applicant Review Queue ({project.applications.length})
+            </h3>
+
+            {project.applications.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                No student research applications received yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {project.applications.map((app) => (
+                  <div key={app.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar user={app.applicant} size="sm" />
+                        <div>
+                          <div className="text-xs font-bold text-foreground">
+                            {app.applicant.fullName} · <span className="text-accent">{app.roleAppliedFor}</span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Amrita {app.applicant.campus} · Applied {relative(app.appliedAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span
+                        className={cx(
+                          'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase self-start sm:self-auto',
+                          app.status === 'accepted'
+                            ? 'bg-emerald-500/20 text-emerald-500'
+                            : app.status === 'declined'
+                            ? 'bg-rose-500/20 text-rose-500'
+                            : 'bg-amber-500/20 text-amber-500'
+                        )}
+                      >
+                        {app.status}
+                      </span>
+                    </div>
+
+                    <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-foreground bg-secondary/30 p-2.5 rounded-lg">
+                      {app.statementOfInterest}
+                    </p>
+
+                    {app.relevantSkills?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {app.relevantSkills.map((s) => (
+                          <Tag key={s}>{s}</Tag>
+                        ))}
+                      </div>
+                    )}
+
+                    {app.status === 'pending' && (
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          className="text-rose-500 border-rose-500/30 px-3 py-1 text-xs font-bold"
+                          onClick={() => respondMutation.mutate({ appId: app.id, status: 'declined' })}
+                          disabled={respondMutation.isPending}
+                        >
+                          Decline
+                        </Button>
+                        <Button
+                          className="px-3 py-1 text-xs font-bold"
+                          onClick={() => respondMutation.mutate({ appId: app.id, status: 'accepted' })}
+                          disabled={respondMutation.isPending}
+                        >
+                          Accept to Lab Roster
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+          <Button variant="quiet" onClick={onClose}>
+            Close
+          </Button>
+
+          {!project.isPI && (
+            <div>
+              {project.myApplication ? (
+                <span className="rounded-xl border border-border bg-secondary px-4 py-2 text-xs font-bold text-foreground">
+                  Application Status: {project.myApplication.status.toUpperCase()}
+                </span>
+              ) : (
+                <Button
+                  onClick={() => {
+                    onClose();
+                    onApply(project);
+                  }}
+                  className="font-bold"
+                >
+                  <Rocket className="h-4 w-4" /> Express Research Interest
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResearchProjectCard({
+  project,
+  onSelect,
+  onApply,
+}: {
+  project: ResearchProject;
+  onSelect: () => void;
+  onApply: () => void;
+}) {
+  const queryClient = useQueryClient();
+
+  const bookmarkMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ isBookmarked: boolean }>(`/research-projects/${project.id}/bookmark`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['research-projects'] }),
+  });
+
+  return (
+    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Tag warm>{project.category}</Tag>
+            <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+            {project.status === 'recruiting' && (
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
+                Recruiting Open 🔬
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => bookmarkMutation.mutate()}
+            className={cx(
+              'rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors',
+              project.isBookmarked && 'text-accent'
+            )}
+          >
+            <Bookmark className={cx('h-4 w-4', project.isBookmarked && 'fill-accent')} />
+          </button>
+        </div>
+
+        <h3
+          onClick={onSelect}
+          className="mt-3 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
+        >
+          {project.title}
+        </h3>
+
+        <div className="mt-1 text-xs font-semibold text-muted-foreground">
+          {project.labName} {project.fundingSource && `· ${project.fundingSource}`}
+        </div>
+
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.abstract}</p>
+
+        {/* Open Positions preview */}
+        {project.openPositions?.length > 0 && (
+          <div className="mt-3.5 flex flex-wrap gap-1">
+            {project.openPositions.map((pos, i) => (
+              <span key={i} className="rounded-lg bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground">
+                🎯 {pos.roleTitle} ({pos.spots} open)
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Avatar user={project.principalInvestigator} size="sm" />
+          <div>
+            <Link href={`/people/${project.principalInvestigator.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+              Prof. {project.principalInvestigator.fullName}
+            </Link>
+            <p className="text-[10px] text-muted-foreground">{project.department}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
+            View Details <ArrowRight className="h-3 w-3" />
+          </Button>
+
+          {!project.isPI && !project.myApplication && (
+            <Button className="px-3 py-1.5 text-xs font-bold" onClick={onApply}>
+              Apply
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResearchPage() {
+  const { data: user } = useGetCurrentUser();
+  const [selectedCampus, setSelectedCampus] = useState('');
+  const [category, setCategory] = useState('');
+  const [status, setStatus] = useState('all');
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
+  const [applyingProject, setApplyingProject] = useState<ResearchProject | null>(null);
+
+  const params = useMemo(
+    () => ({
+      campus: selectedCampus || undefined,
+      category: category || undefined,
+      status: status || undefined,
+      search: search || undefined,
+      page: 1,
+      pageSize: 20,
+    }),
+    [selectedCampus, category, status, search]
+  );
+
+  const { data, isLoading, isError, refetch } = useListResearchProjects(params);
+  const items = data?.items ?? [];
+
+  const categories = [
+    '',
+    'Artificial Intelligence',
+    'Robotics & IoT',
+    'Biotechnology & Healthcare',
+    'Cyber Security',
+    'Sustainable Energy',
+    'Computational Systems',
+  ];
+
+  const isFacultyOrResearcher = user?.role === 'faculty' || user?.role === 'researcher' || user?.role === 'admin';
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Academic Excellence"
+        title="Research & Faculty Collaboration."
+        detail="Discover funded research grants, join interdisciplinary lab initiatives, and collaborate on high-impact publications with faculty across all Amrita campuses."
+        action={
+          <div className="flex items-center gap-2">
+            {isFacultyOrResearcher && (
+              <Button data-testid="button-post-research" onClick={() => setShowCreate(true)}>
+                <BookOpen className="h-4 w-4" /> Post Research Project
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      {/* Category Filter Pills */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setCategory(cat)}
+            className={cx(
+              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+              category === cat
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {cat || 'All Research Fields'}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters & Search */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <label className="relative block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search research topics, lab names, grants, or required skills (e.g. PyTorch, ROS2)..."
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+
+        <select
+          value={selectedCampus}
+          onChange={(e) => setSelectedCampus(e.target.value)}
+          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none"
+        >
+          <option value="">All Campuses</option>
+          {campuses.map((c) => (
+            <option key={c} value={c}>
+              Amrita {c}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex rounded-xl border border-border bg-card p-1">
+          {[
+            { label: 'All', value: 'all' },
+            { label: 'Recruiting 🔬', value: 'recruiting' },
+            { label: 'Active', value: 'active' },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setStatus(tab.value)}
+              className={cx(
+                'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+                status === tab.value ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={BookOpen}
+          title="No research projects found"
+          detail="Faculty and student research calls will appear here. Start a new project or adjust your filters."
+          action={isFacultyOrResearcher ? <Button onClick={() => setShowCreate(true)}>Post Research Call</Button> : undefined}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {items.map((project) => (
+            <ResearchProjectCard
+              key={project.id}
+              project={project}
+              onSelect={() => setSelectedDetailId(project.id)}
+              onApply={() => setApplyingProject(project)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedDetailId && (
+        <ResearchDetailModal
+          projectId={selectedDetailId}
+          onClose={() => setSelectedDetailId(null)}
+          onApply={(proj) => setApplyingProject(proj)}
+          onRefresh={() => refetch()}
+        />
+      )}
+
+      {applyingProject && (
+        <ApplyResearchModal
+          project={applyingProject}
+          onClose={() => setApplyingProject(null)}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {showCreate && (
+        <CreateResearchModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+    </>
+  );
+}
+
+// ==========================================
+// PROJECT SHOWCASE & INNOVATION GALLERY
+// ==========================================
+
+interface ProjectShowcaseComment {
+  id: string;
+  author: PublicUser;
+  text: string;
+  createdAt: string;
+}
+
+interface ProjectShowcase {
+  id: string;
+  author: PublicUser;
+  teamMembers: PublicUser[];
+  title: string;
+  tagline: string;
+  description: string;
+  category: string;
+  techStack: string[];
+  campus: string;
+  department: string;
+  githubUrl?: string;
+  liveDemoUrl?: string;
+  videoUrl?: string;
+  imageUrl?: string;
+  award?: string;
+  upvotesCount: number;
+  isUpvoted: boolean;
+  comments: ProjectShowcaseComment[];
+  commentsCount: number;
+  isAuthor: boolean;
+  createdAt: string;
+}
+
+function useListShowcaseProjects(params: {
+  category?: string;
+  campus?: string;
+  search?: string;
+  sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const queryStr = new URLSearchParams();
+  if (params.category) queryStr.set('category', params.category);
+  if (params.campus) queryStr.set('campus', params.campus);
+  if (params.search) queryStr.set('search', params.search);
+  if (params.sortBy) queryStr.set('sortBy', params.sortBy);
+  if (params.page) queryStr.set('page', String(params.page));
+  if (params.pageSize) queryStr.set('pageSize', String(params.pageSize));
+
+  return useQuery({
+    queryKey: ['showcase-projects', params],
+    queryFn: () =>
+      apiFetch<{ items: ProjectShowcase[]; total: number; page: number; pageSize: number }>(
+        `/showcase?${queryStr.toString()}`
+      ),
+  });
+}
+
+function useShowcaseProjectDetail(id: string | null) {
+  return useQuery({
+    queryKey: ['showcase-project-detail', id],
+    queryFn: () => apiFetch<ProjectShowcase>(`/showcase/${id}`),
+    enabled: !!id,
+  });
+}
+
+function CreateShowcaseModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { data: user } = useGetCurrentUser();
+  const [form, setForm] = useState({
+    title: '',
+    tagline: '',
+    description: '',
+    category: 'AI / ML',
+    techStack: 'React, Python, PyTorch',
+    campus: user?.campus || 'Amaravati',
+    department: user?.department || 'Computer Science & Engineering',
+    githubUrl: '',
+    liveDemoUrl: '',
+    imageUrl: '',
+    award: '',
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean; id: string }>(`/showcase`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          techStack: form.techStack.split(',').map((t) => t.trim()).filter(Boolean),
+        }),
+      }),
+    onSuccess: () => {
+      onSuccess();
+      onClose();
+    },
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Innovation & Demos</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Showcase Your Project</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <Field
+            id="showcase-title"
+            label="Project Title"
+            placeholder="e.g. Amrita RoverBot: Autonomous Campus Delivery Rover"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+
+          <Field
+            id="showcase-tagline"
+            label="One-line Tagline / Pitch"
+            placeholder="e.g. 4WD LiDAR SLAM ground rover delivering lab hardware across campus"
+            value={form.tagline}
+            onChange={(e) => setForm({ ...form, tagline: e.target.value })}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SelectField
+              id="showcase-category"
+              label="Category"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              options={[
+                'AI / ML',
+                'Web & Mobile',
+                'Robotics / IoT',
+                'Cyber Security',
+                'Healthcare Tech',
+                'Blockchain',
+                'Open Source',
+              ].map((c) => ({ value: c, label: c }))}
+            />
+            <SelectField
+              id="showcase-campus"
+              label="Campus"
+              value={form.campus}
+              onChange={(e) => setForm({ ...form, campus: e.target.value })}
+              options={campuses.map((c) => ({ value: c, label: c }))}
+            />
+            <SelectField
+              id="showcase-dept"
+              label="Department"
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
+              options={departments.map((d) => ({ value: d, label: d }))}
+            />
+          </div>
+
+          <Field
+            id="showcase-tech"
+            label="Tech Stack & Tools (comma-separated)"
+            placeholder="e.g. ROS2, Python, LiDAR, React, FastAPI, Jetson Orin"
+            value={form.techStack}
+            onChange={(e) => setForm({ ...form, techStack: e.target.value })}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="showcase-github"
+              label="GitHub Repository URL (Optional)"
+              placeholder="https://github.com/username/project"
+              value={form.githubUrl}
+              onChange={(e) => setForm({ ...form, githubUrl: e.target.value })}
+            />
+            <Field
+              id="showcase-demo"
+              label="Live Demo / Website URL (Optional)"
+              placeholder="https://myproject.dev"
+              value={form.liveDemoUrl}
+              onChange={(e) => setForm({ ...form, liveDemoUrl: e.target.value })}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="showcase-image"
+              label="Cover Image / Banner URL (Optional)"
+              placeholder="https://images.unsplash.com/..."
+              value={form.imageUrl}
+              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+            />
+            <Field
+              id="showcase-award"
+              label="Hackathon / Award Recognition (Optional)"
+              placeholder="e.g. 🏆 1st Prize · Smart India Hackathon 2025"
+              value={form.award}
+              onChange={(e) => setForm({ ...form, award: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">Project Description & Architecture</label>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Explain how it was built, the architecture, challenges solved, and how it impacts users..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending || !form.title.trim()} className="font-bold">
+              {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+              Publish Showcase
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ShowcaseDetailModal({
+  projectId,
+  onClose,
+  onRefresh,
+}: {
+  projectId: string;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: project, isLoading, refetch } = useShowcaseProjectDetail(projectId);
+  const [commentText, setCommentText] = useState('');
+
+  const upvoteMutation = useMutation({
+    mutationFn: () => apiFetch<{ success: boolean }>(`/showcase/${projectId}/upvote`, { method: 'POST' }),
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['showcase-projects'] });
+      onRefresh();
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>(`/showcase/${projectId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ text: commentText }),
+      }),
+    onSuccess: () => {
+      setCommentText('');
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['showcase-projects'] });
+      onRefresh();
+    },
+  });
+
+  if (isLoading || !project) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+          <LoadingState rows={4} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tag warm>{project.category}</Tag>
+              <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+              {project.award && (
+                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold text-amber-500 flex items-center gap-1">
+                  <Trophy className="h-3 w-3" /> {project.award}
+                </span>
+              )}
+            </div>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{project.title}</h2>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{project.tagline}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Links bar & Upvote */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary/30 p-3.5">
+          <div className="flex items-center gap-2">
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
+              >
+                <Code className="h-3.5 w-3.5 text-accent" /> GitHub Repository
+              </a>
+            )}
+            {project.liveDemoUrl && (
+              <a
+                href={project.liveDemoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
+              >
+                <Globe className="h-3.5 w-3.5 text-accent" /> Live Demo <ArrowUpRight className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => upvoteMutation.mutate()}
+            className={cx(
+              'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm',
+              project.isUpvoted
+                ? 'bg-rose-500 text-white shadow-rose-500/20'
+                : 'border border-border bg-card text-foreground hover:bg-muted'
+            )}
+          >
+            <Flame className={cx('h-4 w-4', project.isUpvoted && 'fill-white')} />
+            <span>{project.upvotesCount} Upvotes</span>
+          </button>
+        </div>
+
+        {/* Media preview */}
+        {project.imageUrl && (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+            <img src={project.imageUrl} alt={project.title} className="h-64 w-full object-cover" />
+          </div>
+        )}
+
+        {/* Tech Stack */}
+        <div className="mt-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tech Stack & Tools</h3>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {project.techStack.map((tech) => (
+              <span key={tech} className="rounded-lg bg-secondary px-3 py-1 text-xs font-bold text-foreground">
+                ⚡ {tech}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="mt-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">About the Project</h3>
+          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground bg-card p-4 rounded-xl border border-border">
+            {project.description}
+          </p>
+        </div>
+
+        {/* Team Members */}
+        <div className="mt-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Creators & Team</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5">
+              <Avatar user={project.author} size="sm" />
+              <div>
+                <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                  {project.author.fullName} (Lead)
+                </Link>
+                <div className="text-[10px] text-muted-foreground">{project.author.department}</div>
+              </div>
+            </div>
+
+            {project.teamMembers?.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5">
+                <Avatar user={m} size="sm" />
+                <div>
+                  <Link href={`/people/${m.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                    {m.fullName}
+                  </Link>
+                  <div className="text-[10px] text-muted-foreground">{m.department}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Comments & Discussion */}
+        <div className="mt-6 border-t border-border pt-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+            <MessageSquare className="h-4 w-4 text-accent" /> Feedback & Discussion ({project.comments?.length || 0})
+          </h3>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (commentText.trim()) commentMutation.mutate();
+            }}
+            className="flex gap-2 mb-4"
+          >
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Leave feedback, ask about tech stack, or suggest features..."
+              className="flex-1 rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-accent"
+            />
+            <Button type="submit" disabled={commentMutation.isPending || !commentText.trim()} className="font-bold">
+              {commentMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Comment
+            </Button>
+          </form>
+
+          <div className="space-y-2.5">
+            {project.comments?.map((c) => (
+              <div key={c.id} className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar user={c.author} size="xs" />
+                    <span className="text-xs font-bold text-foreground">{c.author.fullName}</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{relative(c.createdAt)}</span>
+                </div>
+                <p className="mt-1.5 text-xs text-foreground leading-relaxed pl-7">{c.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end border-t border-border pt-4">
+          <Button variant="quiet" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShowcaseCard({
+  project,
+  onSelect,
+}: {
+  project: ProjectShowcase;
+  onSelect: () => void;
+}) {
+  const queryClient = useQueryClient();
+
+  const upvoteMutation = useMutation({
+    mutationFn: () => apiFetch<{ success: boolean }>(`/showcase/${project.id}/upvote`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['showcase-projects'] }),
+  });
+
+  return (
+    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise group">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Tag warm>{project.category}</Tag>
+            <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+            {project.award && (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500 flex items-center gap-1">
+                <Trophy className="h-3 w-3" /> {project.award}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              upvoteMutation.mutate();
+            }}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm',
+              project.isUpvoted
+                ? 'bg-rose-500 text-white shadow-rose-500/20'
+                : 'border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
+          >
+            <Flame className={cx('h-3.5 w-3.5', project.isUpvoted && 'fill-white text-white')} />
+            <span>{project.upvotesCount}</span>
+          </button>
+        </div>
+
+        <h3
+          onClick={onSelect}
+          className="mt-3 text-lg font-bold text-foreground group-hover:text-accent cursor-pointer tracking-[-.03em]"
+        >
+          {project.title}
+        </h3>
+
+        <p className="mt-1 text-xs font-semibold text-foreground/80">{project.tagline}</p>
+
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.description}</p>
+
+        {/* Tech Stack Preview */}
+        <div className="mt-3.5 flex flex-wrap gap-1">
+          {project.techStack.slice(0, 4).map((tech) => (
+            <span key={tech} className="rounded-lg bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground">
+              ⚡ {tech}
+            </span>
+          ))}
+          {project.techStack.length > 4 && (
+            <span className="rounded-lg bg-secondary/60 px-2 py-1 text-[10px] font-bold text-muted-foreground">
+              +{project.techStack.length - 4} more
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Avatar user={project.author} size="sm" />
+          <div>
+            <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+              {project.author.fullName}
+            </Link>
+            <p className="text-[10px] text-muted-foreground">{project.department}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {project.githubUrl && (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <Code className="h-3.5 w-3.5" />
+            </a>
+          )}
+
+          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
+            Explore Demo <ArrowRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShowcasePage() {
+  const [category, setCategory] = useState('');
+  const [selectedCampus, setSelectedCampus] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('upvotes');
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
+
+  const params = useMemo(
+    () => ({
+      category: category || undefined,
+      campus: selectedCampus || undefined,
+      search: search || undefined,
+      sortBy,
+      page: 1,
+      pageSize: 20,
+    }),
+    [category, selectedCampus, search, sortBy]
+  );
+
+  const { data, isLoading, isError, refetch } = useListShowcaseProjects(params);
+  const items = data?.items ?? [];
+
+  const categories = [
+    '',
+    'AI / ML',
+    'Web & Mobile',
+    'Robotics / IoT',
+    'Cyber Security',
+    'Healthcare Tech',
+    'Blockchain',
+    'Open Source',
+  ];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Student & Faculty Innovations"
+        title="Project Showcase & Innovation Gallery."
+        detail="Discover hackathon-winning prototypes, open-source repositories, and innovative research demos built by Amrita students and alumni across all campuses."
+        action={
+          <Button data-testid="button-post-showcase" onClick={() => setShowCreate(true)}>
+            <Rocket className="h-4 w-4" /> Showcase Your Project
+          </Button>
+        }
+      />
+
+      {/* Category Pills */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setCategory(cat)}
+            className={cx(
+              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
+              category === cat
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {cat || 'All Innovations'}
+          </button>
+        ))}
+      </div>
+
+      {/* Search & Sort Controls */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <label className="relative block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects by name, tech stack (ROS2, PyTorch, React), or awards..."
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+
+        <select
+          value={selectedCampus}
+          onChange={(e) => setSelectedCampus(e.target.value)}
+          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none"
+        >
+          <option value="">All Campuses</option>
+          {campuses.map((c) => (
+            <option key={c} value={c}>
+              Amrita {c}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex rounded-xl border border-border bg-card p-1">
+          {[
+            { label: '🔥 Top Upvoted', value: 'upvotes' },
+            { label: '⏱ Recent', value: 'recent' },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setSortBy(tab.value)}
+              className={cx(
+                'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+                sortBy === tab.value ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={Trophy}
+          title="No showcase projects found"
+          detail="Be the first to publish your prototype or demo to the Amrita community!"
+          action={<Button onClick={() => setShowCreate(true)}>Showcase Your Project</Button>}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {items.map((project) => (
+            <ShowcaseCard
+              key={project.id}
+              project={project}
+              onSelect={() => setSelectedDetailId(project.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedDetailId && (
+        <ShowcaseDetailModal
+          projectId={selectedDetailId}
+          onClose={() => setSelectedDetailId(null)}
+          onRefresh={() => refetch()}
+        />
+      )}
+
+      {showCreate && (
+        <CreateShowcaseModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+    </>
+  );
+}
+
+
 function PeoplePage() {
+
+
+
+
+
 
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
@@ -3345,10 +8045,840 @@ function MentorshipPage() {
 function MentorshipCard({ item, onUpdate, pending }: { item: MentorshipRequest; onUpdate: (id: string, status: 'accepted' | 'rejected') => void; pending: boolean }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-start"><Avatar user={item.requester} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold text-foreground">{item.requester.fullName}</h2><Status status={item.status} /></div><p className="mt-1 text-xs text-muted-foreground">Requesting mentorship · {relative(item.createdAt)}</p><p className="mt-4 text-sm leading-6 text-foreground">{item.message}</p><div className="mt-4 flex flex-wrap gap-2"><Tag warm>{item.topic}</Tag><Tag>{item.reason}</Tag></div></div>{item.status === 'pending' && <div className="flex shrink-0 gap-2 sm:flex-col"><Button data-testid={`button-accept-mentorship-${item.id}`} className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'accepted')}><Check className="h-4 w-4" />Accept</Button><Button data-testid={`button-reject-mentorship-${item.id}`} variant="quiet" className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'rejected')}>Decline</Button></div>}</div></div>; }
 function Status({ status }: { status: string }) { return <span data-testid={`status-${status}`} className={cx('rounded-full px-2.5 py-1 text-[10px] font-bold capitalize', status === 'accepted' ? 'bg-emerald-500/15 text-emerald-500' : status === 'rejected' ? 'bg-destructive/15 text-destructive' : 'bg-accent/20 text-accent')}>{status}</span>; }
 
+interface CollaborationMember {
+  user: PublicUser;
+  role: string;
+  joinedAt: string;
+}
+
+interface CollaborationApplication {
+  id: string;
+  user: PublicUser;
+  role: string;
+  pitch: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}
+
+interface ExtendedCollaboration {
+  id: string;
+  creator: PublicUser;
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  rolesNeeded: string[];
+  teamSize: number;
+  deadline: string;
+  category: string;
+  status: 'open' | 'closed' | 'completed';
+  memberCount: number;
+  members: CollaborationMember[];
+  isCreator: boolean;
+  isMember: boolean;
+  myApplication: {
+    id: string;
+    role: string;
+    pitch: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    createdAt: string;
+  } | null;
+  applications?: CollaborationApplication[];
+  pendingApplicantsCount?: number;
+  createdAt: string;
+}
+
+function CollaborationDetailModal({
+  item,
+  onClose,
+  onRefresh,
+}: {
+  item: ExtendedCollaboration;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'details' | 'team' | 'applications'>(
+    item.isCreator && (item.pendingApplicantsCount ?? 0) > 0 ? 'applications' : 'details'
+  );
+  const [selectedRole, setSelectedRole] = useState(item.rolesNeeded?.[0] || 'Contributor');
+  const [pitch, setPitch] = useState('');
+  const queryClient = useQueryClient();
+
+  const applyMutation = useMutation({
+    mutationFn: (body: { role: string; pitch: string }) =>
+      apiFetch<{ success: boolean; message: string }>(`/collaborations/${item.id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (res) => {
+      alert(res.message);
+      queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+      onRefresh();
+    },
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: (appId: string) =>
+      apiFetch<{ success: boolean }>(`/collaborations/${item.id}/applications/${appId}/accept`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+      onRefresh();
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (appId: string) =>
+      apiFetch<{ success: boolean }>(`/collaborations/${item.id}/applications/${appId}/reject`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+      onRefresh();
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) =>
+      apiFetch<{ success: boolean }>(`/collaborations/${item.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+      onRefresh();
+    },
+  });
+
+  const handleApply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pitch.trim()) return;
+    applyMutation.mutate({ role: selectedRole, pitch: pitch.trim() });
+  };
+
+  const isFull = item.memberCount >= item.teamSize;
+  const pendingApps = (item.applications || []).filter((a) => a.status === 'pending');
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        {/* Modal Top Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tag warm>{item.category}</Tag>
+              <span
+                className={cx(
+                  'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                  item.status === 'open'
+                    ? 'bg-emerald-500/15 text-emerald-500'
+                    : item.status === 'closed'
+                    ? 'bg-amber-500/15 text-amber-500'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                {item.status === 'open' ? 'Recruiting' : item.status === 'closed' ? 'Team Full' : 'Completed'}
+              </span>
+              <span className="mono text-[10px] text-muted-foreground">Due {formatDate(item.deadline)}</span>
+            </div>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{item.title}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Modal Navigation Tabs */}
+        <div className="mt-5 flex border-b border-border">
+          <button
+            type="button"
+            onClick={() => setActiveTab('details')}
+            className={cx(
+              'border-b-2 px-4 py-2 text-xs font-bold transition-all',
+              activeTab === 'details'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Project Details
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('team')}
+            className={cx(
+              'border-b-2 px-4 py-2 text-xs font-bold transition-all',
+              activeTab === 'team'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Team Roster ({item.members?.length || 1}/{item.teamSize})
+          </button>
+          {item.isCreator && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('applications')}
+              className={cx(
+                'border-b-2 px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5',
+                activeTab === 'applications'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Applicant Review Queue
+              {pendingApps.length > 0 && (
+                <span className="rounded-full bg-accent px-1.5 py-0.2 text-[9px] font-bold text-primary">
+                  {pendingApps.length}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Tab 1: Details */}
+        {activeTab === 'details' && (
+          <div className="mt-5 space-y-6">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">About the Project</h3>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">{item.description}</p>
+            </div>
+
+            {/* Roles Needed */}
+            {item.rolesNeeded?.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Open Roles</h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.rolesNeeded.map((r) => (
+                    <span key={r} className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
+                      🎯 {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Required Skills */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Required Skills</h3>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {item.requiredSkills?.map((s) => (
+                  <Tag key={s}>{s}</Tag>
+                ))}
+              </div>
+            </div>
+
+            {/* Project Lead */}
+            <div className="rounded-xl border border-border bg-secondary/30 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project Lead</div>
+              <div className="mt-2 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar user={item.creator} size="md" />
+                  <div>
+                    <Link href={`/people/${item.creator.id}`} className="text-sm font-bold text-foreground hover:text-accent">
+                      {item.creator.fullName}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{item.creator.department} · Amrita {item.creator.campus}</p>
+                  </div>
+                </div>
+                <Link
+                  href={`/messages/${item.creator.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-accent" /> Message Lead
+                </Link>
+              </div>
+            </div>
+
+            {/* Application Section for non-members */}
+            {!item.isCreator && !item.isMember && (
+              <div className="rounded-2xl border border-accent/40 bg-accent/5 p-5">
+                {item.myApplication ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Application:</span>
+                      <Status status={item.myApplication.status} />
+                    </div>
+                    <p className="mt-2 text-xs text-foreground font-medium">Applied for role: <strong className="text-accent">{item.myApplication.role}</strong></p>
+                    <p className="mt-1 text-xs text-muted-foreground italic">"{item.myApplication.pitch}"</p>
+                    <p className="mt-3 text-[11px] text-muted-foreground">Submitted {relative(item.myApplication.createdAt)}. The team lead will review your application!</p>
+                  </div>
+                ) : item.status !== 'open' ? (
+                  <p className="text-center text-xs text-muted-foreground font-semibold">
+                    This project is currently not accepting new applications.
+                  </p>
+                ) : (
+                  <form onSubmit={handleApply} className="space-y-3.5">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Apply to Join this Team</h4>
+                      <p className="text-xs text-muted-foreground">Select the role you'd like to take on and write a brief pitch.</p>
+                    </div>
+
+                    {item.rolesNeeded?.length > 0 ? (
+                      <div>
+                        <label className="block text-xs font-bold text-muted-foreground">Select Role</label>
+                        <select
+                          value={selectedRole}
+                          onChange={(e) => setSelectedRole(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-accent"
+                        >
+                          {item.rolesNeeded.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <Field
+                        id="apply-role"
+                        label="Your Proposed Role"
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                        required
+                      />
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground">Why are you a good fit? (Pitch note)</label>
+                      <textarea
+                        rows={3}
+                        value={pitch}
+                        onChange={(e) => setPitch(e.target.value)}
+                        placeholder="Highlight your skills, relevant projects, or coursework..."
+                        className="mt-1 w-full rounded-xl border border-input bg-card p-3 text-xs outline-none focus:border-accent"
+                        required
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={applyMutation.isPending || !pitch.trim()}
+                      className="w-full font-bold"
+                    >
+                      {applyMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      Submit Application
+                    </Button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: Team Roster */}
+        {activeTab === 'team' && (
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Active Team Members ({item.members?.length || 1} of {item.teamSize} slots filled)
+              </h3>
+              <div className="h-2 w-32 rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-accent transition-all"
+                  style={{ width: `${Math.min(100, ((item.members?.length || 1) / item.teamSize) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="divide-y divide-border rounded-xl border border-border bg-card">
+              {item.members && item.members.length > 0 ? (
+                item.members.map((m, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar user={m.user} size="sm" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/people/${m.user.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                            {m.user.fullName}
+                          </Link>
+                          <span className="rounded bg-accent/20 px-1.5 py-0.2 text-[9px] font-bold text-accent">
+                            {m.role}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">{m.user.department} · {m.user.campus}</p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/messages/${m.user.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-between p-3.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar user={item.creator} size="sm" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/people/${item.creator.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                          {item.creator.fullName}
+                        </Link>
+                        <span className="rounded bg-accent/20 px-1.5 py-0.2 text-[9px] font-bold text-accent">
+                          Project Lead
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{item.creator.department} · {item.creator.campus}</p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/messages/${item.creator.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {item.isCreator && (
+              <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-foreground">Project Recruitment Status</div>
+                  <p className="text-[11px] text-muted-foreground">Toggle whether you are actively taking join requests</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={item.status === 'open' ? 'primary' : 'outline'}
+                    onClick={() => statusMutation.mutate('open')}
+                    className="px-3 py-1.5 text-xs font-bold"
+                  >
+                    Open
+                  </Button>
+                  <Button
+                    variant={item.status === 'closed' ? 'primary' : 'outline'}
+                    onClick={() => statusMutation.mutate('closed')}
+                    className="px-3 py-1.5 text-xs font-bold"
+                  >
+                    Close Roster
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Applications Review (Creator only) */}
+        {activeTab === 'applications' && item.isCreator && (
+          <div className="mt-5 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Candidate Applications ({item.applications?.length || 0})
+            </h3>
+
+            {(!item.applications || item.applications.length === 0) ? (
+              <p className="text-center py-8 text-xs text-muted-foreground">No applications submitted yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {item.applications.map((app) => (
+                  <div key={app.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <Avatar user={app.user} size="md" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/people/${app.user.id}`} className="text-sm font-bold text-foreground hover:text-accent">
+                              {app.user.fullName}
+                            </Link>
+                            <Status status={app.status} />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Applying for: <strong className="text-accent">{app.role}</strong> · {relative(app.createdAt)}
+                          </p>
+                          <p className="mt-2 text-xs leading-relaxed text-foreground bg-secondary/40 p-2.5 rounded-lg border border-border">
+                            "{app.pitch}"
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {app.user.skills?.slice(0, 4).map((sk) => (
+                              <Tag key={sk}>{sk}</Tag>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
+                        <Link
+                          href={`/messages/${app.user.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5 text-accent" /> Chat
+                        </Link>
+                        {app.status === 'pending' && (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              onClick={() => acceptMutation.mutate(app.id)}
+                              disabled={acceptMutation.isPending || isFull}
+                              className="px-3 py-1.5 text-xs font-bold"
+                            >
+                              <Check className="h-3.5 w-3.5" /> Accept
+                            </Button>
+                            <Button
+                              variant="quiet"
+                              onClick={() => rejectMutation.mutate(app.id)}
+                              disabled={rejectMutation.isPending}
+                              className="px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CollaborationsPage() {
-  const [search, setSearch] = useState(''); const [showCreate, setShowCreate] = useState(false); const params = useMemo(() => ({ search: search || undefined, page: 1, pageSize: 20 }), [search]); const { data, isLoading, isError, refetch } = useListCollaborations(params, { query: { queryKey: getListCollaborationsQueryKey(params) } }); return <><PageTitle eyebrow="Collaborate" title="Build something together." detail="Find open questions and bring the right mix of people around them." action={<Button data-testid="button-create-collaboration" onClick={() => setShowCreate(true)}><Zap className="h-4 w-4" />Post a project</Button>} /><label className="relative mb-6 block max-w-xl"><Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" /><input data-testid="input-collaborations-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search projects, skills, or categories..." className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent-foreground" /></label>{isLoading ? <LoadingState rows={4} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !data?.items?.length ? <EmptyState icon={Network} title="No projects posted yet" detail="Have an idea that needs a team? Give it a shape and invite the community in." action={<Button onClick={() => setShowCreate(true)}>Post the first project</Button>} /> : <div className="grid gap-4 lg:grid-cols-2">{data.items.map((item) => <CollaborationCard key={item.id} item={item} />)}</div>}{showCreate && <CreateCollaborationDialog onClose={() => setShowCreate(false)} />}</>; }
-function CollaborationCard({ item }: { item: Collaboration }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex items-start justify-between gap-4"><Tag warm>{item.category}</Tag><span className="mono text-[10px] text-muted-foreground">Due {formatDate(item.deadline)}</span></div><h2 className="mt-4 text-xl font-bold tracking-[-.04em] text-foreground">{item.title}</h2><p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{item.description}</p><div className="mt-5 flex flex-wrap gap-1.5">{item.requiredSkills?.map((skill) => <Tag key={skill}>{skill}</Tag>)}</div><div className="mt-6 flex items-center justify-between border-t border-border pt-4"><div className="flex items-center gap-2"><Avatar user={item.creator} size="sm" /><div><p className="text-xs font-bold text-foreground">{item.creator.fullName}</p><p className="text-[10px] text-muted-foreground">{item.memberCount} of {item.teamSize} spots filled</p></div></div><Button variant="outline" className="px-3 py-2" onClick={() => undefined}>View project <ArrowRight className="h-3.5 w-3.5" /></Button></div></div>; }
-function CreateCollaborationDialog({ onClose }: { onClose: () => void }) { const create = useCreateCollaboration(); const queryClient = useQueryClient(); const [form, setForm] = useState({ title: '', description: '', requiredSkills: '', teamSize: '3', deadline: '', category: 'Research' }); const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value })); const submit = (e: React.FormEvent) => { e.preventDefault(); create.mutate({ data: { ...form, requiredSkills: form.requiredSkills.split(',').map((x) => x.trim()).filter(Boolean), teamSize: Number(form.teamSize) } }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() }); onClose(); } }); }; return <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm"><div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-xl"><div className="flex items-start justify-between"><div><div className="mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">Open call</div><h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Post a project</h2></div><button data-testid="button-close-collaboration-dialog" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button></div><form onSubmit={submit} className="mt-6 space-y-4"><Field id="collaboration-title" label="Project title" value={form.title} onChange={(e) => set('title', e.target.value)} required /><label className="block"><span className="mb-1.5 block text-xs font-bold text-foreground">What are you working on?</span><textarea data-testid="textarea-collaboration-description" value={form.description} onChange={(e) => set('description', e.target.value)} required rows={4} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-accent-foreground" /></label><div className="grid gap-4 sm:grid-cols-2"><Field id="collaboration-skills" label="Skills needed" placeholder="Python, design, fieldwork" value={form.requiredSkills} onChange={(e) => set('requiredSkills', e.target.value)} required /><Field id="collaboration-deadline" label="Deadline" type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} required /></div><div className="grid gap-4 sm:grid-cols-2"><SelectField id="collaboration-category" label="Category" value={form.category} onChange={(e) => set('category', e.target.value)} options={['Research', 'Startup', 'Student life', 'Community'].map((value) => ({ value, label: value }))} /><Field id="collaboration-team-size" label="Team size" type="number" value={form.teamSize} onChange={(e) => set('teamSize', e.target.value)} required /></div><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="quiet" onClick={onClose}>Cancel</Button><Button data-testid="button-submit-collaboration" type="submit" disabled={create.isPending}>{create.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Publish project</Button></div></form></div></div>; }
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedCollab, setSelectedCollab] = useState<ExtendedCollaboration | null>(null);
+
+  const params = useMemo(
+    () => ({
+      search: search || undefined,
+      category: category || undefined,
+      page: 1,
+      pageSize: 20,
+    }),
+    [search, category]
+  );
+
+  const { data, isLoading, isError, refetch } = useListCollaborations(params, {
+    query: { queryKey: getListCollaborationsQueryKey(params) },
+  });
+
+  const items = (data?.items as any as ExtendedCollaboration[]) ?? [];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Collaborate"
+        title="Amrita Project & Collaboration Hub."
+        detail="Join hackathon squads, research publications, and ambitious student startups across all campuses."
+        action={
+          <Button data-testid="button-create-collaboration" onClick={() => setShowCreate(true)}>
+            <Zap className="h-4 w-4" /> Post a project
+          </Button>
+        }
+      />
+
+      {/* Filter and search bar */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <label className="relative flex-1 block">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            data-testid="input-collaborations-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects, skills, or roles needed..."
+            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
+          />
+        </label>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {['', 'Hackathon', 'Research', 'Startup', 'Student life'].map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              className={cx(
+                'rounded-lg px-3 py-2 text-xs font-bold shrink-0 transition-all',
+                category === cat
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+              )}
+            >
+              {cat || 'All Categories'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={Network}
+          title="No projects match your search"
+          detail="Have an idea that needs a team? Post a project and invite collaborators from across Amrita."
+          action={<Button onClick={() => setShowCreate(true)}>Post the first project</Button>}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {items.map((item) => (
+            <CollaborationCard
+              key={item.id}
+              item={item}
+              onSelect={() => setSelectedCollab(item)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedCollab && (
+        <CollaborationDetailModal
+          item={selectedCollab}
+          onClose={() => setSelectedCollab(null)}
+          onRefresh={() => {
+            refetch();
+            setSelectedCollab(null);
+          }}
+        />
+      )}
+
+      {showCreate && <CreateCollaborationDialog onClose={() => setShowCreate(false)} />}
+    </>
+  );
+}
+
+function CollaborationCard({
+  item,
+  onSelect,
+}: {
+  item: ExtendedCollaboration;
+  onSelect: () => void;
+}) {
+  const isFull = item.memberCount >= item.teamSize;
+
+  return (
+    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+      <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Tag warm>{item.category}</Tag>
+            <span
+              className={cx(
+                'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                item.status === 'open'
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : item.status === 'closed'
+                  ? 'bg-amber-500/15 text-amber-500'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {item.status === 'open' ? 'Recruiting' : item.status === 'closed' ? 'Team Full' : 'Completed'}
+            </span>
+          </div>
+          <span className="mono text-[10px] text-muted-foreground">Due {formatDate(item.deadline)}</span>
+        </div>
+
+        <h2 className="mt-3.5 text-xl font-bold tracking-[-.04em] text-foreground hover:text-accent cursor-pointer" onClick={onSelect}>
+          {item.title}
+        </h2>
+
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+
+        {/* Roles Needed Chips */}
+        {item.rolesNeeded?.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {item.rolesNeeded.map((role) => (
+              <span key={role} className="rounded-md border border-accent/20 bg-accent/5 px-2 py-0.5 text-[11px] font-bold text-accent">
+                🎯 {role}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Required Skills */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {item.requiredSkills?.map((skill) => (
+            <Tag key={skill}>{skill}</Tag>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        {/* Progress and status */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Avatar user={item.creator} size="sm" />
+            <div>
+              <p className="text-xs font-bold text-foreground">{item.creator?.fullName}</p>
+              <p className="text-[10px] text-muted-foreground">{item.creator?.campus} · Lead</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-xs font-bold text-foreground">
+              {item.memberCount} / {item.teamSize} spots filled
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          {item.isCreator ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-accent">
+              <ShieldCheck className="h-3.5 w-3.5" /> Project Owner
+              {(item.pendingApplicantsCount ?? 0) > 0 && (
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-primary">
+                  {item.pendingApplicantsCount} new application{item.pendingApplicantsCount! > 1 ? 's' : ''}
+                </span>
+              )}
+            </span>
+          ) : item.isMember ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-500">
+              <Check className="h-3.5 w-3.5" /> Team Member
+            </span>
+          ) : item.myApplication ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+              Applied: <Status status={item.myApplication.status} />
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              {isFull ? 'Roster is full' : 'Open for join requests'}
+            </span>
+          )}
+
+          <Button variant="outline" className="px-3.5 py-1.5 text-xs font-bold" onClick={onSelect}>
+            {item.isCreator
+              ? 'Manage Team & Applications'
+              : item.isMember
+              ? 'View Team Roster'
+              : 'View Details & Apply'}{' '}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateCollaborationDialog({ onClose }: { onClose: () => void }) {
+  const create = useCreateCollaboration();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    requiredSkills: '',
+    rolesNeeded: '',
+    teamSize: '4',
+    deadline: '',
+    category: 'Hackathon',
+  });
+
+  const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    create.mutate(
+      {
+        data: {
+          title: form.title,
+          description: form.description,
+          requiredSkills: form.requiredSkills.split(',').map((x) => x.trim()).filter(Boolean),
+          rolesNeeded: form.rolesNeeded.split(',').map((x) => x.trim()).filter(Boolean) as any,
+          teamSize: Number(form.teamSize),
+          deadline: form.deadline as any,
+          category: form.category,
+        } as any,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+          onClose();
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">New Project Call</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Post a collaboration</h2>
+          </div>
+          <button data-testid="button-close-collaboration-dialog" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <Field id="collaboration-title" label="Project / Hackathon Title" placeholder="e.g. Smart India Hackathon 2026 - Problem Statement #12" value={form.title} onChange={(e) => set('title', e.target.value)} required />
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">What are you working on?</span>
+            <textarea
+              data-testid="textarea-collaboration-description"
+              value={form.description}
+              onChange={(e) => set('description', e.target.value)}
+              required
+              rows={4}
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              placeholder="Describe your vision, target competition/publication, and what commitment looks like..."
+            />
+          </label>
+
+          <Field
+            id="collaboration-roles"
+            label="Roles Needed (comma-separated)"
+            placeholder="Frontend Engineer, ML Specialist, UI/UX Designer"
+            value={form.rolesNeeded}
+            onChange={(e) => set('rolesNeeded', e.target.value)}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="collaboration-skills"
+              label="Prerequisite Skills"
+              placeholder="Python, React, PyTorch"
+              value={form.requiredSkills}
+              onChange={(e) => set('requiredSkills', e.target.value)}
+              required
+            />
+            <Field
+              id="collaboration-deadline"
+              label="Recruitment Deadline"
+              type="date"
+              value={form.deadline}
+              onChange={(e) => set('deadline', e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              id="collaboration-category"
+              label="Category"
+              value={form.category}
+              onChange={(e) => set('category', e.target.value)}
+              options={['Hackathon', 'Research', 'Startup', 'Student life', 'Community'].map((value) => ({ value, label: value }))}
+            />
+            <Field
+              id="collaboration-team-size"
+              label="Total Team Size"
+              type="number"
+              value={form.teamSize}
+              onChange={(e) => set('teamSize', e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button data-testid="button-submit-collaboration" type="submit" disabled={create.isPending} className="font-bold">
+              {create.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Publish Project
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 function OpportunitiesPage() {
   const [search, setSearch] = useState('');
@@ -3553,7 +9083,14 @@ function NotFound() { return <div className="grid min-h-[100dvh] place-items-cen
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) { const { data: user, isLoading } = useGetCurrentUser(); const [, setLocation] = useLocation(); if (isLoading) return <AppShell><LoadingState rows={4} /></AppShell>; if (!user) { setLocation('/login'); return null; } return <AppShell user={user}>{children}</AppShell>; }
 function RoutedErrorBoundary({ children }: { children: React.ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
-function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
+function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route><Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route><Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route><Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route><Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route><Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
+
+
+
+
+
+
+
 
 function App() { return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>; }
 export default App;
