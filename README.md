@@ -1,182 +1,101 @@
 # 🎓 Amrita Connect
 
-> **A unified, role-aware university networking and collaboration ecosystem connecting students, alumni, faculty, researchers, and campus administrators across all Amrita campuses.**
+> **A unified university networking and collaboration platform connecting students, alumni, faculty, and researchers across all 7 Amrita campuses.**
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React 19](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Express 5](https://img.shields.io/badge/Express_5-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
+[![MongoDB Atlas](https://img.shields.io/badge/MongoDB_Atlas-4EA94B?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/atlas)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 ---
 
-## 🌟 Our Aim & Mission
+## 🎯 Our Aim
 
-**Amrita Vishwa Vidyapeetham** spans multiple vibrant campuses—including Amaravati, Amritapuri, Bengaluru, Chennai, Coimbatore, Kochi, Mysuru, and NCR. Across these institutions are thousands of ambitious students, accomplished alumni in top tech companies, esteemed faculty researchers, and innovative problem solvers. 
+**Amrita Vishwa Vidyapeetham** spans 7 vibrant campuses with over 50,000 students, researchers, and global alumni working at top tech firms (Google, Microsoft, Amazon, NVIDIA, Cisco).
 
-However, cross-campus collaboration and alumni mentorship often remain fragmented across disparate messaging channels and social networks.
-
-**Amrita Connect solves this by creating a single, cohesive academic and professional hub.** 
-Our goal is to break campus silos and empower the entire Amrita community to:
-- 🤝 **Connect with Verified Members**: Discover peers, seniors, professors, and industry leaders with verified Amrita credentials.
-- 🎯 **Unlock 1:1 Mentorship**: Enable students to seek targeted guidance from alumni working at Microsoft, Google, Amazon, and leading research institutes.
-- 🚀 **Build Cross-Campus Teams**: Form cross-disciplinary squads for national hackathons, capstone projects, and student startups.
-- 🔬 **Democratize Research & Opportunities**: Allow faculty to recruit student fellows and share research calls, internships, and workshops directly with eligible candidates.
+However, inter-campus communication and mentorship often remain fragmented across disparate chat groups. **Amrita Connect** unifies the entire institution into a single, social-first academic and professional ecosystem to:
+- 🌐 **Bridge Campus Silos**: Connect verified students and faculty across all 7 campuses.
+- 💼 **Unlock 1:1 Mentorship**: Enable students to receive resume reviews, mock interviews, and career guidance from placed alumni.
+- 🚀 **Form Cross-Campus Teams**: Build interdisciplinary squads for national hackathons (SIH, ICPC) and capstone projects.
+- 🔬 **Accelerate Research**: Help professors and research labs recruit student co-investigators and research fellows across disciplines.
 
 ---
 
-## 👥 Role-Aware Experience
+## ✨ Key Features
 
-Amrita Connect adapts its interface and workflows based on each user's unique role:
-
-| Persona | Key Capabilities & Benefits |
+| Feature | Description |
 |---|---|
-| **🎓 Students** | • Discover hackathon teammates and project partners.<br>• Request 1:1 mentorship from verified alumni.<br>• Explore internships, fellowships, and upcoming campus events. |
-| **💼 Alumni** | • Give back by mentoring students in mock interviews and resume reviews.<br>• Post job openings, internships, and industry referrals.<br>• Stay connected to university initiatives and research breakthroughs. |
-| **🔬 Faculty & Researchers** | • Publish research fellowship openings and lab calls.<br>• Identify passionate student builders and research assistants across campuses.<br>• Collaborate with industry alumni on sponsored research. |
-| **🛡️ Campus Admins** | • Moderate platform content and manage member verifications.<br>• Track cross-campus engagement metrics and activity trends. |
+| **🗺️ University Live Mesh** | Interactive 7-campus map visualization displaying real-time collaboration links, node metrics, and inter-campus activity. |
+| **👥 People of Amrita** | A visual social discovery feed with "People Stories" avatar rows, Community Spotlights, trending members, and role/campus filters. |
+| **🤝 1:1 Mentorship Hub** | Structured request system connecting students with alumni mentors for career guidance and mock interviews. |
+| **🚀 Collaborate & Team Finder** | Project marketplace to post skill requirements, discover hackathon squads, and build ambitious projects together. |
+| **💼 Opportunities & Events** | Curated board for research fellowships, internships, technical talks, and hackathons with instant 1-click registration. |
+| **📊 Role-Aware Workspaces** | Tailored dashboards customized specifically for **Students**, **Alumni**, **Faculty**, **Researchers**, and **Admins**. |
+| **💬 Direct Messaging & Alerts** | In-app communications, connection requests, and instant activity notifications. |
 
 ---
 
-## ✨ Core Features
+## 🏫 7 Campuses Connected
 
-1. **Role-Aware Dashboards**: Customized landing experiences displaying relevant updates, quick actions, pending mentorship requests, and recommended peers.
-2. **Directory & Smart Search**: Find members with multi-parameter filtering by campus, department, role, technical skills, and mutual interests.
-3. **1:1 Mentorship System**: Structured request workflow where mentees specify topics and goals, and mentors can accept or decline with automated notifications.
-4. **Project Collaboration Hub**: Post team requirements (skills needed, squad size, deadline) and apply to open collaborative projects.
-5. **Campus Opportunities Board**: Curated feed of research fellowships, hackathons, and internships with one-click saving/bookmarking.
-6. **Campus Events & Workshops**: Discover upcoming technical talks, webinars, and builder meetups with instant seat registration.
-7. **Real-Time Notifications**: Instant updates on mentorship statuses, team invites, and platform announcements.
-
----
-
-## 🏗️ Architecture & Tech Stack
-
-Amrita Connect is structured as a modern full-stack monorepo designed for high performance, stateless horizontal scaling, and security:
-
-```text
-Amrita-Connect/
-├── frontend/                # React 19 web application
-│   ├── src/
-│   │   ├── components/      # Accessible UI components (Radix UI, Tailwind CSS v4)
-│   │   ├── hooks/           # Responsive hooks & toast notification managers
-│   │   ├── lib/             # Utility helpers
-│   │   ├── pages/           # Application views & dynamic routing
-│   │   ├── App.tsx          # Main application shell & session state
-│   │   └── main.tsx         # React DOM entry point
-│   ├── vite.config.ts       # Vite config with automated /api proxying
-│   └── package.json
-│
-├── backend/                 # Express 5 REST API Server
-│   ├── src/
-│   │   ├── middleware/      # JWT authentication & role authorization
-│   │   ├── routes/          # REST route handlers (/auth, /users, /events, /opportunities)
-│   │   ├── services/        # Automated MongoDB seeding on first startup
-│   │   ├── lib/             # Structured Pino logger
-│   │   ├── app.ts           # Express application setup & CORS configuration
-│   │   └── index.ts         # Server startup & MongoDB connection lifecycle
-│   ├── build.mjs            # Production esbuild bundling script
-│   └── package.json
-│
-├── database/                # MongoDB Atlas / Mongoose schema models
-│   ├── src/
-│   │   ├── models/          # Mongoose models (User, Opportunity, Event, Mentorship, etc.)
-│   │   └── index.ts         # MongoDB connection manager & model exports
-│   └── package.json
-│
-├── lib/                     # Shared type contracts
-│   ├── api-client-react/    # TanStack React Query hooks & fetch client
-│   ├── api-spec/            # OpenAPI 3.0 specification & Orval codegen
-│   └── api-zod/             # Zod validation schemas
-│
-├── package.json             # Root monorepo workspace scripts
-├── pnpm-workspace.yaml      # Monorepo packages config
-└── tsconfig.json            # Root TypeScript project references
-```
-
-### Technology Highlights
-* **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Radix UI, TanStack React Query v5, Lucide React, Wouter.
-* **Backend**: Express 5, TypeScript, JWT (`jsonwebtoken`), Bcrypt password hashing (`bcryptjs`), Pino logger.
-* **Database**: MongoDB Cloud Atlas with Mongoose schemas, compound indexes, and connection pooling.
-* **API Contracts**: OpenAPI 3.0 specification with automated Orval type and hook generation.
+- 🟣 **Amritapuri** — Cybersecurity (bi0s), Wireless IoT, Nanotechnology & Computing
+- 🟢 **Bengaluru** — Artificial Intelligence, Data Science & Tech Startups
+- 🔵 **Chennai** — Advanced Computing, Emerging Tech & Cyber Physical Systems
+- 🟠 **Coimbatore** — Aerospace, Robotics, CPS & Core Engineering
+- 🌸 **Kochi** — Precision Medicine, Biotech Genomics & Healthcare AI
+- 🟡 **Amaravati** — Interdisciplinary Engineering, Sustainable Tech & AI
+- 🟣 **Mysuru & NCR** — Media, Pure Sciences, Commerce & Management Studies
 
 ---
 
-## 🚀 Quick Start Guide
+## 🛠️ Tech Stack
 
-### Prerequisites
-- **Node.js**: v20 or v24+
-- **pnpm**: v9+ (or npm / yarn)
-- **MongoDB Atlas** database connection string (or local MongoDB)
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, TanStack React Query v5, Radix UI, Lucide Icons, Wouter.
+- **Backend**: Node.js, Express 5, TypeScript, JWT authentication (`jsonwebtoken`), password hashing (`bcryptjs`), Pino logger.
+- **Database**: MongoDB Atlas with Mongoose schemas and compound query indexing.
+- **Type Safety**: OpenAPI 3.0 specification with Orval-generated query hooks and Zod runtime validation.
 
 ---
 
-### 1. Clone & Install Dependencies
+## 🚀 Quick Start
 
+### 1. Clone & Install
 ```bash
-git clone https://github.com/your-username/Amrita-Connect.git
+git clone https://github.com/Richajaishwal0/Amrita-Connect.git
 cd Amrita-Connect
 pnpm install
 ```
 
----
-
-### 2. Configure Environment Variables
-
-Copy the template file `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and configure your credentials:
-
+### 2. Configure Environment (`.env`)
+Create a `.env` file in the project root:
 ```env
-# MongoDB Cloud Atlas Connection URI
 MONGODB_URI="mongodb+srv://<username>:<password>@cluster0.mongodb.net/amrita_connect?retryWrites=true&w=majority"
-
-# JWT Authentication Secret (Generate any secure random string)
-SESSION_SECRET="amrita-connect-super-secret-key-2026"
-
-# Backend API Port
+SESSION_SECRET="your-secure-jwt-secret-key"
 PORT=5000
 ```
 
----
-
 ### 3. Run Development Servers
-
-Run the backend and frontend in separate terminal windows:
-
-#### Terminal 1 — Start Backend API:
 ```bash
+# Terminal 1 — Start Backend API (http://localhost:5000)
 pnpm run dev:backend
-```
-> The server connects to MongoDB Atlas, automatically provisions indexes, seeds initial demo accounts on first launch, and listens on `http://localhost:5000`.
 
-#### Terminal 2 — Start Frontend Application:
-```bash
+# Terminal 2 — Start Frontend (http://localhost:5173)
 pnpm run dev:frontend
 ```
-> Opens the Vite dev server at `http://localhost:5173` with automatic API proxying to the backend.
 
 ---
 
-## 💻 Available Scripts
+## 📜 Available Scripts
 
-| Command | Description |
+| Command | Action |
 |---|---|
-| `pnpm run dev:frontend` | Launch Vite frontend dev server at `http://localhost:5173` |
-| `pnpm run dev:backend` | Build & launch Express API server at `http://localhost:5000` |
-| `pnpm run build` | Create production builds for all packages |
-| `pnpm run build:frontend` | Build frontend SPA bundle into `frontend/dist/` |
-| `pnpm run build:backend` | Bundle backend with esbuild into `backend/dist/` |
-| `pnpm run typecheck` | Run TypeScript verification across the entire monorepo |
-
----
-
-## 🔒 Security & Privacy
-
-- **Cryptographic Password Hashing**: Passwords are never stored in plaintext and are hashed using `bcryptjs` with 12 salt rounds.
-- **Stateless Session Tokens**: Authenticated via signed JSON Web Tokens (JWT) with automatic expiration and active account verification on protected routes.
-- **Protected Secrets**: Sensitive keys, credentials, and environment files are strictly excluded from version control via `.gitignore`.
+| `pnpm run dev:frontend` | Start Vite frontend dev server (`localhost:5173`) |
+| `pnpm run dev:backend` | Start Express backend server (`localhost:5000`) |
+| `pnpm run build` | Build frontend & backend for production |
+| `pnpm run typecheck` | Run TypeScript check across all packages |
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+Distributed under the **MIT License**.
