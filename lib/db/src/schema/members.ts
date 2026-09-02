@@ -24,6 +24,7 @@ export const usersTable = pgTable("amrita_users", {
   lookingFor: text("looking_for").array().notNull().default(emptyTextArray),
   avatarUrl: text("avatar_url"),
   verified: boolean("verified").notNull().default(false),
+  status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

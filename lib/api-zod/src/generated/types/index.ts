@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminSummary';
 export * from './authResponse';
 export * from './badRequestResponse';
 export * from './campusParameter';
@@ -33,7 +34,9 @@ export * from './opportunityListResponse';
 export * from './pageParameter';
 export * from './pageSizeParameter';
 export * from './profileUpdate';
+export * from './publicUser';
 export * from './registerInput';
+export * from './registrationRole';
 export * from './roleParameter';
 export * from './searchParameter';
 export * from './statusUpdate';

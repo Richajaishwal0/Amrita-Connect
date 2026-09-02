@@ -6,12 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MentorshipRequestStatus } from './mentorshipRequestStatus';
-import type { User } from './user';
+import type { PublicUser } from './publicUser';
 
 export interface MentorshipRequest {
   id: string;
-  mentor: User;
-  requester: User;
+  mentor: PublicUser;
+  requester: PublicUser;
   message: string;
   reason: string;
   topic: string;

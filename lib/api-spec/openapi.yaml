@@ -17,6 +17,7 @@ tags:
   - name: opportunities
   - name: events
   - name: notifications
+  - name: admin
 paths:
   /healthz:
     get:
@@ -53,6 +54,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           description: Duplicate email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Role requires administrator provisioning
           content:
             application/json:
               schema:
@@ -164,7 +171,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/PublicUser"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -364,6 +371,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/Notification"
 
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      summary: Get platform summary metrics for administrators
+      responses:
+        "200":
+          description: Platform summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -461,6 +491,9 @@ components:
     UserRole:
       type: string
       enum: [student, alumni, faculty, researcher, admin]
+    RegistrationRole:
+      type: string
+      enum: [student, alumni, faculty, researcher]
     User:
       type: object
       properties:
@@ -528,6 +561,70 @@ components:
         - avatarUrl
         - verified
         - createdAt
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        campus:
+          type: string
+        department:
+          type: string
+        graduationYear:
+          type: ["integer", "null"]
+        headline:
+          type: string
+        bio:
+          type: string
+        company:
+          type: ["string", "null"]
+        jobRole:
+          type: ["string", "null"]
+        skills:
+          type: array
+          items:
+            type: string
+        interests:
+          type: array
+          items:
+            type: string
+        helpWith:
+          type: array
+          items:
+            type: string
+        lookingFor:
+          type: array
+          items:
+            type: string
+        avatarUrl:
+          type: ["string", "null"]
+        verified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - fullName
+        - role
+        - campus
+        - department
+        - graduationYear
+        - headline
+        - bio
+        - company
+        - jobRole
+        - skills
+        - interests
+        - helpWith
+        - lookingFor
+        - avatarUrl
+        - verified
+        - createdAt
     RegisterInput:
       type: object
       properties:
@@ -541,7 +638,7 @@ components:
           type: string
           minLength: 8
         role:
-          $ref: "#/components/schemas/UserRole"
+          $ref: "#/components/schemas/RegistrationRole"
         campus:
           type: string
         department:
@@ -601,7 +698,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/User"
+            $ref: "#/components/schemas/PublicUser"
         page:
           type: integer
         pageSize:
@@ -627,7 +724,7 @@ components:
         recentPeople:
           type: array
           items:
-            $ref: "#/components/schemas/User"
+            $ref: "#/components/schemas/PublicUser"
         upcoming:
           type: array
           items:
@@ -646,6 +743,16 @@ components:
         - recentPeople
         - upcoming
         - opportunities
+    AdminSummary:
+      type: object
+      properties:
+        users:
+          type: integer
+        opportunities:
+          type: integer
+        events:
+          type: integer
+      required: [users, opportunities, events]
     MentorshipRequestInput:
       type: object
       properties:
@@ -671,9 +778,9 @@ components:
         id:
           type: string
         mentor:
-          $ref: "#/components/schemas/User"
+          $ref: "#/components/schemas/PublicUser"
         requester:
-          $ref: "#/components/schemas/User"
+          $ref: "#/components/schemas/PublicUser"
         message:
           type: string
         reason:
@@ -730,7 +837,7 @@ components:
         category:
           type: string
         creator:
-          $ref: "#/components/schemas/User"
+          $ref: "#/components/schemas/PublicUser"
       required: [id, title, description, requiredSkills, teamSize, memberCount, deadline, category, creator]
     CollaborationListResponse:
       type: object

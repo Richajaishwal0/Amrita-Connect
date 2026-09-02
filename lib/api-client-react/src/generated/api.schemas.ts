@@ -25,10 +25,44 @@ export const UserRole = {
   admin: 'admin',
 } as const;
 
+export type RegistrationRole = typeof RegistrationRole[keyof typeof RegistrationRole];
+
+
+export const RegistrationRole = {
+  student: 'student',
+  alumni: 'alumni',
+  faculty: 'faculty',
+  researcher: 'researcher',
+} as const;
+
 export interface User {
   id: string;
   fullName: string;
   email: string;
+  role: UserRole;
+  campus: string;
+  department: string;
+  /** @nullable */
+  graduationYear: number | null;
+  headline: string;
+  bio: string;
+  /** @nullable */
+  company: string | null;
+  /** @nullable */
+  jobRole: string | null;
+  skills: string[];
+  interests: string[];
+  helpWith: string[];
+  lookingFor: string[];
+  /** @nullable */
+  avatarUrl: string | null;
+  verified: boolean;
+  createdAt: string;
+}
+
+export interface PublicUser {
+  id: string;
+  fullName: string;
   role: UserRole;
   campus: string;
   department: string;
@@ -56,7 +90,7 @@ export interface RegisterInput {
   email: string;
   /** @minLength 8 */
   password: string;
-  role: UserRole;
+  role: RegistrationRole;
   campus: string;
   department: string;
   /** @nullable */
@@ -89,7 +123,7 @@ export interface ProfileUpdate {
 }
 
 export interface UserListResponse {
-  items: User[];
+  items: PublicUser[];
   page: number;
   pageSize: number;
   total: number;
@@ -130,9 +164,15 @@ export interface DashboardSummary {
   savedOpportunities: number;
   upcomingEvents: number;
   unreadNotifications: number;
-  recentPeople: User[];
+  recentPeople: PublicUser[];
   upcoming: Event[];
   opportunities: Opportunity[];
+}
+
+export interface AdminSummary {
+  users: number;
+  opportunities: number;
+  events: number;
 }
 
 export interface MentorshipRequestInput {
@@ -165,8 +205,8 @@ export const MentorshipRequestStatus = {
 
 export interface MentorshipRequest {
   id: string;
-  mentor: User;
-  requester: User;
+  mentor: PublicUser;
+  requester: PublicUser;
   message: string;
   reason: string;
   topic: string;
@@ -193,7 +233,7 @@ export interface Collaboration {
   memberCount: number;
   deadline: string;
   category: string;
-  creator: User;
+  creator: PublicUser;
 }
 
 export interface CollaborationListResponse {

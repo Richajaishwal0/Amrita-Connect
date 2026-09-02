@@ -32,7 +32,6 @@ const router: IRouter = Router();
 const publicUserFields = {
   id: usersTable.id,
   fullName: usersTable.fullName,
-  email: usersTable.email,
   role: usersTable.role,
   campus: usersTable.campus,
   department: usersTable.department,
@@ -50,8 +49,19 @@ const publicUserFields = {
   createdAt: usersTable.createdAt,
 };
 
-function serializeUser(user: typeof usersTable.$inferSelect) {
-  return { ...user, id: String(user.id), createdAt: user.createdAt.toISOString() };
+function serializeUser(user: typeof usersTable.$inferSelect, includeEmail = false) {
+  const {
+    passwordHash: _passwordHash,
+    status: _status,
+    email: _email,
+    ...safeUser
+  } = user;
+  return {
+    ...safeUser,
+    ...(includeEmail ? { email: user.email } : {}),
+    id: String(user.id),
+    createdAt: user.createdAt.toISOString(),
+  };
 }
 
 function getUserId(req: Parameters<typeof requireAuth>[0]) {
@@ -66,9 +76,14 @@ function parseListParams<T extends object>(parser: { parse: (value: unknown) => 
 router.post("/auth/register", async (req, res, next) => {
   try {
     const input = RegisterBody.parse(req.body);
+    if ((input.role as string) === "admin") {
+      res.status(403).json({ success: false, message: "Admin accounts must be provisioned by the platform team" });
+      return;
+    }
     const passwordHash = await bcrypt.hash(input.password, 12);
     const [user] = await db.insert(usersTable).values({
       ...input,
+      email: input.email.toLowerCase().trim(),
       graduationYear: input.graduationYear ?? null,
       passwordHash,
       skills: [],
@@ -76,7 +91,7 @@ router.post("/auth/register", async (req, res, next) => {
       helpWith: [],
       lookingFor: [],
     }).returning();
-    res.status(201).json({ token: issueToken(user.id, user.role), user: serializeUser(user) });
+    res.status(201).json({ token: issueToken(user.id, user.role), user: serializeUser(user, true) });
   } catch (error: unknown) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       res.status(409).json({ success: false, message: "An account with this email already exists" });
@@ -94,7 +109,7 @@ router.post("/auth/login", async (req, res, next) => {
       res.status(401).json({ success: false, message: "Email or password is incorrect" });
       return;
     }
-    res.json({ token: issueToken(user.id, user.role), user: serializeUser(user) });
+    res.json({ token: issueToken(user.id, user.role), user: serializeUser(user, true) });
   } catch (error) {
     next(error);
   }
@@ -107,7 +122,7 @@ router.get("/auth/me", requireAuth, async (req, res, next) => {
       res.status(404).json({ success: false, message: "User not found" });
       return;
     }
-    res.json(serializeUser(user));
+    res.json(serializeUser(user, true));
   } catch (error) {
     next(error);
   }
@@ -121,7 +136,7 @@ router.patch("/users/me", requireAuth, async (req, res, next) => {
       res.status(404).json({ success: false, message: "User not found" });
       return;
     }
-    res.json(serializeUser(user));
+    res.json(serializeUser(user, true));
   } catch (error) {
     next(error);
   }

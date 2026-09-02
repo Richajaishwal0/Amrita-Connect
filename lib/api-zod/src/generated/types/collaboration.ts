@@ -5,7 +5,7 @@
  * Amrita Connect university networking API
  * OpenAPI spec version: 0.1.0
  */
-import type { User } from './user';
+import type { PublicUser } from './publicUser';
 
 export interface Collaboration {
   id: string;
@@ -16,5 +16,5 @@ export interface Collaboration {
   memberCount: number;
   deadline: Date;
   category: string;
-  creator: User;
+  creator: PublicUser;
 }

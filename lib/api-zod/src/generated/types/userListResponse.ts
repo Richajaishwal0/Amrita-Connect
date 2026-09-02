@@ -5,10 +5,10 @@
  * Amrita Connect university networking API
  * OpenAPI spec version: 0.1.0
  */
-import type { User } from './user';
+import type { PublicUser } from './publicUser';
 
 export interface UserListResponse {
-  items: User[];
+  items: PublicUser[];
   page: number;
   pageSize: number;
   total: number;

@@ -29,7 +29,7 @@ export const RegisterBody = zod.object({
   "fullName": zod.string().min(registerBodyFullNameMin),
   "email": zod.email(),
   "password": zod.string().min(registerBodyPasswordMin),
-  "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
+  "role": zod.enum(['student', 'alumni', 'faculty', 'researcher']),
   "campus": zod.string(),
   "department": zod.string(),
   "graduationYear": zod.int().nullish()
@@ -178,7 +178,6 @@ export const ListUsersResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -211,7 +210,6 @@ export const GetUserParams = zod.object({
 export const GetUserResponse = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -243,7 +241,6 @@ export const GetDashboardSummaryResponse = zod.object({
   "recentPeople": zod.array(zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -295,7 +292,6 @@ export const ListMentorshipRequestsResponseItem = zod.object({
   "mentor": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -315,7 +311,6 @@ export const ListMentorshipRequestsResponseItem = zod.object({
   "requester": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -356,7 +351,6 @@ export const CreateMentorshipRequestResponse = zod.object({
   "mentor": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -376,7 +370,6 @@ export const CreateMentorshipRequestResponse = zod.object({
   "requester": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -417,7 +410,6 @@ export const UpdateMentorshipRequestStatusResponse = zod.object({
   "mentor": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -437,7 +429,6 @@ export const UpdateMentorshipRequestStatusResponse = zod.object({
   "requester": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -492,7 +483,6 @@ export const ListCollaborationsResponse = zod.object({
   "creator": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -544,7 +534,6 @@ export const CreateCollaborationResponse = zod.object({
   "creator": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
   "role": zod.enum(['student', 'alumni', 'faculty', 'researcher', 'admin']),
   "campus": zod.string(),
   "department": zod.string(),
@@ -663,6 +652,16 @@ export const MarkNotificationReadResponse = zod.object({
   "message": zod.string(),
   "read": zod.boolean(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get platform summary metrics for administrators
+ */
+export const GetAdminSummaryResponse = zod.object({
+  "users": zod.int(),
+  "opportunities": zod.int(),
+  "events": zod.int()
 })
 
 

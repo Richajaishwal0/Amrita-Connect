@@ -5,7 +5,7 @@
  * Amrita Connect university networking API
  * OpenAPI spec version: 0.1.0
  */
-import type { UserRole } from './userRole';
+import type { RegistrationRole } from './registrationRole';
 
 export interface RegisterInput {
   /** @minLength 2 */
@@ -13,7 +13,7 @@ export interface RegisterInput {
   email: string;
   /** @minLength 8 */
   password: string;
-  role: UserRole;
+  role: RegistrationRole;
   campus: string;
   department: string;
   /** @nullable */

@@ -7,7 +7,7 @@
  */
 import type { Event } from './event';
 import type { Opportunity } from './opportunity';
-import type { User } from './user';
+import type { PublicUser } from './publicUser';
 
 export interface DashboardSummary {
   profileCompletion: number;
@@ -16,7 +16,7 @@ export interface DashboardSummary {
   savedOpportunities: number;
   upcomingEvents: number;
   unreadNotifications: number;
-  recentPeople: User[];
+  recentPeople: PublicUser[];
   upcoming: Event[];
   opportunities: Opportunity[];
 }
