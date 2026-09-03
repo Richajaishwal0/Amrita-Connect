@@ -16,6 +16,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      '@photos': path.resolve(import.meta.dirname, '../photos'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -28,6 +29,9 @@ export default defineConfig({
     port,
     strictPort: false,
     host: '0.0.0.0',
+    fs: {
+      allow: [path.resolve(import.meta.dirname, '..')],
+    },
     proxy: {
       '/api': {
         target: apiUrl,

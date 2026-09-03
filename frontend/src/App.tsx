@@ -30,6 +30,12 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Link, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import { PLACED_SENIORS, PLACED_ALUMNI_DATA } from './data/seniorsData';
+import { SeniorProfilePage } from './pages/SeniorProfilePage';
+import maneeshaPhoto from '@photos/maneesha.png';
+import santikumarPhoto from '@photos/santikumar.png';
+import jayakumarPhoto from '@photos/jayakumar.png';
+import krishnakumarPhoto from '@photos/krishnakumar.png';
 
 const queryClient = new QueryClient();
 setAuthTokenGetter(() => typeof localStorage === 'undefined' ? null : localStorage.getItem('amrita_token'));
@@ -219,69 +225,6 @@ function Brand({ light = false, small = false }: { light?: boolean; small?: bool
   );
 }
 
-const PLACED_ALUMNI = [
-  {
-    name: 'Arjun Narayanan',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=280&q=80',
-    role: 'Software Engineer',
-    roleColor: 'text-blue-600 dark:text-blue-400',
-    company: 'Google',
-    location: 'Google, USA',
-    batch: 'Class of 2019 • CSE',
-    ringClass: 'ring-blue-400/80',
-    btnClass: 'bg-blue-50/80 text-blue-600 hover:bg-blue-100 border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900',
-    logo: 'google',
-  },
-  {
-    name: 'Meghana Iyer',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=280&q=80',
-    role: 'Product Manager',
-    roleColor: 'text-sky-500 dark:text-sky-400',
-    company: 'Microsoft',
-    location: 'Microsoft, USA',
-    batch: 'Class of 2018 • ECE',
-    ringClass: 'ring-sky-400/80',
-    btnClass: 'bg-sky-50/80 text-sky-600 hover:bg-sky-100 border-sky-200/60 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-900',
-    logo: 'microsoft',
-  },
-  {
-    name: 'Rohit Prakash',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=280&q=80',
-    role: 'Solutions Architect',
-    roleColor: 'text-amber-500 dark:text-amber-400',
-    company: 'Amazon AWS',
-    location: 'Amazon AWS, USA',
-    batch: 'Class of 2017 • IT',
-    ringClass: 'ring-amber-400/80',
-    btnClass: 'bg-amber-50/80 text-amber-600 hover:bg-amber-100 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900',
-    logo: 'aws',
-  },
-  {
-    name: 'Karan Mahesh',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=280&q=80',
-    role: 'AI Research Engineer',
-    roleColor: 'text-emerald-500 dark:text-emerald-400',
-    company: 'NVIDIA',
-    location: 'NVIDIA, USA',
-    batch: 'Class of 2020 • CSE',
-    ringClass: 'ring-emerald-400/80',
-    btnClass: 'bg-emerald-50/80 text-emerald-600 hover:bg-emerald-100 border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900',
-    logo: 'nvidia',
-  },
-  {
-    name: 'Ananya Subramani',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=280&q=80',
-    role: 'Security Researcher',
-    roleColor: 'text-rose-500 dark:text-rose-400',
-    company: 'Cisco Talos',
-    location: 'Cisco Talos, USA',
-    batch: 'Class of 2019 • CSE',
-    ringClass: 'ring-rose-400/80',
-    btnClass: 'bg-rose-50/80 text-rose-600 hover:bg-rose-100 border-rose-200/60 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900',
-    logo: 'cisco',
-  },
-];
-
 const AMRITA_CAMPUSES = [
   { id: 'cbe', name: 'Coimbatore', title: 'Coimbatore (Ettimadai)', focus: 'Aerospace, Robotics, Cyber Physical Systems & Core Engineering', count: '10,000+ Members', activeProjects: 142, icon: Rocket },
   { id: 'amp', name: 'Amritapuri', title: 'Amritapuri (Kollam)', focus: 'Cybersecurity (bi0s), Wireless IoT, Nanotech & Computing', count: '8,500+ Members', activeProjects: 118, icon: ShieldCheck },
@@ -347,130 +290,198 @@ const RENOWNED_FACULTY = [
   },
 ];
 
-/* 1. Alumni Spotlight 5-Column Carousel matching Reference Screenshot */
+/* 1. Alumni & Seniors Spotlight Experience Matching Exact Reference */
 function AlumniSpotlightSection() {
-  const [activePage, setActivePage] = useState(0);
+  const [category, setCategory] = useState<'seniors' | 'alumni'>('seniors');
 
-  const getCompanyLogoBadge = (type: string) => {
-    switch (type) {
-      case 'google':
-        return (
-          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
-            <span className="font-bold text-xs text-blue-500">G</span>
-          </div>
-        );
-      case 'microsoft':
-        return (
-          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white p-1">
-            <div className="grid grid-cols-2 gap-0.5 w-3.5 h-3.5">
-              <div className="bg-[#f25022] rounded-[1px]" />
-              <div className="bg-[#7fba00] rounded-[1px]" />
-              <div className="bg-[#00a4ef] rounded-[1px]" />
-              <div className="bg-[#ffb900] rounded-[1px]" />
-            </div>
-          </div>
-        );
-      case 'aws':
-        return (
-          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
-            <span className="font-extrabold text-[9px] text-[#ff9900]">aws</span>
-          </div>
-        );
-      case 'nvidia':
-        return (
-          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-[#76b900] shadow-md ring-2 ring-white">
-            <span className="font-bold text-[9px] text-white">n</span>
-          </div>
-        );
-      case 'cisco':
-        return (
-          <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-white shadow-md ring-2 ring-white">
-            <span className="font-extrabold text-[8px] text-[#00bceb]">cisco</span>
-          </div>
-        );
+  const activeProfiles = category === 'seniors' ? PLACED_SENIORS : PLACED_ALUMNI_DATA;
+
+  const getProfileConfig = (slug: string, logos: string[]) => {
+    switch (slug) {
+      case 'nitesh':
+        return {
+          company: 'Amazon - Infosys',
+          badgeBg: 'bg-[#fff8eb] dark:bg-amber-950/30 border-[#fde68a] dark:border-amber-800/40 text-[#b45309] dark:text-amber-400',
+          ring: 'ring-4 ring-amber-100 dark:ring-amber-900/30',
+          linkText: 'text-amber-600 dark:text-amber-400',
+          hasBookmark: true,
+        };
+      case 'richa':
+        return {
+          company: 'Infosys',
+          badgeBg: 'bg-[#eff6ff] dark:bg-blue-950/30 border-[#bfdbfe] dark:border-blue-800/40 text-[#1d4ed8] dark:text-blue-400',
+          ring: 'ring-4 ring-blue-100 dark:ring-blue-900/30',
+          linkText: 'text-blue-600 dark:text-blue-400',
+          hasBookmark: false,
+        };
+      case 'shudarsan':
+        return {
+          company: 'The Math Company',
+          badgeBg: 'bg-[#faf5ff] dark:bg-purple-950/30 border-[#e9d5ff] dark:border-purple-800/40 text-[#7e22ce] dark:text-purple-400',
+          ring: 'ring-4 ring-purple-100 dark:ring-purple-900/30',
+          linkText: 'text-purple-600 dark:text-purple-400',
+          hasBookmark: false,
+        };
+      case 'kavya':
+        return {
+          company: 'Lam Research · ServiceNow',
+          badgeBg: 'bg-[#ecfdf5] dark:bg-emerald-950/30 border-[#a7f3d0] dark:border-emerald-800/40 text-[#047857] dark:text-emerald-400',
+          ring: 'ring-4 ring-emerald-100 dark:ring-emerald-900/30',
+          linkText: 'text-emerald-600 dark:text-emerald-400',
+          hasBookmark: false,
+        };
+      case 'rupa':
+        return {
+          company: 'TCS',
+          badgeBg: 'bg-[#fff1f2] dark:bg-rose-950/30 border-[#fecdd3] dark:border-rose-800/40 text-[#be123c] dark:text-rose-400',
+          ring: 'ring-4 ring-rose-100 dark:ring-rose-900/30',
+          linkText: 'text-rose-600 dark:text-rose-400',
+          hasBookmark: false,
+        };
+      case 'arjun':
+        return {
+          company: 'Google',
+          badgeBg: 'bg-[#eff6ff] dark:bg-blue-950/30 border-[#bfdbfe] dark:border-blue-800/40 text-[#1d4ed8] dark:text-blue-400',
+          ring: 'ring-4 ring-blue-100 dark:ring-blue-900/30',
+          linkText: 'text-blue-600 dark:text-blue-400',
+          hasBookmark: true,
+        };
+      case 'meghana':
+        return {
+          company: 'Microsoft',
+          badgeBg: 'bg-[#f0f9ff] dark:bg-sky-950/30 border-[#bae6fd] dark:border-sky-800/40 text-[#0369a1] dark:text-sky-400',
+          ring: 'ring-4 ring-sky-100 dark:ring-sky-900/30',
+          linkText: 'text-sky-600 dark:text-sky-400',
+          hasBookmark: false,
+        };
+      case 'rohit':
+        return {
+          company: 'Amazon AWS',
+          badgeBg: 'bg-[#fff8eb] dark:bg-amber-950/30 border-[#fde68a] dark:border-amber-800/40 text-[#b45309] dark:text-amber-400',
+          ring: 'ring-4 ring-amber-100 dark:ring-amber-900/30',
+          linkText: 'text-amber-600 dark:text-amber-400',
+          hasBookmark: false,
+        };
+      case 'karan':
+        return {
+          company: 'NVIDIA',
+          badgeBg: 'bg-[#ecfdf5] dark:bg-emerald-950/30 border-[#a7f3d0] dark:border-emerald-800/40 text-[#047857] dark:text-emerald-400',
+          ring: 'ring-4 ring-emerald-100 dark:ring-emerald-900/30',
+          linkText: 'text-emerald-600 dark:text-emerald-400',
+          hasBookmark: false,
+        };
+      case 'ananya':
+        return {
+          company: 'Cisco Talos',
+          badgeBg: 'bg-[#ecfeff] dark:bg-cyan-950/30 border-[#a5f3fc] dark:border-cyan-800/40 text-[#0e7490] dark:text-cyan-400',
+          ring: 'ring-4 ring-cyan-100 dark:ring-cyan-900/30',
+          linkText: 'text-cyan-600 dark:text-cyan-400',
+          hasBookmark: false,
+        };
       default:
-        return null;
+        return {
+          company: logos.join(' · '),
+          badgeBg: 'bg-secondary border-border text-foreground',
+          ring: 'ring-4 ring-border',
+          linkText: 'text-accent',
+          hasBookmark: false,
+        };
     }
   };
 
   return (
-    <section className="border-t border-border/70 bg-transparent py-16 sm:py-24 relative z-10">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        {/* Brand Logos Bar */}
-        <div className="mb-12 text-center">
-          <p className="mono text-[11px] font-bold uppercase tracking-[.25em] text-muted-foreground">
-            ALUMNI LEADING BREAKTHROUGHS GLOBALLY AT
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm font-bold text-muted-foreground/80">
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-blue-500" /> Google
-            </span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-sky-500" /> Microsoft
-            </span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-amber-500" /> Amazon AWS
-            </span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-emerald-500" /> NVIDIA
-            </span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-cyan-500" /> Cisco Talos
-            </span>
-            <span className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <Building2 className="h-4 w-4 text-rose-500" /> Adobe
-            </span>
+    <section id="alumni" className="relative overflow-hidden py-16 sm:py-24 bg-slate-50/60 dark:bg-transparent border-t border-border/70">
+      {/* Decorative Dot Matrix on the side */}
+      <div className="absolute top-1/2 -right-4 -translate-y-1/2 w-64 h-64 opacity-25 dark:opacity-10 pointer-events-none hidden lg:block bg-[radial-gradient(#94a3b8_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
+      <div className="absolute top-1/4 -left-4 w-48 h-48 opacity-25 dark:opacity-10 pointer-events-none hidden lg:block bg-[radial-gradient(#94a3b8_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* 1. Centered Segmented Capsule Switcher */}
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-card p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-slate-200/80 dark:border-border">
+            <button
+              type="button"
+              onClick={() => setCategory('seniors')}
+              className={cx(
+                'inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold transition-all duration-300 active:scale-95',
+                category === 'seniors'
+                  ? 'bg-[#181326] text-white shadow-md ring-1 ring-purple-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-foreground'
+              )}
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span>Placed Seniors (2023)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCategory('alumni')}
+              className={cx(
+                'inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold transition-all duration-300 active:scale-95',
+                category === 'alumni'
+                  ? 'bg-[#181326] text-white shadow-md ring-1 ring-purple-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-foreground'
+              )}
+            >
+              <Globe className="h-4 w-4" />
+              <span>Global Alumni</span>
+            </button>
           </div>
         </div>
 
-        {/* Main 5-Column Alumni Carousel Container matching Reference Image */}
-        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/95 p-6 sm:p-10 shadow-xl backdrop-blur-md">
-          {/* Navigation Arrows */}
-          <button
-            type="button"
-            aria-label="Previous alumni"
-            onClick={() => setActivePage((prev) => (prev === 0 ? 4 : prev - 1))}
-            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 grid h-10 w-10 place-items-center rounded-full border border-border/80 bg-background/95 text-foreground shadow-md hover:bg-muted active:scale-95 transition-all"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+        {/* 2. Header: Eyebrow + Dual-Colored Title + Subtitle */}
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <p className="text-[11px] font-bold tracking-[0.25em] text-slate-500 dark:text-slate-400 uppercase flex items-center justify-center gap-2">
+            <span className="text-amber-500">→</span>
+            <span>{category === 'seniors' ? 'CAMPUS PLACEMENT ACHIEVERS' : 'GLOBAL ALUMNI ACHIEVERS'}</span>
+            <span className="text-amber-500">←</span>
+          </p>
 
-          <button
-            type="button"
-            aria-label="Next alumni"
-            onClick={() => setActivePage((prev) => (prev + 1) % 5)}
-            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 grid h-10 w-10 place-items-center rounded-full border border-border/80 bg-background/95 text-foreground shadow-md hover:bg-muted active:scale-95 transition-all"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-foreground">
+            Celebrating <span className="text-[#f97316]">excellence.</span> Inspired by <span className="text-[#8b5cf6]">journeys.</span>
+          </h2>
 
-          {/* Background Connecting Dotted Curved Path */}
-          <div className="absolute top-[82px] left-16 right-16 hidden lg:block pointer-events-none z-0">
-            <svg className="w-full h-12" viewBox="0 0 900 40" fill="none" preserveAspectRatio="none">
-              <path
-                d="M 10 20 Q 225 5 450 20 T 890 20"
-                stroke="currentColor"
-                className="text-border/60"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-              />
-              <circle cx="170" cy="14" r="4" fill="#3b82f6" />
-              <circle cx="390" cy="23" r="4" fill="#f97316" />
-              <circle cx="610" cy="18" r="4" fill="#10b981" />
-              <circle cx="830" cy="20" r="4" fill="#f43f5e" />
-            </svg>
-          </div>
+          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400">
+            {category === 'seniors'
+              ? 'Meet our talented seniors placed in top companies.'
+              : 'Connect with Amrita alumni leading engineering & product breakthroughs.'}
+          </p>
+        </div>
 
-          {/* 5-Column Alumni Profile Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-6 relative z-10 px-6 sm:px-8">
-            {PLACED_ALUMNI.map((alum) => (
-              <div
-                key={alum.name}
-                className="flex flex-col items-center text-center group transition-all duration-300 hover:-translate-y-1"
+        {/* 3. 5-Column High-Fidelity Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-6">
+          {activeProfiles.map((alum) => {
+            const config = getProfileConfig(alum.slug, alum.logos);
+
+            return (
+              <Link
+                key={alum.slug}
+                href={`/profile/${alum.slug}`}
+                className="group relative flex flex-col justify-between items-center rounded-3xl bg-white dark:bg-card border border-slate-100 dark:border-border/60 shadow-[0_10px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_45px_rgba(0,0,0,0.1)] p-6 transition-all duration-300 hover:-translate-y-2 overflow-hidden text-center"
               >
-                {/* Circular Profile Avatar with Company Pin */}
-                <div className="relative mb-3.5">
-                  <div className={cx('h-24 w-24 rounded-full p-1 ring-2 shadow-lg transition-all', alum.ringClass)}>
+                {/* Optional Top Bookmark Ribbon (Nitesh / Arjun) */}
+                {config.hasBookmark && (
+                  <div className="absolute top-0 right-5 bg-gradient-to-b from-amber-500 to-amber-600 text-white w-6 h-8 flex items-center justify-center rounded-b-sm shadow-md z-20">
+                    <Star className="h-3.5 w-3.5 fill-white text-white" />
+                  </div>
+                )}
+
+                {/* Top: Company Pill */}
+                <div className="w-full flex justify-center mb-5">
+                  <span
+                    className={cx(
+                      'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-bold tracking-tight shadow-2xs',
+                      config.badgeBg
+                    )}
+                  >
+                    <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    <span>{config.company}</span>
+                  </span>
+                </div>
+
+                {/* Middle: Portrait Image inside Subtle Color Ring */}
+                <div className="my-2 flex justify-center">
+                  <div className={cx('relative h-28 w-28 rounded-full p-1 shadow-sm overflow-hidden transition-transform duration-300 group-hover:scale-105', config.ring)}>
                     <img
                       src={alum.avatar}
                       alt={alum.name}
@@ -484,64 +495,85 @@ function AlumniSpotlightSection() {
                     />
                     <div
                       style={{ display: 'none' }}
-                      className="h-full w-full place-items-center rounded-full bg-secondary text-foreground font-bold text-base"
+                      className="h-full w-full place-items-center rounded-full bg-secondary text-foreground font-bold text-lg"
                     >
                       {initials(alum.name)}
                     </div>
                   </div>
-                  {getCompanyLogoBadge(alum.logo)}
                 </div>
 
-                {/* Name */}
-                <h3 className="text-sm font-bold text-foreground tracking-tight">
-                  {alum.name}
-                </h3>
+                {/* Bottom: Name + Verified Checkmark + Batch + View Profile */}
+                <div className="mt-5 space-y-2 w-full">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-foreground">
+                      {alum.name}
+                    </h3>
+                    <CheckCircle2 className="h-4 w-4 text-blue-500 fill-blue-500 text-white shrink-0" />
+                  </div>
 
-                {/* Role Title */}
-                <p className={cx('text-xs font-semibold mt-0.5', alum.roleColor)}>
-                  {alum.role}
-                </p>
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    <span>{alum.batch}</span>
+                  </div>
 
-                {/* Company & Location */}
-                <p className="mt-2 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/80" />
-                  <span>{alum.location}</span>
-                </p>
+                  <div className="pt-3 flex justify-center">
+                    <span className={cx('text-xs font-bold flex items-center gap-1 transition-all duration-300 group-hover:gap-2', config.linkText)}>
+                      <span>View Profile</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
 
-                {/* Batch & Major */}
-                <p className="mt-0.5 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-                  <GraduationCap className="h-3 w-3 shrink-0 text-muted-foreground/80" />
-                  <span>{alum.batch}</span>
-                </p>
-
-                {/* View Profile Action Button */}
-                <Link
-                  href="/register"
-                  className={cx(
-                    'mt-4 w-full max-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-bold shadow-sm transition-all active:scale-95',
-                    alum.btnClass
-                  )}
-                >
-                  View Profile →
-                </Link>
+        {/* 4. Bottom Floating Stats Bar */}
+        <div className="mt-12 rounded-3xl border border-slate-100 dark:border-border/80 bg-white/95 dark:bg-card/90 p-6 shadow-[0_10px_35px_rgba(0,0,0,0.04)] backdrop-blur-md">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-border/60">
+            {/* Stat 1: Placed Seniors */}
+            <div className="flex items-center gap-4 p-3 sm:px-6">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-500">
+                <Users className="h-5 w-5" />
               </div>
-            ))}
-          </div>
+              <div>
+                <p className="text-2xl font-extrabold text-orange-500">200+</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Seniors Placed</p>
+              </div>
+            </div>
 
-          {/* Carousel Dot Pagination */}
-          <div className="mt-8 flex items-center justify-center gap-2">
-            {[0, 1, 2, 3, 4].map((idx) => (
-              <button
-                key={idx}
-                type="button"
-                aria-label={`Go to slide ${idx + 1}`}
-                onClick={() => setActivePage(idx)}
-                className={cx(
-                  'rounded-full transition-all duration-300',
-                  activePage === idx ? 'h-1.5 w-6 bg-blue-500 shadow-sm' : 'h-1.5 w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'
-                )}
-              />
-            ))}
+            {/* Stat 2: Top Companies */}
+            <div className="flex items-center gap-4 p-3 sm:px-6">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold text-blue-600">45+</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Top Companies</p>
+              </div>
+            </div>
+
+            {/* Stat 3: Amrita Campuses */}
+            <div className="flex items-center gap-4 p-3 sm:px-6">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600">
+                <Globe className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold text-purple-600">7</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Amrita Campuses</p>
+              </div>
+            </div>
+
+            {/* Stat 4: Excellence */}
+            <div className="flex items-center gap-4 p-3 sm:px-6">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600">
+                <Award className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold text-emerald-600">100%</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Excellence</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1012,26 +1044,23 @@ function UniversityLiveMesh() {
                     </div>
                   </Link>
 
-                  {/* Contextual Floating Popover with Smart Position to Prevent Collisions */}
+                  {/* Contextual Floating Popover: Compact with Essential Details Only */}
                   {isSelected && (
                     <div className={cx(
-                      'absolute z-50 w-64 rounded-2xl border border-slate-200/90 dark:border-slate-700 bg-white/98 dark:bg-slate-900/98 p-4 shadow-2xl backdrop-blur-md animate-scale-in text-left pointer-events-auto',
+                      'absolute z-50 w-48 rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-2.5 shadow-xl backdrop-blur-md animate-scale-in text-left pointer-events-auto',
                       getPopoverPositionClass(camp.popoverPlacement)
                     )}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-foreground">{camp.name}</span>
-                        <span className="mono text-[10px] font-bold text-accent">{camp.members} verified</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-bold text-foreground truncate">{camp.name}</span>
+                        <span className="text-[10px] font-bold text-orange-500 shrink-0">{camp.members}</span>
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                        {camp.focus}
-                      </p>
-                      <div className="mt-2.5 flex items-center justify-between border-t border-border/60 pt-2">
-                        <span className="text-[10px] text-muted-foreground">{camp.projects} Active Initiatives</span>
+                      <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-1.5">
+                        <span className="text-[10px] text-muted-foreground font-medium">{camp.projects} projects</span>
                         <Link
                           href={getNavHref(`/people?campus=${encodeURIComponent(camp.queryCampus)}`)}
-                          className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-0.5"
+                          className="text-[10px] font-bold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-0.5"
                         >
-                          Connect Now <ArrowRight className="h-3 w-3 inline" />
+                          Connect <ArrowRight className="h-2.5 w-2.5 inline" />
                         </Link>
                       </div>
                     </div>
@@ -1074,160 +1103,440 @@ function UniversityLiveMesh() {
   );
 }
 
-/* 3. Interactive Split-Screen Capability Explorer (Apple / Stripe style) */
+/* 3. Interactive Split-Screen Capability Explorer: Enhanced Dual-Theme & Concentric Icons */
 function InteractiveFeatureExplorer() {
   const [activeTab, setActiveTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const features = [
     {
       id: 'directory',
-      title: '01. Multi-Campus Directory',
-      summary: 'Search by exact skills, publications, batch year, and campus centers.',
-      detail: 'Find senior engineers at top firms, prospective co-founders, or lab heads in seconds without cold emailing strangers on open networks.',
-      preview: {
-        badge: 'Direct Search Preview',
-        searchQuery: 'PyTorch, Biomedical Imaging, Class of 2023',
-        results: [
-          { name: 'Dr. Deepthi K. S.', role: 'AI in Healthcare Lab Lead', campus: 'Kochi', tag: 'Faculty' },
-          { name: 'Meera Nair', role: 'Biotech & Robotics Researcher', campus: 'Kochi', tag: 'Researcher' },
-          { name: 'Sneha Iyer', role: 'AI Research Scientist @ Microsoft', campus: 'Bengaluru', tag: 'Alumni' },
-        ],
-      },
+      num: '01',
+      title: 'Multi-Campus Directory',
+      summary: 'Search by skills, publications, batch year, and campus centers in seconds.',
+      icon: Users,
+      color: 'amber',
+      accentColor: '#f97316',
+      activeBorder: 'border-amber-500 dark:border-amber-500/80 bg-gradient-to-r from-amber-50/90 via-amber-50/40 to-white/80 dark:from-amber-500/15 dark:via-amber-500/5 dark:to-transparent ring-1 ring-amber-500/30 dark:ring-amber-500/40',
+      iconOuterActive: 'bg-amber-500/15 ring-2 ring-amber-500/50 dark:ring-amber-400/60 shadow-md shadow-amber-500/10',
+      iconInnerActive: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40',
+      searchPlaceholder: 'e.g. PyTorch, Biomedical Imaging, Class of 2023',
+      popular: ['Machine Learning', '2023 Batch', 'Amrita Bengaluru', 'Researcher'],
+      eyebrow: 'FIND PEOPLE, SKILLS, OPPORTUNITIES',
+      cardsTitle: 'Quick Connections',
+      items: [
+        {
+          name: 'Dr. Deepthi K. S.',
+          role: 'AI in Healthcare',
+          subrole: 'Lab Lead',
+          campus: 'Amrita Kochi',
+          type: 'Faculty',
+          tag: 'AI • Healthcare',
+          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/faculty/deepthi-ks',
+        },
+        {
+          name: 'Meera Nair',
+          role: 'Biotech & Robotics',
+          subrole: 'Researcher',
+          campus: 'Amrita Kochi',
+          type: 'Researcher',
+          tag: 'Robotics • Biotech',
+          avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/people',
+        },
+        {
+          name: 'Sneha Iyer',
+          role: 'AI Research Scientist',
+          subrole: '@ Microsoft',
+          campus: 'Amrita Bengaluru',
+          type: 'Alumni',
+          tag: 'AI • Computer Vision',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/people',
+        },
+      ],
     },
     {
       id: 'mentorship',
-      title: '02. Structured 1-on-1 Guidance',
-      summary: 'Request direct office hours and mock interviews with verified alumni.',
-      detail: 'Set clear expectations, submit your project notes, and schedule focused sessions on career pivots, coding interviews, and grant proposals.',
-      preview: {
-        badge: 'Active Mentorship Flow',
-        searchQuery: 'Topic: Distributed Systems & LLD Preparation',
-        results: [
-          { name: 'Karthik Ramanathan', role: 'SWE III @ Google', campus: 'Zurich (Amritapuri)', tag: 'Confirmed' },
-          { name: 'Vishnu Vardhan', role: 'Threat Lead @ Cisco Talos', campus: 'Bengaluru (bi0s)', tag: 'Open Slot' },
-        ],
-      },
+      num: '02',
+      title: '1-on-1 Guidance',
+      summary: 'Request office hours and mock interviews with verified alumni.',
+      icon: MessageSquare,
+      color: 'purple',
+      accentColor: '#a855f7',
+      activeBorder: 'border-purple-500 dark:border-purple-500/80 bg-gradient-to-r from-purple-50/90 via-purple-50/40 to-white/80 dark:from-purple-500/15 dark:via-purple-500/5 dark:to-transparent ring-1 ring-purple-500/30 dark:ring-purple-500/40',
+      iconOuterActive: 'bg-purple-500/15 ring-2 ring-purple-500/50 dark:ring-purple-400/60 shadow-md shadow-purple-500/10',
+      iconInnerActive: 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/40',
+      searchPlaceholder: 'e.g. Mock Interview, Resume Review, LLD System Design',
+      popular: ['Google SWE', 'Amazon AWS', 'Research MS/PhD', 'bi0s CTF'],
+      eyebrow: 'BOOK DIRECT 1-ON-1 SESSIONS',
+      cardsTitle: 'Featured Mentors',
+      items: [
+        {
+          name: 'Nitesh Kumar',
+          role: 'Software Engineer',
+          subrole: '@ Amazon / Infosys',
+          campus: 'Amrita Bengaluru',
+          type: 'Batch of 2023',
+          tag: 'Amazon • DSA',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/profile/nitesh',
+        },
+        {
+          name: 'Richa Jaishwal',
+          role: 'Systems Engineer',
+          subrole: '@ Infosys',
+          campus: 'Amrita Bengaluru',
+          type: 'Batch of 2023',
+          tag: 'Cloud • Java',
+          avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/profile/richa',
+        },
+        {
+          name: 'Kavya R',
+          role: 'Hardware / SWE',
+          subrole: '@ Lam / ServiceNow',
+          campus: 'Amrita Coimbatore',
+          type: 'Batch of 2023',
+          tag: 'VLSI • Enterprise',
+          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/profile/kavya',
+        },
+      ],
     },
     {
-      id: 'collabs',
-      title: '03. Cross-Discipline Project Match',
-      summary: 'Bring coders, hardware engineers, and domain specialists together.',
-      detail: 'Tackle Smart India Hackathons, co-author IEEE papers, or build deep-tech startups by assembling multi-campus interdisciplinary teams.',
-      preview: {
-        badge: 'Live Projects Board',
-        searchQuery: 'Category: Defense AI & Autonomous Swarms',
-        results: [
-          { name: 'Autonomous Drone Swarm', role: 'Need: ROS 2 & Computer Vision', campus: 'Coimbatore', tag: '3/4 Filled' },
-          { name: 'Genome AI Classifier', role: 'Need: Python & Biostatistics', campus: 'Kochi', tag: '2/3 Filled' },
-        ],
-      },
+      id: 'projects',
+      num: '03',
+      title: 'Project Match',
+      summary: 'Find the right teammates across disciplines and build impactful projects.',
+      icon: Code,
+      color: 'blue',
+      accentColor: '#3b82f6',
+      activeBorder: 'border-blue-500 dark:border-blue-500/80 bg-gradient-to-r from-blue-50/90 via-blue-50/40 to-white/80 dark:from-blue-500/15 dark:via-blue-500/5 dark:to-transparent ring-1 ring-blue-500/30 dark:ring-blue-500/40',
+      iconOuterActive: 'bg-blue-500/15 ring-2 ring-blue-500/50 dark:ring-blue-400/60 shadow-md shadow-blue-500/10',
+      iconInnerActive: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40',
+      searchPlaceholder: 'e.g. Autonomous Drones, Robotics ROS2, Quantum ML',
+      popular: ['SIH 2024', 'IEEE Paper', 'Defense Swarms', 'Fintech'],
+      eyebrow: 'COLLABORATE ACROSS 7 CAMPUSES',
+      cardsTitle: 'Active Teams & Inquiries',
+      items: [
+        {
+          name: 'Autonomous Swarm',
+          role: 'Robotics & Vision',
+          subrole: 'Lead: Rahul V.',
+          campus: 'Amrita Coimbatore',
+          type: '3/4 Filled',
+          tag: 'ROS2 • OpenCV',
+          avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/projects',
+        },
+        {
+          name: 'Genome Classifier',
+          role: 'Healthcare AI',
+          subrole: 'Lead: Ananya S.',
+          campus: 'Amrita Kochi',
+          type: '2/3 Filled',
+          tag: 'PyTorch • Genomics',
+          avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/projects',
+        },
+        {
+          name: 'Microgrid IoT',
+          role: 'Clean Energy',
+          subrole: 'Lead: Vinay P.',
+          campus: 'Amrita Amritapuri',
+          type: '1/3 Filled',
+          tag: 'Smart Grid • IoT',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/projects',
+        },
+      ],
     },
     {
       id: 'opportunities',
-      title: '04. Curated Opportunities & Grants',
-      summary: 'Exclusive lab positions, research grants, and hiring calls.',
-      detail: 'Discover verified academic fellowships, university startup seed funds, and campus referrals not posted on public job boards.',
-      preview: {
-        badge: 'Exclusive Noticeboard',
-        searchQuery: 'Filtered: DRDO & ISRO Sponsored Fellowships',
-        results: [
-          { name: 'Hypervelocity Coatings Fellow', role: 'DRDO Composite Lab · ₹35k/mo', campus: 'Coimbatore', tag: 'Apply Now' },
-          { name: 'UN Sasakawa Sensor Grant', role: 'IoT Landslide Lab · Research Call', campus: 'Amritapuri', tag: 'Open' },
-        ],
-      },
+      num: '04',
+      title: 'Opportunities & Grants',
+      summary: 'Discover exclusive labs, research grants, and hiring opportunities.',
+      icon: BriefcaseBusiness,
+      color: 'emerald',
+      accentColor: '#10b981',
+      activeBorder: 'border-emerald-500 dark:border-emerald-500/80 bg-gradient-to-r from-emerald-50/90 via-emerald-50/40 to-white/80 dark:from-emerald-500/15 dark:via-emerald-500/5 dark:to-transparent ring-1 ring-emerald-500/30 dark:ring-emerald-500/40',
+      iconOuterActive: 'bg-emerald-500/15 ring-2 ring-emerald-500/50 dark:ring-emerald-400/60 shadow-md shadow-emerald-500/10',
+      iconInnerActive: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40',
+      searchPlaceholder: 'e.g. DRDO Fellowship, ISRO Lab, Microsoft Research',
+      popular: ['Research Fellow', 'DRDO Lab', 'Seed Grant', 'Internships'],
+      eyebrow: 'EXCLUSIVE NOTICEBOARD & GRANTS',
+      cardsTitle: 'Verified Openings',
+      items: [
+        {
+          name: 'Coatings Fellow',
+          role: 'DRDO Composite Lab',
+          subrole: 'Stipend: ₹35k/mo',
+          campus: 'Amrita Coimbatore',
+          type: 'Apply Now',
+          tag: 'Materials • DRDO',
+          avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/opportunities',
+        },
+        {
+          name: 'Landslide IoT Grant',
+          role: 'UN Sasakawa Lab',
+          subrole: 'Funded Research Call',
+          campus: 'Amrita Amritapuri',
+          type: 'Open Call',
+          tag: 'IoT • Sensors',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/opportunities',
+        },
+        {
+          name: 'AI Diagnostics R&D',
+          role: 'AIMS Medical AI',
+          subrole: 'Fellowship Position',
+          campus: 'Amrita Kochi',
+          type: 'Open Call',
+          tag: 'Bioinformatics',
+          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+          verified: true,
+          link: '/opportunities',
+        },
+      ],
     },
   ];
 
   const current = features[activeTab];
 
   return (
-    <section className="border-t border-border/70 bg-transparent py-20 sm:py-28 relative z-10">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="max-w-2xl">
-          <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-accent">
-            <Sparkles className="h-3.5 w-3.5" /> Platform Capabilities
+    <section className="relative overflow-hidden py-20 sm:py-28 bg-slate-50/80 dark:bg-[#070b14] text-foreground dark:text-white border-t border-border/80 transition-colors">
+      {/* Ambient Lighting Orbs */}
+      <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-amber-500/10 dark:bg-amber-500/10 blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-purple-500/10 dark:bg-purple-500/10 blur-[120px] pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
+        {/* Section Header */}
+        <div className="max-w-2xl mb-12">
+          <div className="mono inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.25em] text-[#f97316]">
+            <Sparkles className="h-4 w-4" /> PLATFORM CAPABILITIES
           </div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            A Purpose-Built Engine for Academic Excellence.
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+            A Purpose-Built Engine for <span className="text-[#f97316]">Academic</span> <span className="text-[#8b5cf6]">Excellence.</span>
           </h2>
+          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+            Powerful features to help you discover people, opportunities, and grow together.
+          </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
-          {/* Left Feature Tabs */}
-          <div className="space-y-3">
+        {/* Split-Screen Main Grid */}
+        <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] items-start">
+          
+          {/* Left Vertical Timeline Selector */}
+          <div className="relative space-y-4">
+            {/* Timeline Vertical Track Line that cuts through all nodes */}
+            <div className="absolute left-[37px] top-7 bottom-7 w-[2px] bg-slate-200 dark:bg-slate-800 pointer-events-none" />
+
             {features.map((feat, idx) => {
               const isActive = activeTab === idx;
+              const Icon = feat.icon;
+
               return (
                 <button
                   key={feat.id}
                   type="button"
                   onClick={() => setActiveTab(idx)}
                   className={cx(
-                    'w-full rounded-2xl border p-5 text-left transition-all',
+                    'group relative w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 text-left transition-all duration-300 active:scale-[0.99] cursor-pointer',
                     isActive
-                      ? 'border-accent bg-card shadow-md ring-1 ring-accent/30'
-                      : 'border-transparent bg-transparent hover:bg-card/60'
+                      ? feat.activeBorder + ' shadow-lg'
+                      : 'border-slate-200/80 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c101c]/70 hover:bg-white dark:hover:bg-[#0c101c] hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 shadow-xs'
                   )}
                 >
-                  <h3 className={cx('text-lg font-bold', isActive ? 'text-accent' : 'text-foreground')}>
-                    {feat.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-foreground/90 font-medium">
-                    {feat.summary}
-                  </p>
-                  {isActive && (
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground animate-rise">
-                      {feat.detail}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-4">
+                    {/* Concentric Dual-Ring Icon Container */}
+                    <div
+                      className={cx(
+                        'relative z-10 grid h-14 w-14 shrink-0 place-items-center rounded-full transition-all duration-300',
+                        isActive
+                          ? feat.iconOuterActive
+                          : 'bg-slate-100 dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 group-hover:border-slate-400 dark:group-hover:border-slate-600'
+                      )}
+                    >
+                      <div
+                        className={cx(
+                          'grid h-10 w-10 place-items-center rounded-full transition-all',
+                          isActive
+                            ? feat.iconInnerActive
+                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                        )}
+                      >
+                        <Icon className="h-5 w-5 stroke-[1.8]" />
+                      </div>
+                    </div>
+
+                    {/* Text Details */}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="mono text-xs font-extrabold text-slate-400">{feat.num}</span>
+                        <h3 className={cx('text-base sm:text-lg font-bold transition-colors', isActive ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white')}>
+                          {feat.title}
+                        </h3>
+                      </div>
+                      <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium leading-snug">
+                        {feat.summary}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Chevron Indicator */}
+                  <div
+                    style={{
+                      backgroundColor: isActive ? feat.accentColor : undefined,
+                    }}
+                    className={cx(
+                      'hidden sm:grid h-7 w-7 shrink-0 place-items-center rounded-full transition-all group-hover:translate-x-1',
+                      isActive
+                        ? 'text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-[#1e293b] text-slate-400 dark:text-slate-500'
+                    )}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Right Live Interactive Preview Canvas */}
-          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <span className="mono text-xs font-bold uppercase tracking-wider text-accent">
-                {current.preview.badge}
+          {/* Right Interactive Live Engine Preview Glass Canvas: Compact & Minimal */}
+          <div className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#090d16] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_15px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl">
+            
+            {/* Top Bar Header */}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span className="mono text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <Search className="h-3 w-3" />
+                <span>{current.eyebrow}</span>
               </span>
-              <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-muted-foreground">
-                Amrita Connect Engine
+              <span className="rounded-full bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/50 px-2.5 py-0.5 text-[10px] font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> Engine
               </span>
             </div>
 
-            <div className="mt-5 rounded-xl border border-input bg-secondary/40 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-              <Search className="h-3.5 w-3.5 text-accent" />
-              <span>{current.preview.searchQuery}</span>
+            {/* Compact Search Bar Input */}
+            <div className="mt-3.5 flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-[#121829] p-1 shadow-inner">
+              <div className="flex items-center gap-2 flex-1 pl-2.5 text-xs text-slate-400">
+                <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder={current.searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              >
+                Search
+              </button>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {current.preview.results.map((res, i) => (
-                <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-secondary/20 p-3.5 hover:bg-secondary/40 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent/20 text-accent font-bold text-xs">
-                      {initials(res.name)}
+            {/* Compact Popular Tags */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-slate-400 text-[10px]">Popular:</span>
+              {current.popular.slice(0, 3).map((term, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSearchQuery(term)}
+                  className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-600 dark:text-slate-300 hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-white transition-colors"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Connections Header */}
+            <div className="mt-4 flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                {current.cardsTitle}
+              </h4>
+              <Link href="/people" className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline">
+                View all
+              </Link>
+            </div>
+
+            {/* Compact Minimal Cards Grid */}
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {current.items.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="group relative flex flex-col justify-between rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#0e1424]/90 p-3 shadow-2xs transition-all duration-200 hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 text-center"
+                >
+                  {/* Photo with Verified Pin */}
+                  <div className="relative mx-auto h-11 w-11 mb-1.5">
+                    <img
+                      src={item.avatar}
+                      alt={item.name}
+                      className="h-full w-full rounded-full object-cover ring-2 ring-purple-500/30"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextElementSibling) {
+                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
+                        }
+                      }}
+                    />
+                    <div
+                      style={{ display: 'none' }}
+                      className="h-full w-full place-items-center rounded-full bg-purple-950 text-white font-bold text-xs"
+                    >
+                      {initials(item.name)}
                     </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">{res.name}</h4>
-                      <p className="text-[11px] text-muted-foreground">{res.role} · Amrita {res.campus}</p>
-                    </div>
+                    {item.verified && (
+                      <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 text-blue-500 fill-blue-500 text-white shadow-sm" />
+                    )}
                   </div>
-                  <span className="rounded-md bg-accent/15 px-2.5 py-1 text-[10px] font-bold text-accent">
-                    {res.tag}
-                  </span>
+
+                  {/* Name & Concise Role */}
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors truncate">
+                      {item.name}
+                    </h5>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {item.role}
+                    </p>
+                  </div>
+
+                  {/* Single Clean Tag Pill */}
+                  <div className="mt-1.5">
+                    <span className="inline-block rounded bg-slate-200/60 dark:bg-slate-800/80 border border-slate-300/60 dark:border-slate-700/60 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-300">
+                      {item.tag}
+                    </span>
+                  </div>
+
+                  {/* Compact Connect Action Button */}
+                  <div className="mt-2.5 pt-1.5 border-t border-slate-200/80 dark:border-slate-800/60">
+                    <Link
+                      href={item.link}
+                      className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 py-1 text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white hover:border-purple-600 shadow-2xs active:scale-95 transition-all"
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      <span>Connect</span>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground hover:opacity-90 shadow-sm"
-              >
-                Access this feature <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
           </div>
         </div>
       </div>
@@ -1235,235 +1544,583 @@ function InteractiveFeatureExplorer() {
   );
 }
 
-/* 4. Structured 4-Step Trajectory Roadmap */
+/* 4. Structured 4-Step Trajectory Roadmap: Exact Reference Match */
 function TrajectoryRoadmap() {
   const steps = [
-    { num: '01', title: 'Verify & Claim Profile', desc: 'Sign in with your campus credentials to establish trusted academic standing.' },
-    { num: '02', title: 'Discover 7 Campuses', desc: 'Filter through students, researchers, and alumni by domain, tools, and batch.' },
-    { num: '03', title: 'Request 1-on-1 Guidance', desc: 'Schedule mentorship sessions for coding interviews, research, and career advice.' },
-    { num: '04', title: 'Co-Author & Build', desc: 'Assemble interdisciplinary teams to publish papers, win hackathons, and innovate.' },
+    {
+      num: '01',
+      title: 'Verify & Claim Profile',
+      desc: 'Sign in with your campus credentials to establish trusted academic standing.',
+      color: 'orange',
+      badgeBg: 'bg-[#f97316]',
+      borderHover: 'hover:border-orange-400 dark:hover:border-orange-500',
+      gradientBg: 'bg-gradient-to-b from-orange-50/70 via-amber-50/20 to-white dark:from-orange-950/20 dark:via-card dark:to-card',
+      borderColor: 'border-orange-100/90 dark:border-orange-900/30',
+      arrowBg: 'bg-orange-50 dark:bg-orange-950/50 text-orange-500 border border-orange-200/80 dark:border-orange-800/80',
+      connectorColor: 'border-orange-300 dark:border-orange-700 text-orange-500',
+      link: '/login',
+      illustration: (
+        <div className="relative mx-auto h-28 w-28 flex items-center justify-center my-3 group-hover:scale-105 transition-transform duration-300">
+          {/* Continuous Orbiting Dashed Ring */}
+          <div className="absolute inset-0 rounded-full border border-dashed border-orange-400/40 dark:border-orange-500/30 animate-spin-slow" />
+          
+          {/* Orbiting Shimmer Sparkles */}
+          <div className="absolute -top-1 right-2 h-2.5 w-2.5 rounded-full bg-orange-400/80 shadow-sm animate-pulse" />
+          <div className="absolute bottom-2 left-1 h-2 w-2 rounded-full bg-amber-400/70" />
+          <div className="absolute top-1/2 -left-1 h-1.5 w-1.5 rounded-full bg-orange-300" />
+          
+          {/* 3D Glossy Shield with Smooth Floating Motion */}
+          <div className="relative z-10 filter drop-shadow-[0_12px_18px_rgba(249,115,22,0.3)] animate-float">
+            <svg viewBox="0 0 100 110" className="h-20 w-20 transition-transform duration-300 group-hover:scale-105">
+              <defs>
+                <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fed7aa" />
+                  <stop offset="30%" stopColor="#fb923c" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </linearGradient>
+                <linearGradient id="shieldInner" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {/* Outer Shield */}
+              <path
+                d="M50 8 C75 8, 88 18, 88 45 C88 75, 50 102, 50 102 C50 102, 12 75, 12 45 C12 18, 25 8, 50 8 Z"
+                fill="url(#shieldGrad)"
+              />
+              {/* Inner Gloss */}
+              <path
+                d="M50 14 C70 14, 80 22, 80 45 C80 68, 50 92, 50 92 C50 92, 20 68, 20 45 C20 22, 30 14, 50 14 Z"
+                fill="url(#shieldInner)"
+              />
+              {/* Avatar Silhouette */}
+              <circle cx="50" cy="40" r="11" fill="#ffffff" />
+              <path
+                d="M33 68 C33 55, 40 52, 50 52 C60 52, 67 55, 67 68 Z"
+                fill="#ffffff"
+              />
+            </svg>
+          </div>
+
+          {/* Pulsing Verified Check Badge */}
+          <div className="absolute -bottom-1 right-2 z-20 grid h-7 w-7 place-items-center rounded-full bg-white dark:bg-slate-900 shadow-lg ring-2 ring-orange-200 dark:ring-orange-800 animate-badge-pop">
+            <CheckCircle2 className="h-5 w-5 text-orange-500 fill-orange-500 text-white" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      num: '02',
+      title: 'Discover 7 Campuses',
+      desc: 'Filter through students, researchers, and alumni by domain, tools, and batch.',
+      color: 'blue',
+      badgeBg: 'bg-[#2563eb]',
+      borderHover: 'hover:border-blue-400 dark:hover:border-blue-500',
+      gradientBg: 'bg-gradient-to-b from-blue-50/70 via-sky-50/20 to-white dark:from-blue-950/20 dark:via-card dark:to-card',
+      borderColor: 'border-blue-100/90 dark:border-blue-900/30',
+      arrowBg: 'bg-blue-50 dark:bg-blue-950/50 text-blue-500 border border-blue-200/80 dark:border-blue-800/80',
+      connectorColor: 'border-blue-300 dark:border-blue-700 text-blue-500',
+      link: '/people',
+      illustration: (
+        <div className="relative mx-auto h-28 w-28 flex items-center justify-center my-3 group-hover:scale-105 transition-transform duration-300">
+          {/* Counter-Orbiting Dashed Ring */}
+          <div className="absolute inset-0 rounded-full border border-dashed border-blue-400/40 dark:border-blue-500/30 animate-spin-slow-reverse" />
+          <div className="absolute top-1 left-2 h-2.5 w-2.5 rounded-full bg-blue-400/80 shadow-sm animate-pulse" />
+          <div className="absolute -bottom-1 left-4 h-2 w-2 rounded-full bg-sky-300/70" />
+          
+          {/* 3D Floating Globe */}
+          <div className="relative z-10 filter drop-shadow-[0_12px_18px_rgba(37,99,235,0.3)] animate-float">
+            <svg viewBox="0 0 100 100" className="h-20 w-20 transition-transform duration-300 group-hover:scale-105">
+              <defs>
+                <radialGradient id="globeGrad" cx="35%" cy="35%" r="65%">
+                  <stop offset="0%" stopColor="#bfdbfe" />
+                  <stop offset="45%" stopColor="#60a5fa" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </radialGradient>
+              </defs>
+              {/* Globe Sphere */}
+              <circle cx="50" cy="50" r="38" fill="url(#globeGrad)" />
+              {/* Latitudes & Longitudes */}
+              <ellipse cx="50" cy="50" rx="38" ry="14" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.45" />
+              <ellipse cx="50" cy="50" rx="16" ry="38" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.45" />
+              <line x1="12" y1="50" x2="88" y2="50" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.45" />
+              <line x1="50" y1="12" x2="50" y2="88" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.45" />
+            </svg>
+          </div>
+
+          {/* Floating Map Pin 1 with Ripple */}
+          <div className="absolute -top-1 left-3 z-20 filter drop-shadow-md animate-pin-1">
+            <div className="h-6 w-6 rounded-full bg-blue-600 text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-md">
+              <MapPin className="h-3.5 w-3.5 fill-white" />
+            </div>
+          </div>
+
+          {/* Floating Map Pin 2 with Alternating Drop */}
+          <div className="absolute bottom-1 right-3 z-20 filter drop-shadow-md animate-pin-2">
+            <div className="h-5 w-5 rounded-full bg-sky-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-md">
+              <MapPin className="h-3 w-3 fill-white" />
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      num: '03',
+      title: 'Request 1-on-1 Guidance',
+      desc: 'Schedule mentorship sessions for coding interviews, research, and career advice.',
+      color: 'purple',
+      badgeBg: 'bg-[#8b5cf6]',
+      borderHover: 'hover:border-purple-400 dark:hover:border-purple-500',
+      gradientBg: 'bg-gradient-to-b from-purple-50/70 via-indigo-50/20 to-white dark:from-purple-950/20 dark:via-card dark:to-card',
+      borderColor: 'border-purple-100/90 dark:border-purple-900/30',
+      arrowBg: 'bg-purple-50 dark:bg-purple-950/50 text-purple-500 border border-purple-200/80 dark:border-purple-800/80',
+      connectorColor: 'border-purple-300 dark:border-purple-700 text-purple-500',
+      link: '/mentorship',
+      illustration: (
+        <div className="relative mx-auto h-28 w-28 flex items-center justify-center my-3 group-hover:scale-105 transition-transform duration-300">
+          {/* Orbiting Ring */}
+          <div className="absolute inset-0 rounded-full border border-dashed border-purple-400/40 dark:border-purple-500/30 animate-spin-slow" />
+          <div className="absolute top-1 right-2 h-2.5 w-2.5 rounded-full bg-purple-400/80 shadow-sm animate-pulse" />
+          <div className="absolute bottom-2 -left-1 h-2 w-2 rounded-full bg-indigo-300" />
+
+          {/* 3D Chat Bubble with Animated Pulsing Dots */}
+          <div className="absolute top-0 left-1 z-10 filter drop-shadow-[0_12px_16px_rgba(139,92,246,0.3)] animate-float">
+            <svg viewBox="0 0 70 60" className="h-14 w-14">
+              <defs>
+                <linearGradient id="chatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#c084fc" />
+                  <stop offset="100%" stopColor="#7c3aed" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M10 10 C10 4.5, 14.5 0, 20 0 L50 0 C55.5 0, 60 4.5, 60 10 L60 35 C60 40.5, 55.5 45, 50 45 L25 45 L10 58 L10 45 C4.5 45, 0 40.5, 0 35 L0 10 C0 4.5, 4.5 0, 10 0 Z"
+                fill="url(#chatGrad)"
+              />
+              <circle cx="20" cy="22" r="3.5" fill="#ffffff" className="animate-type-dot-1" />
+              <circle cx="33" cy="22" r="3.5" fill="#ffffff" className="animate-type-dot-2" />
+              <circle cx="46" cy="22" r="3.5" fill="#ffffff" className="animate-type-dot-3" />
+            </svg>
+          </div>
+
+          {/* 3D Calendar Card with Reverse Counter-Phase Float */}
+          <div className="absolute bottom-0 right-1 z-20 filter drop-shadow-[0_12px_18px_rgba(124,58,237,0.35)] animate-float-reverse">
+            <svg viewBox="0 0 65 55" className="h-13 w-13">
+              <defs>
+                <linearGradient id="calGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#e9d5ff" />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="8" width="60" height="45" rx="8" fill="url(#calGrad)" stroke="#c084fc" strokeWidth="1.5" />
+              <rect x="0" y="8" width="60" height="12" rx="6" fill="#8b5cf6" />
+              {/* Calendar rings */}
+              <rect x="12" y="3" width="5" height="10" rx="2.5" fill="#6d28d9" />
+              <rect x="43" y="3" width="5" height="10" rx="2.5" fill="#6d28d9" />
+              {/* Date grid dots */}
+              <circle cx="15" cy="28" r="2.5" fill="#a855f7" />
+              <circle cx="30" cy="28" r="2.5" fill="#a855f7" />
+              <circle cx="45" cy="28" r="2.5" fill="#a855f7" />
+              <circle cx="15" cy="39" r="2.5" fill="#a855f7" />
+              <circle cx="30" cy="39" r="2.5" fill="#a855f7" />
+              <circle cx="45" cy="39" r="2.5" fill="#a855f7" />
+            </svg>
+          </div>
+        </div>
+      ),
+    },
+    {
+      num: '04',
+      title: 'Co-Author & Build',
+      desc: 'Assemble interdisciplinary teams to publish papers, win hackathons, and innovate.',
+      color: 'emerald',
+      badgeBg: 'bg-[#10b981]',
+      borderHover: 'hover:border-emerald-400 dark:hover:border-emerald-500',
+      gradientBg: 'bg-gradient-to-b from-emerald-50/70 via-teal-50/20 to-white dark:from-emerald-950/20 dark:via-card dark:to-card',
+      borderColor: 'border-emerald-100/90 dark:border-emerald-900/30',
+      arrowBg: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-500 border border-emerald-200/80 dark:border-emerald-800/80',
+      connectorColor: 'border-emerald-300 dark:border-emerald-700 text-emerald-500',
+      link: '/collaborations',
+      illustration: (
+        <div className="relative mx-auto h-28 w-28 flex items-center justify-center my-3 group-hover:scale-105 transition-transform duration-300">
+          {/* Orbiting Ring */}
+          <div className="absolute inset-0 rounded-full border border-dashed border-emerald-400/40 dark:border-emerald-500/30 animate-spin-slow-reverse" />
+          <div className="absolute bottom-1 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400/80 shadow-sm animate-pulse" />
+          <div className="absolute top-2 left-1 h-2 w-2 rounded-full bg-teal-300" />
+
+          {/* 3D Isometric Stacked Blocks with Smooth Hover Motion */}
+          <div className="relative z-10 filter drop-shadow-[0_12px_18px_rgba(16,185,129,0.3)] animate-cube-hover">
+            <svg viewBox="0 0 100 90" className="h-20 w-20 transition-transform duration-300 group-hover:scale-105">
+              {/* Isometric Block 1 (Left Emerald) */}
+              <g transform="translate(15, 30)">
+                <path d="M20 0 L40 10 L20 20 L0 10 Z" fill="#6ee7b7" />
+                <path d="M0 10 L20 20 L20 40 L0 30 Z" fill="#10b981" />
+                <path d="M20 20 L40 10 L40 30 L20 40 Z" fill="#047857" />
+              </g>
+              {/* Isometric Block 2 (Right Teal) */}
+              <g transform="translate(45, 20)">
+                <path d="M20 0 L40 10 L20 20 L0 10 Z" fill="#a7f3d0" />
+                <path d="M0 10 L20 20 L20 40 L0 30 Z" fill="#34d399" />
+                <path d="M20 20 L40 10 L40 30 L20 40 Z" fill="#059669" />
+              </g>
+              {/* Isometric Block 3 (Top White/Frosted) */}
+              <g transform="translate(30, 5)">
+                <path d="M20 0 L40 10 L20 20 L0 10 Z" fill="#ffffff" />
+                <path d="M0 10 L20 20 L20 38 L0 28 Z" fill="#e2e8f0" />
+                <path d="M20 20 L40 10 L40 28 L20 38 Z" fill="#cbd5e1" />
+              </g>
+            </svg>
+          </div>
+
+          {/* Floating Code Tag with Rhythm Pulse */}
+          <div className="absolute -bottom-1 right-2 z-20 grid h-7 px-2.5 place-items-center rounded-xl bg-emerald-500 text-white font-mono font-bold text-xs shadow-lg ring-2 ring-white dark:ring-slate-900 animate-badge-pop">
+            &lt;/&gt;
+          </div>
+        </div>
+      ),
+    },
   ];
 
   return (
-    <section className="border-t border-border py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section className="relative overflow-hidden border-t border-border/80 py-20 sm:py-28 bg-slate-50/60 dark:bg-transparent transition-colors">
+      {/* Top Left Concentric Rings Ambient Background */}
+      <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full border border-orange-300/20 dark:border-orange-500/10 pointer-events-none" />
+      <div className="absolute -top-28 -left-28 h-[420px] w-[420px] rounded-full border border-orange-300/15 dark:border-orange-500/5 pointer-events-none" />
+      <div className="absolute -top-40 -left-40 h-[540px] w-[540px] rounded-full border border-orange-300/10 dark:border-orange-500/5 pointer-events-none" />
+
+      {/* Top Right Dot Grid Ambient Background */}
+      <div className="absolute top-8 right-8 h-44 w-44 bg-dot-pattern opacity-60 dark:opacity-20 pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
+        {/* Section Header Matching Exact Reference */}
         <div className="text-center max-w-2xl mx-auto">
-          <div className="mono text-[10px] font-bold uppercase tracking-[.22em] text-accent">
-            Seamless Progression
+          <div className="mono inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[.25em] text-[#f97316]">
+            <Sparkles className="h-3.5 w-3.5" /> SEAMLESS PROGRESSION
           </div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Your Trajectory on Amrita Connect.
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Your Trajectory on <span className="text-[#f97316]">Amrita</span> <span className="text-[#8b5cf6]">Connect.</span>
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
             From your first semester to senior alumni leadership, stay connected to the university commons.
           </p>
+          {/* Subtle Horizontal Gradient Accent Bar */}
+          <div className="mx-auto mt-4 h-1 w-20 rounded-full bg-gradient-to-r from-[#f97316] to-[#8b5cf6]" />
         </div>
 
-        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step) => (
-            <div key={step.num} className="relative rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <div className="mono text-3xl font-bold text-accent">{step.num}</div>
-              <h3 className="mt-6 text-base font-bold text-foreground">{step.title}</h3>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">{step.desc}</p>
+        {/* 4 Connected Trajectory Cards Grid */}
+        <div className="relative mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step, idx) => (
+            <div key={step.num} className="relative group">
+              
+              {/* Connector Arrow Nodes Between Cards on Desktop */}
+              {idx < steps.length - 1 && (
+                <div className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 items-center justify-center">
+                  <div className={cx(
+                    'grid h-7 w-7 place-items-center rounded-full bg-white dark:bg-slate-900 border shadow-sm transition-transform group-hover:scale-110',
+                    step.connectorColor
+                  )}>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              )}
+
+              {/* Main Card */}
+              <div
+                className={cx(
+                  'relative flex h-full flex-col justify-between rounded-3xl border p-6 transition-all duration-300 hover:-translate-y-1.5 shadow-sm hover:shadow-xl',
+                  step.borderColor,
+                  step.gradientBg,
+                  step.borderHover
+                )}
+              >
+                <div>
+                  {/* Top Number Badge Pill */}
+                  <div className="flex items-center justify-between">
+                    <span className={cx('inline-block rounded-lg px-2.5 py-1 text-xs font-extrabold text-white shadow-2xs', step.badgeBg)}>
+                      {step.num}
+                    </span>
+                  </div>
+
+                  {/* 3D Vector Illustration */}
+                  {step.illustration}
+
+                  {/* Title & Description */}
+                  <div className="mt-2">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-xs sm:text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
+                      {step.desc}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom Circular Action Arrow Button */}
+                <div className="mt-5 flex justify-end">
+                  <Link
+                    href={step.link}
+                    className={cx(
+                      'grid h-9 w-9 place-items-center rounded-full transition-all duration-200 group-hover:scale-110 shadow-2xs',
+                      step.arrowBg
+                    )}
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
             </div>
           ))}
         </div>
+
+        {/* Bottom Platform Capsule Banner */}
+        <div className="mt-14 max-w-2xl mx-auto rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/95 dark:bg-card/90 p-4 sm:p-5 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 text-center sm:text-left">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <Rocket className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                One platform. Endless opportunities.
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Explore. Connect. Collaborate.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/register"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-200 dark:border-purple-800/80 bg-white dark:bg-slate-900 px-5 py-2.5 text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white hover:border-purple-600 shadow-2xs active:scale-95 transition-all"
+          >
+            <span>Explore Platform</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
       </div>
     </section>
   );
 }
 
-/* 5. World-Class Researchers & Faculty Spotlight */
+/* 5. World-Class Researchers & Faculty Spotlight: Exact Reference Match */
 function FacultySpotlight() {
+  const researchers = [
+    {
+      num: '01',
+      name: 'Dr. Maneesha V. Ramesh',
+      domain: 'AI • IoT • Disaster Resilience',
+      campus: 'Amritapuri',
+      color: 'orange',
+      numColor: 'text-[#f97316]',
+      pinColor: 'text-[#f97316]',
+      badgeBg: 'bg-[#f97316] text-white',
+      badgeBorder: 'ring-white dark:ring-slate-900',
+      blobBorder: 'border-orange-400/40 bg-orange-500/10',
+      avatar: maneeshaPhoto,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
+          <circle cx="12" cy="12" r="2.5" />
+          <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48 0a6 6 0 0 1 0-8.49m11.31-2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      ),
+      link: '/faculty/maneesha-ramesh',
+    },
+    {
+      num: '02',
+      name: 'Dr. Shantikumar V. Nair',
+      domain: 'Materials • Nanotechnology',
+      campus: 'Kochi',
+      color: 'pink',
+      numColor: 'text-[#ec4899]',
+      pinColor: 'text-[#ec4899]',
+      badgeBg: 'bg-[#ec4899] text-white',
+      badgeBorder: 'ring-white dark:ring-slate-900',
+      blobBorder: 'border-pink-400/40 bg-pink-500/10',
+      avatar: santikumarPhoto,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-2">
+          <circle cx="12" cy="12" r="3" />
+          <circle cx="6" cy="6" r="2" />
+          <circle cx="18" cy="6" r="2" />
+          <circle cx="6" cy="18" r="2" />
+          <circle cx="18" cy="18" r="2" />
+          <line x1="7.5" y1="7.5" x2="10" y2="10" />
+          <line x1="16.5" y1="7.5" x2="14" y2="10" />
+          <line x1="7.5" y1="16.5" x2="10" y2="14" />
+          <line x1="16.5" y1="16.5" x2="14" y2="14" />
+        </svg>
+      ),
+      link: '/faculty/shantikumar-nair',
+    },
+    {
+      num: '03',
+      name: 'Dr. R. Jayakumar',
+      domain: 'Biomaterials • Nanomedicine',
+      campus: 'Kochi',
+      color: 'purple',
+      numColor: 'text-[#8b5cf6]',
+      pinColor: 'text-[#8b5cf6]',
+      badgeBg: 'bg-[#8b5cf6] text-white',
+      badgeBorder: 'ring-white dark:ring-slate-900',
+      blobBorder: 'border-purple-400/40 bg-purple-500/10',
+      avatar: jayakumarPhoto,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-2">
+          <path d="M6 18h8m-4-4v4m5-11-2.5 4M10 2l4.5 7.5a4 4 0 1 1-7-3.5L10 2z" />
+          <circle cx="18" cy="18" r="3" />
+        </svg>
+      ),
+      link: '/faculty/jayakumar',
+    },
+    {
+      num: '04',
+      name: 'Dr. R. Krishnakumar',
+      domain: 'Paediatric Cardiology • Healthcare',
+      campus: 'Kochi',
+      color: 'blue',
+      numColor: 'text-[#3b82f6]',
+      pinColor: 'text-[#3b82f6]',
+      badgeBg: 'bg-[#3b82f6] text-white',
+      badgeBorder: 'ring-white dark:ring-slate-900',
+      blobBorder: 'border-blue-400/40 bg-blue-500/10',
+      avatar: krishnakumarPhoto,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg>
+      ),
+      link: '/faculty/krishnakumar',
+    },
+  ];
+
   return (
-    <section className="border-t border-border bg-secondary/20 py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="max-w-2xl">
-          <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-accent">
-            <Award className="h-3.5 w-3.5" /> World-Class Research & Faculty
+    <section className="relative overflow-hidden border-t border-border/70 bg-slate-50/50 dark:bg-transparent py-24 sm:py-32 transition-colors">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-purple-500/10 dark:bg-purple-500/10 blur-[130px] pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 h-80 w-80 rounded-full bg-orange-500/10 dark:bg-orange-500/10 blur-[120px] pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
+        
+        {/* Section Header Matching Exact Reference */}
+        <div className="text-center max-w-3xl mx-auto">
+          <div className="mono inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.25em] text-[#8b5cf6]">
+            <span>✦</span> WORLD-CLASS RESEARCH & FACULTY <span>✦</span>
           </div>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Distinguished Researchers Shaping Global Impact.
+          
+          {/* Header Accent Bar */}
+          <div className="mx-auto mt-2 h-0.5 w-14 rounded-full bg-gradient-to-r from-purple-500 to-orange-400" />
+
+          <h2 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
+            Minds Behind <br />
+            Meaningful Research<span className="text-[#f97316]">.</span>
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Collaborate with internationally decorated scientists, UN laureates, and lab heads across Amrita campuses.
+          <p className="mt-4 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+            Explore the visionaries driving innovation and creating global impact across Amrita.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {RENOWNED_FACULTY.map((faculty) => (
-            <div
-              key={faculty.name}
-              className="surface group relative flex flex-col justify-between rounded-2xl border border-border p-6 sm:p-7 transition-all hover:border-accent/40"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <span className="mono inline-block text-[10px] font-bold uppercase tracking-wider text-accent">
-                      Amrita {faculty.campus}
-                    </span>
-                    <h3 className="mt-1 text-xl font-bold tracking-tight text-foreground group-hover:text-accent">
-                      {faculty.name}
-                    </h3>
-                    <p className="text-xs font-medium text-muted-foreground">{faculty.role}</p>
-                    <p className="text-[11px] text-muted-foreground/80">{faculty.department}</p>
+        {/* 4 Faculty Profiles on Connected Wave Line */}
+        <div className="relative mt-20">
+          
+          {/* Desktop Connecting Curving Wave Line with Colored Nodes */}
+          <div className="hidden lg:block absolute top-[76px] left-[10%] right-[10%] h-16 pointer-events-none z-0">
+            <svg viewBox="0 0 1000 100" fill="none" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+              <path
+                d="M 0 50 Q 150 15, 300 50 T 600 50 T 900 50 L 1000 50"
+                stroke="url(#waveGradient)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+                className="opacity-70"
+              />
+              <defs>
+                <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#f97316" />
+                  <stop offset="33%" stopColor="#ec4899" />
+                  <stop offset="66%" stopColor="#8b5cf6" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Glowing Intersecting Junction Nodes */}
+            <div className="absolute top-[42px] left-[32%] -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-[#f97316] ring-4 ring-orange-200 dark:ring-orange-950/60 shadow-md animate-pulse" />
+            <div className="absolute top-[42px] left-[56%] -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-[#8b5cf6] ring-4 ring-purple-200 dark:ring-purple-950/60 shadow-md animate-pulse" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute top-[42px] left-[80%] -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-[#3b82f6] ring-4 ring-blue-200 dark:ring-blue-950/60 shadow-md animate-pulse" style={{ animationDelay: '1s' }} />
+          </div>
+
+          {/* 4 Researchers Grid */}
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 relative z-10 text-center">
+            {researchers.map((res) => (
+              <div key={res.num} className="group relative flex flex-col items-center">
+                
+                {/* Number Eyebrow */}
+                <div className={cx('mono text-sm font-extrabold mb-3', res.numColor)}>
+                  {res.num}
+                </div>
+
+                {/* Amoeba Fluid Halo with Floating Avatar */}
+                <div className="relative mx-auto h-36 w-36 flex items-center justify-center mb-5">
+                  {/* Rotating / Pulsing Amoeba Organic Aura */}
+                  <div
+                    className={cx(
+                      'absolute inset-0 rounded-[42%_58%_70%_30%/45%_45%_55%_55%] border transition-all duration-700 group-hover:scale-110 group-hover:rotate-12',
+                      res.blobBorder
+                    )}
+                  />
+
+                  {/* Circular Avatar */}
+                  <div className="relative z-10 h-28 w-28 rounded-full overflow-hidden ring-4 ring-white dark:ring-slate-900 shadow-xl">
+                    <img
+                      src={res.avatar}
+                      alt={res.name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextElementSibling) {
+                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
+                        }
+                      }}
+                    />
+                    <div
+                      style={{ display: 'none' }}
+                      className="h-full w-full place-items-center bg-purple-950 text-white font-bold text-sm"
+                    >
+                      {initials(res.name)}
+                    </div>
                   </div>
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/15 text-accent font-bold">
-                    {initials(faculty.name)}
+
+                  {/* Thematic Floating Icon Badge */}
+                  <div
+                    className={cx(
+                      'absolute bottom-1 right-2 z-20 grid h-8 w-8 place-items-center rounded-full shadow-lg ring-2 transition-transform duration-300 group-hover:scale-110 animate-bounce',
+                      res.badgeBg,
+                      res.badgeBorder
+                    )}
+                    style={{ animationDuration: '4s' }}
+                  >
+                    {res.icon}
                   </div>
                 </div>
 
-                <p className="mt-4 text-xs leading-6 text-foreground/85">
-                  {faculty.highlight}
+                {/* Name & Academic Credentials */}
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white group-hover:text-[#8b5cf6] transition-colors leading-snug">
+                  {res.name}
+                </h3>
+                
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {res.domain}
                 </p>
 
-                <div className="mt-5 grid grid-cols-3 gap-2 rounded-xl border border-border bg-secondary/50 p-3 text-center">
-                  {faculty.metrics.map((metric) => (
-                    <div key={metric.label}>
-                      <div className="text-sm font-bold text-foreground">{metric.value}</div>
-                      <div className="mono text-[9px] uppercase tracking-wider text-muted-foreground">{metric.label}</div>
-                    </div>
-                  ))}
+                {/* Campus Location Tag */}
+                <div className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <MapPin className={cx('h-3.5 w-3.5', res.pinColor)} />
+                  <span>{res.campus}</span>
                 </div>
+
               </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                <div className="flex flex-wrap gap-1">
-                  {faculty.tags.slice(0, 3).map((tag) => (
-                    <Tag key={tag}>{tag}</Tag>
-                  ))}
-                </div>
-                <Link
-                  href="/collaborations"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
-                >
-                  Explore research <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* 6. Interactive Role Persona Switcher */
-function RolePreviewInteractive() {
-  const [selectedRole, setSelectedRole] = useState<'student' | 'alumni' | 'faculty' | 'researcher'>('student');
-
-  const roleDetails = {
-    student: {
-      title: 'Accelerate your learning, build a portfolio, find mentors.',
-      bullets: [
-        'Connect with verified alumni at Google, Microsoft, Amazon for technical reviews.',
-        'Find teammates from other campuses for Smart India hackathons and inter-college contests.',
-        'Discover funded research openings and lab assistantships before they go public.',
-      ],
-      cta: 'Join as a Student',
-      href: '/register',
-    },
-    alumni: {
-      title: 'Stay connected to your alma mater, give back, find top talent.',
-      bullets: [
-        'Offer 1-on-1 mentorship sessions on your own schedule to high-potential students.',
-        'Post job openings, internships, and startup co-founder calls directly to verified members.',
-        'Network with fellow alumni across global chapters in USA, Europe, and Asia.',
-      ],
-      cta: 'Join as an Alumnus',
-      href: '/register',
-    },
-    faculty: {
-      title: 'Turn campus expertise into high-impact collaborative momentum.',
-      bullets: [
-        'Identify exceptional student researchers across all 7 campuses for grant projects.',
-        'Collaborate with industry-placed alumni for guest lectures and curriculum advisory.',
-        'Host inter-campus symposiums, webinars, and specialized workshops easily.',
-      ],
-      cta: 'Join as Faculty',
-      href: '/register',
-    },
-    researcher: {
-      title: 'Bring domain experts together to crack complex interdisciplinary problems.',
-      bullets: [
-        'Form joint research groups between healthcare, computing, IoT, and aerospace.',
-        'Publish joint IEEE, ACM, and Nature papers with multi-campus co-investigators.',
-        'Access specialized lab equipment and dataset repositories across the university system.',
-      ],
-      cta: 'Join as a Researcher',
-      href: '/register',
-    },
-  };
-
-  const activeInfo = roleDetails[selectedRole];
-
-  return (
-    <section className="border-t border-border py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="rounded-3xl border border-border bg-card p-6 sm:p-12 shadow-sm">
-          <div className="text-center max-w-2xl mx-auto">
-            <div className="mono text-[10px] font-bold uppercase tracking-[.22em] text-accent">
-              Role-Tailored Workspaces
-            </div>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Built for Every Stage of Your Amrita Journey.
-            </h2>
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-            {(['student', 'alumni', 'faculty', 'researcher'] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setSelectedRole(r)}
-                className={cx(
-                  'rounded-xl px-5 py-2.5 text-xs font-bold capitalize transition-all',
-                  selectedRole === r
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'border border-border bg-secondary text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {roleLabels[r]}
-              </button>
             ))}
           </div>
-
-          <div className="mt-10 grid gap-8 rounded-2xl border border-border bg-secondary/30 p-6 sm:p-8 lg:grid-cols-2 lg:items-center">
-            <div>
-              <span className="mono text-[10px] font-bold uppercase tracking-wider text-accent">
-                Tailored Experience
-              </span>
-              <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-                {activeInfo.title}
-              </h3>
-              <ul className="mt-6 space-y-3">
-                {activeInfo.bullets.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                    <span>{bullet}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-accent/15 text-accent">
-                <GraduationCap className="h-7 w-7" />
-              </div>
-              <h4 className="mt-4 text-lg font-bold text-foreground">
-                Ready to get started?
-              </h4>
-              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                Create your profile in 60 seconds with your campus email or personal account.
-              </p>
-              <Link
-                href={activeInfo.href}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-95"
-              >
-                {activeInfo.cta} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
         </div>
+
       </div>
     </section>
   );
@@ -1680,6 +2337,39 @@ function CampusConstellationHero() {
   );
 }
 
+/* Ambient Animated Background for Homepage (Dynamic in Light & Dark Mode) */
+function LandingAmbientBackground() {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+      {/* Subtle Micro-Dot Grid with Radial Edge Fade */}
+      <div className="absolute inset-0 bg-dot-pattern opacity-60 dark:opacity-20 [mask-image:radial-gradient(ellipse_at_center,black_35%,transparent_85%)]" />
+      
+      {/* Subtle Linear Grid */}
+      <div className="absolute inset-0 bg-grid-subtle opacity-40 dark:opacity-15 [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_90%)]" />
+
+      {/* Floating Ambient Gradient Mesh 1 (Top Left: Warm Amber / Sunset Peach) */}
+      <div className="absolute -top-36 -left-36 h-[550px] w-[550px] rounded-full bg-gradient-to-br from-orange-400/25 via-amber-300/20 to-transparent dark:from-orange-500/10 dark:via-transparent blur-[110px] animate-drift" />
+
+      {/* Floating Ambient Gradient Mesh 2 (Top Right: Luminous Violet / Indigo) */}
+      <div className="absolute -top-24 -right-28 h-[600px] w-[600px] rounded-full bg-gradient-to-bl from-purple-400/25 via-indigo-300/20 to-transparent dark:from-purple-600/10 dark:via-transparent blur-[120px] animate-drift-reverse" />
+
+      {/* Floating Ambient Gradient Mesh 3 (Middle Center: Soft Sky / Cyan Breeze) */}
+      <div className="absolute top-[35%] left-[20%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-sky-400/15 via-teal-300/15 to-transparent dark:from-cyan-900/10 dark:via-transparent blur-[130px] animate-pulse-slow" />
+
+      {/* Floating Ambient Gradient Mesh 4 (Bottom Right: Rose Sunset Aura) */}
+      <div className="absolute top-[65%] -right-24 h-[550px] w-[550px] rounded-full bg-gradient-to-l from-rose-300/20 via-orange-300/15 to-transparent dark:from-rose-950/10 dark:via-transparent blur-[120px] animate-drift" />
+
+      {/* Floating Ambient Gradient Mesh 5 (Bottom Left: Soft Electric Indigo) */}
+      <div className="absolute top-[80%] -left-20 h-[450px] w-[450px] rounded-full bg-gradient-to-r from-indigo-300/20 via-purple-300/15 to-transparent dark:from-indigo-950/10 dark:via-transparent blur-[110px] animate-drift-reverse" />
+
+      {/* Floating Micro Shimmer Particles */}
+      <div className="absolute top-1/4 left-1/3 h-2 w-2 rounded-full bg-orange-400/50 dark:bg-orange-400/30 blur-[1px] animate-float" />
+      <div className="absolute top-1/3 right-1/4 h-3 w-3 rounded-full bg-purple-400/50 dark:bg-purple-400/30 blur-[1px] animate-float-reverse" />
+      <div className="absolute top-2/3 left-1/4 h-2.5 w-2.5 rounded-full bg-sky-400/50 dark:bg-sky-400/30 blur-[1px] animate-float" />
+    </div>
+  );
+}
+
 function Landing() {
   const { data: currentUser } = useGetCurrentUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1687,9 +2377,12 @@ function Landing() {
     currentUser ? target : `/login?redirect=${encodeURIComponent(target)}`;
 
   return (
-    <div className="min-h-[100dvh] overflow-hidden bg-background text-foreground relative">
-      {/* Top Navbar with Responsive Navigation & Mobile Drawer */}
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
+    <div className="min-h-[100dvh] overflow-x-clip bg-background text-foreground relative">
+      {/* Living Animated Ambient Background */}
+      <LandingAmbientBackground />
+
+      {/* Top Navbar with Responsive Navigation & Mobile Drawer (Sticky on Scroll) */}
+      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 dark:bg-[#070b14]/90 backdrop-blur-xl shadow-sm transition-all">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8">
           <Brand />
 
@@ -1934,9 +2627,6 @@ function Landing() {
         {/* Section 5: Renowned Faculty & Research Labs */}
         <FacultySpotlight />
 
-        {/* Section 6: Interactive Role Preview */}
-        <RolePreviewInteractive />
-
         {/* Big Call to Action Banner with Rich Ambient Gradient */}
         <section className="relative border-t border-border bg-gradient-to-b from-secondary/40 via-background to-background py-16 sm:py-24 overflow-hidden">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
@@ -1964,49 +2654,109 @@ function Landing() {
       </main>
 
 
-      {/* Modern Footer */}
-      <footer className="border-t border-border bg-card py-12 text-xs text-muted-foreground">
+      {/* Minimal & Elegant Modern University Footer */}
+      <footer className="border-t border-border/70 bg-card/60 dark:bg-background/60 py-14 text-xs text-muted-foreground">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <Brand light={false} small />
-              <p className="mt-3 text-xs leading-6 text-muted-foreground">
-                Amrita Connect is the university-wide platform breaking campus boundaries and empowering lifelong academic and career collaboration.
+          
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
+            
+            {/* Left Brand & Mission Info */}
+            <div className="max-w-sm">
+              <Brand light={false} />
+              <p className="mt-3 text-xs sm:text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
+                Connecting students, faculty, researchers, and alumni across all 7 campuses of Amrita Vishwa Vidyapeetham.
               </p>
-            </div>
-            <div>
-              <h5 className="font-bold text-foreground text-xs uppercase tracking-wider">Campuses</h5>
-              <ul className="mt-3 space-y-2 text-xs">
-                <li>Coimbatore (Ettimadai)</li>
-                <li>Amritapuri (Kollam)</li>
-                <li>Bengaluru</li>
-                <li>Kochi (Health Sciences)</li>
-                <li>Chennai · Amaravati · Mysuru</li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-bold text-foreground text-xs uppercase tracking-wider">Features</h5>
-              <ul className="mt-3 space-y-2 text-xs">
-                <li><Link href="/login" className="hover:text-foreground">Member Directory</Link></li>
-                <li><Link href="/login" className="hover:text-foreground">Mentorship Requests</Link></li>
-                <li><Link href="/login" className="hover:text-foreground">Project Collaborations</Link></li>
-                <li><Link href="/login" className="hover:text-foreground">Career Opportunities</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-bold text-foreground text-xs uppercase tracking-wider">Community</h5>
-              <p className="mt-3 text-xs leading-6">
-                Amrita Vishwa Vidyapeetham · Accredited NAAC A++
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-accent font-semibold">
-                <Globe className="h-4 w-4" /> Global Academic Commons
+              <div className="mt-4 flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span>NAAC A++ Accredited</span>
+                <span>·</span>
+                <span>NIRF Top 7</span>
               </div>
             </div>
+
+            {/* Right Clean Spaced Navigation Links */}
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-14">
+              
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
+                  Platform
+                </p>
+                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                  <li>
+                    <Link href="/people" className="hover:text-foreground transition-colors">
+                      People Directory
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/mentorship" className="hover:text-foreground transition-colors">
+                      Mentorship
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/collaborations" className="hover:text-foreground transition-colors">
+                      Collaborations
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/opportunities" className="hover:text-foreground transition-colors">
+                      Opportunities
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
+                  Campuses
+                </p>
+                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                  <li className="hover:text-foreground cursor-pointer transition-colors">Coimbatore</li>
+                  <li className="hover:text-foreground cursor-pointer transition-colors">Amritapuri</li>
+                  <li className="hover:text-foreground cursor-pointer transition-colors">Bengaluru</li>
+                  <li className="hover:text-foreground cursor-pointer transition-colors">Kochi · Chennai · AP</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
+                  Connect
+                </p>
+                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                  <li>
+                    <Link href="/events" className="hover:text-foreground transition-colors">
+                      Campus Events
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/register" className="hover:text-foreground transition-colors">
+                      Join Network
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/login" className="hover:text-foreground transition-colors">
+                      Sign in
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
           </div>
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
-            <span>© {new Date().getFullYear()} Amrita Connect. For every chapter of the Amrita story.</span>
-            <span>Made with passion for the Amrita fraternity.</span>
+
+          {/* Clean Bottom Copyright & Back to Top */}
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/60 pt-6 text-[11px] text-slate-500 dark:text-slate-400">
+            <p>© {new Date().getFullYear()} Amrita Vishwa Vidyapeetham. All rights reserved.</p>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="hover:text-foreground font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>Back to Top</span>
+              <ArrowRight className="h-3 w-3 -rotate-90" />
+            </button>
           </div>
+
         </div>
       </footer>
     </div>
@@ -10493,7 +11243,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppShell user={user}>{children}</AppShell>;
 }
 function RoutedErrorBoundary({ children }: { children: React.ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
-function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route><Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route><Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route><Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route><Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route><Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
+function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/profile/:slug" component={SeniorProfilePage} /><Route path="/seniors/:slug" component={SeniorProfilePage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route><Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route><Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route><Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route><Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route><Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
 
 
 
