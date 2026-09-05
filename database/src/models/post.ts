@@ -12,8 +12,13 @@ export interface IPost extends Document {
   authorId: mongoose.Types.ObjectId;
   content: string;
   imageUrl?: string | null;
+  documentUrl?: string | null;
+  documentName?: string | null;
+  linkUrl?: string | null;
   category:
     | "General"
+    | "Blog"
+    | "Article"
     | "Achievement"
     | "Project"
     | "Opportunity"
@@ -41,11 +46,16 @@ const PostSchema = new Schema<IPost>(
     authorId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     content: { type: String, required: true, trim: true },
     imageUrl: { type: String, default: null },
+    documentUrl: { type: String, default: null },
+    documentName: { type: String, default: null },
+    linkUrl: { type: String, default: null },
     category: {
       type: String,
       required: true,
       enum: [
         "General",
+        "Blog",
+        "Article",
         "Achievement",
         "Project",
         "Opportunity",

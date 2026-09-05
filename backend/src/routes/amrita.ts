@@ -78,6 +78,9 @@ function serializePost(post: any, currentUserId?: string) {
     id: String(plain._id || plain.id),
     content: plain.content,
     imageUrl: plain.imageUrl || null,
+    documentUrl: plain.documentUrl || null,
+    documentName: plain.documentName || null,
+    linkUrl: plain.linkUrl || null,
     category: plain.category || "General",
     campus: plain.campus,
     department: plain.department,
@@ -1061,7 +1064,7 @@ router.get("/posts", requireAuth, async (req, res, next) => {
 router.post("/posts", requireAuth, async (req, res, next) => {
   try {
     const userId = getUserId(req);
-    const { content, imageUrl, category } = req.body;
+    const { content, imageUrl, documentUrl, documentName, linkUrl, category } = req.body;
     if (!content || typeof content !== "string" || !content.trim()) {
       res.status(400).json({ success: false, message: "Post content is required" });
       return;
@@ -1091,6 +1094,9 @@ router.post("/posts", requireAuth, async (req, res, next) => {
       authorId: author._id,
       content: content.trim(),
       imageUrl: imageUrl && typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null,
+      documentUrl: documentUrl && typeof documentUrl === "string" && documentUrl.trim() ? documentUrl.trim() : null,
+      documentName: documentName && typeof documentName === "string" && documentName.trim() ? documentName.trim() : null,
+      linkUrl: linkUrl && typeof linkUrl === "string" && linkUrl.trim() ? linkUrl.trim() : null,
       category: postCategory,
       campus: author.campus,
       department: author.department,
@@ -1113,7 +1119,7 @@ router.post("/posts", requireAuth, async (req, res, next) => {
 router.patch("/posts/:id", requireAuth, async (req, res, next) => {
   try {
     const userId = getUserId(req);
-    const { content, imageUrl, category } = req.body;
+    const { content, imageUrl, documentUrl, documentName, linkUrl, category } = req.body;
     const post = await PostModel.findById(req.params.id);
     if (!post) {
       res.status(404).json({ success: false, message: "Post not found" });
@@ -1129,6 +1135,15 @@ router.patch("/posts/:id", requireAuth, async (req, res, next) => {
     }
     if (imageUrl !== undefined) {
       post.imageUrl = imageUrl && typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null;
+    }
+    if (documentUrl !== undefined) {
+      post.documentUrl = documentUrl && typeof documentUrl === "string" && documentUrl.trim() ? documentUrl.trim() : null;
+    }
+    if (documentName !== undefined) {
+      post.documentName = documentName && typeof documentName === "string" && documentName.trim() ? documentName.trim() : null;
+    }
+    if (linkUrl !== undefined) {
+      post.linkUrl = linkUrl && typeof linkUrl === "string" && linkUrl.trim() ? linkUrl.trim() : null;
     }
     if (category !== undefined) {
       const validCategories = [

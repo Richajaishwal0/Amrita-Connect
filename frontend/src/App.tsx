@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, BriefcaseBusiness,
-  Building2, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  Code, Compass, Copy, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Layers,
-
-  Lightbulb, Link2, LoaderCircle, LogIn, LogOut, MapPin, Menu, MessageSquare, Moon,
-
-  MoreHorizontal, Network, Pencil, Quote, Rocket, Search, Send, Settings2, Share2, ShieldCheck, Sparkles,
-  Star, Sun, Trash2, Trophy, UserCheck, UserPlus, UserRoundPlus, Users, Users2, UserX, X, Zap,
+  ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, Briefcase, BriefcaseBusiness,
+  Building2, CalendarDays, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
+  Code, Compass, Copy, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Layers,
+  Lightbulb, Link2, LoaderCircle, LogIn, LogOut, Mail, MapPin, Menu, MessageSquare, Moon,
+  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Rocket, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Sparkles,
+  Star, Sun, Terminal, ThumbsUp, Trash2, TrendingUp, Trophy, Upload, UserCheck, UserCircle, UserPlus, UserRoundPlus, Users, Users2, UserX, Video, X, Zap,
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -108,9 +106,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Main Workspace',
     items: [
-      { href: '/dashboard', label: 'Overview', icon: House },
-      { href: '/people', label: 'People & Feed', icon: Users },
-      { href: '/connections', label: 'My Network', icon: Users2 },
+      { href: '/feed', label: 'Community Feed', icon: Rss },
     ],
   },
   {
@@ -173,9 +169,15 @@ function relative(value?: string) {
 }
 function cx(...classes: Array<string | false | null | undefined>) { return classes.filter(Boolean).join(' '); }
 
-function Avatar({ user, size = 'md' }: { user?: Partial<User> | null; size?: 'sm' | 'md' | 'lg' }) {
-  return user?.avatarUrl ? <img data-testid={`img-avatar-${user.id ?? 'current'}`} src={user.avatarUrl} alt={user.fullName ?? 'Member'} className={cx('rounded-full object-cover ring-2 ring-background', size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-20 w-20' : 'h-11 w-11')} /> :
-    <div data-testid={`avatar-fallback-${user?.id ?? 'current'}`} className={cx('rounded-full bg-secondary text-primary flex items-center justify-center font-bold tracking-tight ring-2 ring-background', size === 'sm' ? 'h-8 w-8 text-[10px]' : size === 'lg' ? 'h-20 w-20 text-xl' : 'h-11 w-11 text-sm')}>{initials(user?.fullName)}</div>;
+function Avatar({ user, size = 'md', className }: { user?: Partial<User> | null; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
+  const sizeClasses = size === 'sm' ? 'h-8 w-8 text-[10px]' : size === 'lg' ? 'h-20 w-20 text-xl' : size === 'xl' ? 'h-28 w-28 sm:h-36 sm:w-36 text-3xl sm:text-4xl' : 'h-11 w-11 text-sm';
+  return user?.avatarUrl ? (
+    <img data-testid={`img-avatar-${user.id ?? 'current'}`} src={user.avatarUrl} alt={user.fullName ?? 'Member'} className={cx('rounded-full object-cover ring-4 ring-background shadow-md', sizeClasses, className)} />
+  ) : (
+    <div data-testid={`avatar-fallback-${user?.id ?? 'current'}`} className={cx('rounded-full bg-secondary text-primary flex items-center justify-center font-bold tracking-tight ring-4 ring-background shadow-md', sizeClasses, className)}>
+      {initials(user?.fullName)}
+    </div>
+  );
 }
 function Button({ children, variant = 'primary', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'quiet' | 'outline' | 'danger' }) {
   return <button {...props} className={cx('inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50', variant === 'primary' && 'bg-primary text-primary-foreground hover:opacity-90', variant === 'quiet' && 'text-muted-foreground hover:bg-muted hover:text-foreground', variant === 'outline' && 'border border-border bg-card text-foreground hover:bg-muted', variant === 'danger' && 'border border-destructive/30 text-destructive hover:bg-destructive/10', className)}>{children}</button>;
@@ -776,7 +778,7 @@ function UniversityLiveMesh() {
                 : 'bg-white/80 dark:bg-slate-900/80 text-muted-foreground border-slate-200 dark:border-slate-800 hover:text-foreground'
             )}
           >
-            🌐 All 7 Hubs
+            All 7 Hubs
           </button>
           {MAP_NODES.map((camp) => (
             <button
@@ -2377,10 +2379,14 @@ function Landing() {
           <Brand />
 
           {/* Desktop Navigation Tabs (Visible on lg screens) */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-7 text-sm font-semibold">
             <Link href="/" className="relative text-foreground font-bold py-1">
               Home
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
+            </Link>
+            <Link href={getNavHref('/blogs')} className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <span>Blogs & Prep</span>
+              <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.2 text-[9px] font-bold">New</span>
             </Link>
             <Link href={getNavHref('/people')} className="text-muted-foreground hover:text-foreground transition-colors">
               People
@@ -2404,7 +2410,7 @@ function Landing() {
             <ThemeToggle className="hidden sm:inline-flex" />
             {currentUser ? (
               <Link
-                href="/dashboard"
+                href="/feed"
                 className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold shadow-md active:scale-95 transition-all flex items-center gap-1.5 sm:gap-2"
               >
                 <span>Workspace</span>
@@ -2452,6 +2458,14 @@ function Landing() {
               >
                 <span>Home</span>
                 <span className="h-2 w-2 rounded-full bg-orange-500" />
+              </Link>
+              <Link
+                href={getNavHref('/blogs')}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-muted-foreground hover:text-foreground py-1.5 flex items-center justify-between"
+              >
+                <span>Blogs & Interview Prep</span>
+                <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.2 text-[9px] font-bold">New</span>
               </Link>
               <Link
                 href={getNavHref('/people')}
@@ -2801,7 +2815,7 @@ function LoginPage() {
           setAuthSession(data.token);
           queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
           const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/dashboard';
+          const redirect = params.get('redirect') || '/feed';
           setLocation(redirect);
         },
         onError: () => setError('Those details did not work. Check your email and password, then try again.'),
@@ -2845,7 +2859,7 @@ function RegisterPage() {
           setAuthSession(data.token);
           queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
           const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/dashboard';
+          const redirect = params.get('redirect') || '/feed';
           setLocation(redirect);
         },
         onError: () => setError('We could not create your account. Please review the details and try again.'),
@@ -2881,40 +2895,55 @@ function SelectField({ id, label, value, onChange, options }: { id: string; labe
 function AppShell({ children, user }: { children: React.ReactNode; user?: User | null }) {
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useLocation();
+  const [globalSearch, setGlobalSearch] = useState('');
   const unread = useListNotifications({ query: { queryKey: getListNotificationsQueryKey(), staleTime: 30000 } });
   const unreadCount = unread.data?.filter((n) => !n.read).length ?? 0;
 
-  const activeGroup =
-    NAV_GROUPS.find((group) =>
-      group.items.some((item) => location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href)))
-    ) || NAV_GROUPS[0];
+  const socialNavItems: NavItem[] = [
+    { href: '/feed', label: 'Feed & Stories', icon: Rss },
+    { href: '/people', label: 'Discover Members', icon: Users },
+    { href: '/blogs', label: 'Articles & Experiences', icon: FileText },
+    { href: '/mentorship', label: 'Mentorship Hub', icon: HeartHandshake },
+    { href: '/showcase', label: 'Project Showcase', icon: Trophy },
+    { href: '/research', label: 'Research & Labs', icon: BookOpen },
+    { href: '/opportunities', label: 'Events & Opportunities', icon: CalendarDays },
+    { href: '/messages', label: 'Messages', icon: MessageSquare },
+  ];
 
-  const currentItem = ALL_NAV_ITEMS.find((item) => location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href)));
-  const currentLabel = currentItem?.label ?? 'Workspace';
+  if (user?.role === 'admin') {
+    socialNavItems.push({ href: '/admin', label: 'Admin Console', icon: ShieldCheck, roles: ['admin'] });
+  }
 
   const handleLogout = () => {
     clearAuthSession();
     setLocation('/login');
   };
 
+  const handleGlobalSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (globalSearch.trim()) {
+      setLocation(`/feed?search=${encodeURIComponent(globalSearch.trim())}`);
+    }
+  };
+
   return (
-    <div className="grain min-h-[100dvh] bg-background">
-      {/* Modern Grouped Sidebar for Desktop & Mobile Drawer */}
+    <div className="min-h-[100dvh] bg-background">
+      {/* Modern Social Sidebar for Desktop & Mobile Drawer */}
       <aside
         className={cx(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl lg:shadow-none',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/80 bg-card text-card-foreground transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl lg:shadow-none',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Top Header of Sidebar */}
-        <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-sidebar-border/60 px-5">
-          <Brand light />
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/60 px-5">
+          <Brand />
           <div className="flex items-center gap-1">
-            <ThemeToggle className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
+            <ThemeToggle className="text-muted-foreground hover:bg-muted hover:text-foreground" />
             <button
               data-testid="button-close-menu"
               aria-label="Close navigation menu"
-              className="rounded-lg p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
               onClick={() => setOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -2922,88 +2951,98 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
           </div>
         </div>
 
-        {/* Role & Campus Badge */}
-        <div className="shrink-0 px-4 pt-3.5 pb-2">
-          <div className="flex items-center justify-between rounded-xl bg-sidebar-accent/50 px-3.5 py-2 text-[11px] font-semibold text-sidebar-foreground/80 border border-sidebar-border/50">
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              {roleLabels[user?.role ?? 'student']} Hub
-            </span>
-            <span className="mono text-[9px] uppercase tracking-wider text-accent font-bold">
-              Amrita {user?.campus || 'Campus'}
-            </span>
-          </div>
-        </div>
-
-        {/* Section Navigation - ONLY the active section is rendered */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {activeGroup.group !== 'Main Workspace' && (
-            <Link
-              href="/dashboard"
-              onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-1"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Overview</span>
-            </Link>
-          )}
-
-          <div className="mono px-2 text-[11px] font-extrabold uppercase tracking-[.2em] text-foreground/80 mb-3">
-            {activeGroup.group}
-          </div>
-
-          <nav className="space-y-1.5" aria-label={activeGroup.group}>
-            {activeGroup.items
-              .filter((item) => !item.roles || (user && item.roles.includes(user.role)))
-              .map(({ href, label, icon: Icon }) => {
-                const isActive = location === href || (href !== '/dashboard' && location.startsWith(href));
-                return (
+        {/* Social Mini Profile Card */}
+        {user && (
+          <div className="p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-orange-500/10 via-purple-500/5 to-secondary/30 p-3.5 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <Avatar user={user} size="md" className="ring-2 ring-orange-500/30" />
+                <div className="min-w-0 flex-1">
                   <Link
-                    data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
+                    href="/profile"
                     onClick={() => setOpen(false)}
-                    href={href}
-                    key={href + label}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cx(
-                      'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
-                      isActive
-                        ? 'border border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm ring-1 ring-amber-500/30'
-                        : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                    )}
+                    className="block font-bold text-sm text-foreground hover:text-orange-500 transition-colors truncate"
                   >
-                    <Icon className={cx('h-4 w-4 shrink-0', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-sidebar-foreground/50')} />
-                    <span className="truncate">{label}</span>
+                    {user.fullName}
                   </Link>
-                );
-              })}
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {user.headline || `${roleLabels[user.role] ?? user.role} · Amrita ${user.campus || ''}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick links under mini card */}
+              <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5 text-[11px] font-semibold text-muted-foreground">
+                <Link
+                  href="/connections"
+                  onClick={() => setOpen(false)}
+                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
+                >
+                  <Users className="h-3 w-3" />
+                  <span>Network</span>
+                </Link>
+                <span className="text-border">•</span>
+                <Link
+                  href="/profile?tab=saved"
+                  onClick={() => setOpen(false)}
+                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
+                >
+                  <Bookmark className="h-3 w-3" />
+                  <span>Saved</span>
+                </Link>
+                <span className="text-border">•</span>
+                <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
+                >
+                  <UserCircle className="h-3 w-3" />
+                  <span>Profile</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Social Navigation Menu */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          <nav className="space-y-1" aria-label="Social navigation">
+            {socialNavItems.map(({ href, label, icon: Icon }) => {
+              const isActive = location === href || (href !== '/feed' && location.startsWith(href));
+              return (
+                <Link
+                  data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
+                  onClick={() => setOpen(false)}
+                  href={href}
+                  key={href + label}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cx(
+                    'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold transition-all',
+                    isActive
+                      ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold border border-orange-500/20 shadow-2xs'
+                      : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                  )}
+                >
+                  <Icon
+                    className={cx(
+                      'h-4 w-4 shrink-0',
+                      isActive ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
+                    )}
+                  />
+                  <span className="truncate">{label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
-        {/* Fixed User Profile & Logout Footer */}
-        <div className="shrink-0 border-t border-sidebar-border/70 p-3 space-y-1.5 bg-sidebar/95 backdrop-blur-sm">
-          <Link
-            data-testid="link-nav-profile"
-            href="/profile"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 rounded-xl border border-sidebar-border/80 bg-sidebar-accent/30 p-2.5 hover:bg-sidebar-accent transition-all group"
-          >
-            <Avatar user={user} size="sm" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold text-sidebar-foreground group-hover:text-accent">
-                {user?.fullName ?? 'Your Profile'}
-              </div>
-              <div className="truncate text-[10px] text-sidebar-foreground/50">
-                {user?.headline || `${roleLabels[user?.role ?? 'student']} · ${user?.department || 'Amrita'}`}
-              </div>
-            </div>
-            <Settings2 aria-hidden="true" className="h-4 w-4 shrink-0 text-sidebar-foreground/45 group-hover:text-accent" />
-          </Link>
-
+        {/* Sidebar Bottom Footer */}
+        <div className="shrink-0 border-t border-border/70 p-3 bg-card/90">
           <button
             type="button"
             data-testid="button-sidebar-logout"
             onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-sidebar-foreground/50 transition-colors hover:bg-destructive/15 hover:text-destructive active:scale-95"
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span>Sign out</span>
@@ -3015,16 +3054,16 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
       {open && (
         <div
           aria-label="Close navigation overlay"
-          className="fixed inset-0 z-30 bg-primary/40 backdrop-blur-sm transition-opacity lg:hidden"
+          className="fixed inset-0 z-30 bg-background/60 backdrop-blur-sm transition-opacity lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Main Content Viewport */}
       <div className="lg:pl-72 flex min-h-screen flex-col">
-        {/* Clean Top Sticky Header */}
-        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border bg-background/90 px-4 sm:px-8 backdrop-blur-md">
-          <div className="flex items-center gap-3">
+        {/* Social Sticky Top Header */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/80 bg-background/90 px-4 sm:px-8 backdrop-blur-md">
+          <div className="flex items-center gap-3 flex-1 max-w-lg">
             <button
               data-testid="button-open-menu"
               aria-label="Open navigation menu"
@@ -3033,22 +3072,27 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground font-medium">
-              <span className="h-2 w-2 rounded-full bg-accent" />
-              <span className="hidden sm:inline">Amrita Connect</span>
-              <span className="text-border hidden sm:inline">/</span>
-              <span className="font-bold text-foreground">{currentLabel}</span>
-            </div>
+
+            {/* Global Search Bar */}
+            <form onSubmit={handleGlobalSearchSubmit} className="relative w-full max-w-sm hidden sm:block">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder="Search posts, members, #tags..."
+                className="w-full rounded-full border border-input bg-secondary/50 hover:bg-secondary/70 focus:bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+              />
+            </form>
           </div>
 
-          {/* Right User Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <ThemeToggle />
+          {/* Right Social Controls */}
+          <div className="flex items-center gap-2">
             <Link
               data-testid="link-messages-header"
               aria-label="Messages"
               href="/messages"
-              className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="relative rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <MessageSquare aria-hidden="true" className="h-[18px] w-[18px]" />
             </Link>
@@ -3056,18 +3100,19 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
               data-testid="link-notifications-header"
               aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
               href="/notifications"
-              className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="relative rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <Bell aria-hidden="true" className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-background"
+                  className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold text-white ring-2 ring-background"
                 >
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </Link>
+            <ThemeToggle className="hidden sm:inline-flex" />
             <Link data-testid="link-profile-header" aria-label="Open your profile" href="/profile" className="ml-1">
               <Avatar user={user} size="sm" />
             </Link>
@@ -3075,7 +3120,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
         </header>
 
         {/* Page Container */}
-        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-8 sm:py-8 lg:py-10">
+        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:py-8">
           {children}
         </main>
       </div>
@@ -3338,6 +3383,9 @@ interface PostItem {
   id: string;
   content: string;
   imageUrl?: string | null;
+  documentUrl?: string | null;
+  documentName?: string | null;
+  linkUrl?: string | null;
   category: PostCategory;
   campus: string;
   department: string;
@@ -3674,6 +3722,61 @@ function PostCard({
         </div>
       )}
 
+      {/* Attached Document / PDF */}
+      {post.documentUrl && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 sm:p-4 hover:border-accent/40 transition-all">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-500 font-bold">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs sm:text-sm font-bold text-foreground">
+                {post.documentName || 'Attached Document.pdf'}
+              </p>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                PDF / Document
+              </span>
+            </div>
+          </div>
+          <a
+            href={post.documentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={post.documentName || 'document.pdf'}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all shrink-0"
+          >
+            <Download className="h-3.5 w-3.5 text-accent" />
+            <span>Open / Download</span>
+          </a>
+        </div>
+      )}
+
+      {/* Attached Link */}
+      {post.linkUrl && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 hover:border-accent/40 transition-all">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-500">
+              <Link2 className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-foreground hover:text-accent">
+                {post.linkUrl}
+              </p>
+              <span className="text-[10px] text-muted-foreground">External Resource</span>
+            </div>
+          </div>
+          <a
+            href={post.linkUrl.startsWith('http') ? post.linkUrl : `https://${post.linkUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-accent hover:underline shrink-0"
+          >
+            <span>Visit</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      )}
+
       {/* Interactions Action Bar */}
       <div className="mt-5 flex items-center justify-between border-t border-border pt-3.5 text-xs text-muted-foreground">
         <div className="flex items-center gap-1 sm:gap-2">
@@ -3915,182 +4018,6 @@ function EditPostDialog({
         </form>
       </div>
     </div>
-  );
-}
-
-function FeedPage() {
-  const [view, setView] = useState<'all' | 'saved' | 'my_posts'>('all');
-  const [category, setCategory] = useState<string>('');
-  const [campus, setCampus] = useState<string>('');
-  const [department, setDepartment] = useState<string>('');
-  const [search, setSearch] = useState<string>('');
-  const [editingPost, setEditingPost] = useState<PostItem | null>(null);
-
-  const queryClient = useQueryClient();
-  const queryKey = useMemo(() => ['posts', { view, category, campus, department, search }], [view, category, campus, department, search]);
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const q = new URLSearchParams();
-      if (category) q.set('category', category);
-      if (campus) q.set('campus', campus);
-      if (department) q.set('department', department);
-      if (search) q.set('search', search);
-      if (view === 'saved') q.set('filter', 'saved');
-      if (view === 'my_posts') q.set('filter', 'my_posts');
-      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
-    },
-  });
-
-  const posts = data?.items ?? [];
-
-  return (
-    <>
-      <PageTitle
-        eyebrow="Amrita Social Commons"
-        title="Campus Feed & Discussions."
-        detail="Share breakthroughs, interview experiences, research updates, or ask for help across all 7 Amrita campuses."
-      />
-
-      {/* Create Post Box */}
-      <CreatePostBox onCreated={() => queryClient.invalidateQueries({ queryKey: ['posts'] })} />
-
-      {/* Main Filter & View Bar */}
-      <div className="mt-8 space-y-4">
-        {/* Top View Selector & Category Chips */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-          <div className="flex rounded-lg border border-border bg-card p-1">
-            {[
-              { id: 'all', label: 'All Posts' },
-              { id: 'saved', label: 'Saved' },
-              { id: 'my_posts', label: 'My Posts' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                data-testid={`button-feed-tab-${tab.id}`}
-                onClick={() => setView(tab.id as any)}
-                className={cx(
-                  'rounded-md px-3.5 py-1.5 text-xs font-bold transition-all',
-                  view === tab.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCategory('')}
-              className={cx(
-                'rounded-full px-3 py-1 text-xs font-semibold transition-all',
-                category === '' ? 'bg-accent text-primary font-bold' : 'bg-muted text-muted-foreground hover:text-foreground'
-              )}
-            >
-              All Topics
-            </button>
-            {POST_CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                data-testid={`button-category-${cat.toLowerCase().replaceAll(' ', '-')}`}
-                onClick={() => setCategory(category === cat ? '' : cat)}
-                className={cx(
-                  'rounded-full border px-3 py-1 text-xs font-semibold transition-all',
-                  category === cat
-                    ? 'border-accent bg-accent/20 text-accent font-bold'
-                    : 'border-border bg-card text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Secondary Search and Campus/Department Filters */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_160px_200px]">
-          <label className="relative block">
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-            <input
-              data-testid="input-feed-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search posts by keywords, tags, or author..."
-              className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 pr-3 text-sm outline-none focus:border-accent"
-            />
-          </label>
-          <SelectField
-            id="feed-campus-filter"
-            label=""
-            value={campus}
-            onChange={(e) => setCampus(e.target.value)}
-            options={[{ value: '', label: 'All campuses' }, ...campuses.map((c) => ({ value: c, label: c }))]}
-          />
-          <SelectField
-            id="feed-department-filter"
-            label=""
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            options={[{ value: '', label: 'All departments' }, ...departments.map((d) => ({ value: d, label: d }))]}
-          />
-        </div>
-      </div>
-
-      {/* Feed Stream */}
-      <div className="mt-6 space-y-5">
-        {isLoading ? (
-          <LoadingState rows={4} />
-        ) : isError ? (
-          <ErrorState onRetry={() => refetch()} />
-        ) : !posts.length ? (
-          <EmptyState
-            icon={Sparkles}
-            title="No posts found in this feed"
-            detail="Be the first to share an update, interview experience, project milestone, or question with the Amrita community!"
-            action={
-              (category || campus || department || search || view !== 'all') ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setView('all');
-                    setCategory('');
-                    setCampus('');
-                    setDepartment('');
-                    setSearch('');
-                  }}
-                >
-                  Clear all filters
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onEdit={(p) => setEditingPost(p)}
-              onRefresh={() => queryClient.invalidateQueries({ queryKey: ['posts'] })}
-            />
-          ))
-        )}
-      </div>
-
-      {editingPost && (
-        <EditPostDialog
-          post={editingPost}
-          onClose={() => setEditingPost(null)}
-          onUpdated={() => {
-            queryClient.invalidateQueries({ queryKey: ['posts'] });
-            setEditingPost(null);
-          }}
-        />
-      )}
-    </>
   );
 }
 
@@ -4376,378 +4303,7 @@ function ConnectActionButton({
   );
 }
 
-function ConnectionsPage() {
-  const [tab, setTab] = useState<'connected' | 'pending' | 'suggestions'>('connected');
-  const [search, setSearch] = useState('');
-  const { data, isLoading, isError, refetch } = useConnections();
-  const { data: suggestionsData, isLoading: sugLoading } = useConnectionSuggestions();
-  const queryClient = useQueryClient();
-
-  const acceptMutation = useMutation({
-    mutationFn: (connId: string) => apiFetch(`/connections/${connId}/accept`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connections'] }),
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (connId: string) => apiFetch(`/connections/${connId}/reject`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connections'] }),
-  });
-
-  const removeMutation = useMutation({
-    mutationFn: (connId: string) => apiFetch(`/connections/${connId}`, { method: 'DELETE' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connections'] }),
-  });
-
-  const connectedList = (data?.connected ?? []).filter((item) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      item.user?.fullName?.toLowerCase().includes(q) ||
-      item.user?.department?.toLowerCase().includes(q) ||
-      item.user?.campus?.toLowerCase().includes(q) ||
-      item.user?.skills?.some((s) => s.toLowerCase().includes(q))
-    );
-  });
-
-  const incomingList = data?.incoming ?? [];
-  const outgoingList = data?.outgoing ?? [];
-  const suggestionsList = suggestionsData?.items ?? [];
-
-  return (
-    <>
-      {/* Social Network Header */}
-      <div className="mb-8 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-secondary/30 p-6 sm:p-8 shadow-sm backdrop-blur-md relative overflow-hidden animate-rise">
-        <div className="absolute top-0 right-0 h-48 w-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.22em] text-orange-500">
-              <Users className="h-3.5 w-3.5" /> Professional & Campus Network
-            </div>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Amrita Connected Network.
-            </h1>
-            <p className="mt-1.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Stay in touch with batchmates, research co-investigators, and alumni mentors across all 7 Amrita campuses.
-            </p>
-          </div>
-
-          {/* Quick Metrics Badge */}
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3 text-center shadow-sm">
-              <div className="text-xl font-black text-foreground">{data?.totalConnected ?? 0}</div>
-              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Connections</div>
-            </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3 text-center shadow-sm">
-              <div className="text-xl font-black text-orange-500">{data?.pendingCount ?? 0}</div>
-              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pending</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Social Discovery Tabs & Search Bar */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-border/70">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: 'connected', label: `My Connections (${data?.totalConnected ?? 0})`, icon: UserCheck },
-              { id: 'pending', label: `Invitations (${data?.pendingCount ?? 0})`, icon: Bell },
-              { id: 'suggestions', label: 'People You May Know', icon: Sparkles },
-            ].map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  data-testid={`tab-connections-${t.id}`}
-                  onClick={() => setTab(t.id as any)}
-                  className={cx(
-                    'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all border shadow-sm',
-                    tab === t.id
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-md scale-[1.02]'
-                      : 'bg-card/70 border-border text-muted-foreground hover:text-foreground hover:border-slate-300'
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {tab === 'connected' && (
-            <label className="relative block w-full sm:w-72">
-              <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter by name, campus, skill..."
-                className="w-full rounded-xl border border-input bg-card py-2 pl-9 pr-3 text-xs outline-none focus:border-orange-500 shadow-sm"
-              />
-            </label>
-          )}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <LoadingState rows={4} />
-      ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
-      ) : tab === 'connected' ? (
-        connectedList.length === 0 ? (
-          /* Engaging Social Empty State with Suggested Avatars */
-          <div className="rounded-3xl border border-dashed border-orange-500/30 bg-gradient-to-b from-card/80 to-orange-50/20 dark:to-orange-950/10 p-8 sm:p-12 text-center shadow-sm animate-rise">
-            <div className="relative mx-auto h-20 w-20 mb-4 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-orange-500/10 animate-ping opacity-60" />
-              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-orange-500/15 text-orange-600 dark:text-orange-400 font-black shadow-inner">
-                <Users2 className="h-8 w-8" />
-              </div>
-            </div>
-
-            <h3 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
-              Your Amrita network starts here.
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              You have 0 active connections yet. Connect with classmates in your department, alumni mentors at top tech companies, and cross-campus research teams!
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Button onClick={() => setTab('suggestions')} className="rounded-xl px-5 py-2.5 text-xs font-bold shadow-md">
-                <Sparkles className="h-4 w-4" /> Discover People You May Know
-              </Button>
-              <Link
-                href="/people"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-5 py-2.5 text-xs font-bold text-foreground hover:bg-muted shadow-sm transition-all"
-              >
-                <span>Explore Full 50K+ Directory</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {connectedList.map(({ id, user, connectedAt }) => (
-              <div key={id} className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise">
-                <div>
-                  <div className="flex items-start justify-between">
-                    <Avatar user={user} size="md" />
-                    <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
-                      {roleLabels[user.role] ?? user.role}
-                    </span>
-                  </div>
-                  <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors">
-                    {user.fullName}
-                  </Link>
-                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                    {user.headline || `${user.department} · Amrita ${user.campus}`}
-                  </p>
-                  <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    <span>Connected {relative(connectedAt || '')}</span>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/messages/${user.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm active:scale-95 transition-all"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" /> Message
-                    </Link>
-                    <Link
-                      href={`/people/${user.id}`}
-                      className="text-xs font-bold text-muted-foreground hover:text-foreground py-1.5 px-2"
-                    >
-                      Profile
-                    </Link>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`Remove connection with ${user.fullName}?`)) {
-                        removeMutation.mutate(id);
-                      }
-                    }}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      ) : tab === 'pending' ? (
-        <div className="space-y-8 animate-rise">
-          {/* Incoming */}
-          <section>
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <span>Received Invitations</span>
-              <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[11px] font-bold">
-                {incomingList.length}
-              </span>
-            </h3>
-            {incomingList.length === 0 ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card/60 p-6 text-center text-xs text-muted-foreground">
-                No incoming connection requests at this time.
-              </div>
-            ) : (
-              <div className="mt-3 divide-y divide-border/70 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-                {incomingList.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-start gap-3.5">
-                      <Avatar user={item.user} size="md" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-orange-500 transition-colors">
-                            {item.user.fullName}
-                          </Link>
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                            {roleLabels[item.user.role] ?? item.user.role}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{item.user.headline || `${item.user.department} · ${item.user.campus}`}</p>
-                        {item.message && (
-                          <div className="mt-2.5 rounded-xl border border-orange-500/20 bg-orange-50/50 dark:bg-orange-950/20 p-3 text-xs text-foreground italic">
-                            "{item.message}"
-                          </div>
-                        )}
-                        <span className="mt-1.5 block text-[10px] text-muted-foreground">Received {relative(item.createdAt || '')}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        onClick={() => acceptMutation.mutate(item.id)}
-                        disabled={acceptMutation.isPending}
-                        className="px-4 py-2 text-xs font-bold"
-                      >
-                        <Check className="h-3.5 w-3.5" /> Accept
-                      </Button>
-                      <Button
-                        variant="quiet"
-                        onClick={() => rejectMutation.mutate(item.id)}
-                        disabled={rejectMutation.isPending}
-                        className="px-3.5 py-2 text-xs"
-                      >
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Outgoing */}
-          <section>
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <span>Sent Invitations</span>
-              <span className="rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[11px] font-bold">
-                {outgoingList.length}
-              </span>
-            </h3>
-            {outgoingList.length === 0 ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card/60 p-6 text-center text-xs text-muted-foreground">
-                No pending sent invitations.
-              </div>
-            ) : (
-              <div className="mt-3 divide-y divide-border/70 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-                {outgoingList.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Avatar user={item.user} size="md" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-orange-500 transition-colors">
-                            {item.user.fullName}
-                          </Link>
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                            {roleLabels[item.user.role] ?? item.user.role}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{item.user.department} · {item.user.campus}</p>
-                        <span className="text-[10px] text-muted-foreground">Sent {relative(item.createdAt || '')}</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => removeMutation.mutate(item.id)}
-                      disabled={removeMutation.isPending}
-                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive"
-                    >
-                      Withdraw Request
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      ) : (
-        /* Grow Network / Suggestions */
-        <div>
-          {sugLoading ? (
-            <LoadingState rows={3} />
-          ) : suggestionsList.length === 0 ? (
-            <EmptyState
-              icon={Sparkles}
-              title="No recommendations right now"
-              detail="Explore the full directory to meet people from all departments and campuses."
-              action={
-                <Link href="/people" className="text-sm font-bold text-orange-500">
-                  Browse People Directory
-                </Link>
-              }
-            />
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {suggestionsList.map(({ user, score: _score, reason, matchingPoints }) => (
-                <div key={user.id} className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise">
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <Avatar user={user} size="md" />
-                      <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
-                        {roleLabels[user.role] ?? user.role}
-                      </span>
-                    </div>
-                    <Link href={`/people/${user.id}`} className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors">
-                      {user.fullName}
-                    </Link>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                      {user.headline || `${user.department} · Amrita ${user.campus}`}
-                    </p>
-
-                    <div className="mt-3.5 rounded-xl border border-orange-500/20 bg-orange-50/50 dark:bg-orange-950/20 p-3 text-xs">
-                      <div className="font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5" /> {reason}
-                      </div>
-                      {matchingPoints.length > 1 && (
-                        <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground list-disc list-inside">
-                          {matchingPoints.slice(1, 3).map((pt, idx) => (
-                            <li key={idx}>{pt}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3.5">
-                    <Link href={`/people/${user.id}`} className="text-xs font-bold text-muted-foreground hover:text-foreground">
-                      Profile
-                    </Link>
-                    <ConnectActionButton targetUser={user} size="sm" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
+const ConnectionsPage = ProfilePage;
 
 interface DirectMessage {
   id: string;
@@ -5260,7 +4816,7 @@ function PitchModal({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      alert(`🎉 Pitch sent to ${targetUser.fullName}! You can continue the chat in Messages.`);
+      alert(`Pitch sent to ${targetUser.fullName}! You can continue the chat in Messages.`);
       onClose();
       setLocation(`/messages/${targetUser.id}`);
     },
@@ -6415,7 +5971,7 @@ function InterviewsPage() {
           className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none focus:border-accent"
         >
           <option value="">All Outcomes</option>
-          <option value="Offered">Offered Only 🎉</option>
+          <option value="Offered">Offered Only</option>
           <option value="In Progress">In Progress</option>
           <option value="Not Selected">Not Selected</option>
         </select>
@@ -7523,9 +7079,9 @@ function RegisterBuddyModal({
               value={availability}
               onChange={(e) => setAvailability(e.target.value as any)}
               options={[
-                { value: 'Available', label: '🟢 Available' },
-                { value: 'Busy', label: '🟡 Busy with Exams' },
-                { value: 'Away', label: '⚪ Away' },
+                { value: 'Available', label: 'Available' },
+                { value: 'Busy', label: 'Busy with Exams' },
+                { value: 'Away', label: 'Away' },
               ]}
             />
           </div>
@@ -8038,15 +7594,13 @@ function ApplyResearchModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [role, setRole] = useState(
-    project.openPositions?.[0]?.roleTitle || 'Research Assistant'
-  );
+  const [role, setRole] = useState(project.openPositions?.[0]?.roleTitle || 'Research Assistant');
   const [statement, setStatement] = useState('');
   const [skills, setSkills] = useState('');
 
   const applyMutation = useMutation({
     mutationFn: () =>
-      apiFetch<{ success: boolean; message: string }>(`/research-projects/${project.id}/apply`, {
+      apiFetch<{ success: boolean }>(`/research-projects/${project.id}/apply`, {
         method: 'POST',
         body: JSON.stringify({
           roleAppliedFor: role,
@@ -8066,21 +7620,31 @@ function ApplyResearchModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-7 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Research Collaboration</div>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Express Research Interest</h2>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-orange-500">Research Collaboration</span>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Express Research Interest</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <X className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-3.5">
+        <div className="mt-4 rounded-2xl border border-border/80 bg-secondary/30 p-3.5">
           <div className="text-xs font-bold text-foreground">{project.title}</div>
-          <div className="mt-1 text-[10px] text-muted-foreground">
+          <div className="mt-1 text-[11px] text-muted-foreground">
             PI: Prof. {project.principalInvestigator.fullName} · {project.labName} (Amrita {project.campus})
           </div>
         </div>
@@ -8109,7 +7673,7 @@ function ApplyResearchModal({
 
           <Field
             id="apply-skills"
-            label="Relevant Skills & Technologies (comma-separated)"
+            label="Relevant Skills & Technologies"
             placeholder="e.g. PyTorch, ROS2, Computer Vision, C++"
             value={skills}
             onChange={(e) => setSkills(e.target.value)}
@@ -8124,19 +7688,23 @@ function ApplyResearchModal({
               rows={4}
               value={statement}
               onChange={(e) => setStatement(e.target.value)}
-              placeholder="Highlight relevant course projects, research experience, or why you want to contribute to this lab..."
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              placeholder="Highlight relevant coursework, past projects, or why you want to contribute to this lab..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-orange-500 transition-colors"
               required
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+          <div className="flex justify-end gap-2 pt-3 border-t border-border/80">
             <Button type="button" variant="quiet" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={applyMutation.isPending || !statement.trim()} className="font-bold">
+            <Button
+              type="submit"
+              disabled={applyMutation.isPending || !statement.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+            >
               {applyMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Submit Application
+              <span>Submit Application</span>
             </Button>
           </div>
         </form>
@@ -8218,15 +7786,25 @@ function CreateResearchModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-7 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Faculty & Lab Initiative</div>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Post Research Project / Call</h2>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-orange-500">Faculty & Lab Initiative</span>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Post Research Project / Call</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <X className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -8240,7 +7818,7 @@ function CreateResearchModal({
             required
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field
               id="proj-lab"
               label="Lab / Research Center Name"
@@ -8258,7 +7836,7 @@ function CreateResearchModal({
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <SelectField
               id="proj-campus"
               label="Campus"
@@ -8266,20 +7844,13 @@ function CreateResearchModal({
               onChange={(e) => setForm({ ...form, campus: e.target.value })}
               options={campuses.map((c) => ({ value: c, label: c }))}
             />
-            <SelectField
+            <Field
               id="proj-category"
               label="Domain Category"
+              placeholder="e.g. Artificial Intelligence, Robotics, Quantum"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              options={[
-                'Artificial Intelligence',
-                'Robotics & IoT',
-                'Biotechnology & Healthcare',
-                'Cyber Security',
-                'Sustainable Energy',
-                'Computational Systems',
-                'Interdisciplinary',
-              ].map((c) => ({ value: c, label: c }))}
+              required
             />
             <SelectField
               id="proj-dept"
@@ -8297,7 +7868,7 @@ function CreateResearchModal({
               value={form.abstract}
               onChange={(e) => setForm({ ...form, abstract: e.target.value })}
               placeholder="Provide a comprehensive summary of the problem statement, proposed methodology, and expected outcomes..."
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-orange-500 transition-colors"
               required
             />
           </div>
@@ -8309,13 +7880,13 @@ function CreateResearchModal({
               value={form.objectives}
               onChange={(e) => setForm({ ...form, objectives: e.target.value })}
               placeholder="Implement real-time visual odometry&#10;Deploy on Nvidia Jetson edge platform&#10;Conduct field trials in rural farmlands"
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-orange-500 transition-colors"
             />
           </div>
 
           {/* Open Position Section */}
-          <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-accent">Open Research Role (Optional)</div>
+          <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-orange-500">Open Research Role (Optional)</div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field
                 id="role-title"
@@ -8334,20 +7905,24 @@ function CreateResearchModal({
             </div>
             <Field
               id="role-skills"
-              label="Prerequisite Skills (comma-separated)"
+              label="Prerequisite Skills"
               placeholder="e.g. PyTorch, ROS2, Python, OpenCV"
               value={form.openRoleSkills}
               onChange={(e) => setForm({ ...form, openRoleSkills: e.target.value })}
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+          <div className="flex justify-end gap-2 pt-3 border-t border-border/80">
             <Button type="button" variant="quiet" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending || !form.title.trim()} className="font-bold">
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !form.title.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+            >
               {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-              Publish Research Project
+              <span>Publish Research Project</span>
             </Button>
           </div>
         </form>
@@ -8385,8 +7960,8 @@ function ResearchDetailModal({
 
   if (isLoading || !project) {
     return (
-      <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+      <div className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-12 pb-8 backdrop-blur-md">
+        <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl">
           <LoadingState rows={4} />
         </div>
       </div>
@@ -8394,37 +7969,51 @@ function ResearchDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-8 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Tag warm>{project.category}</Tag>
-              <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+              <span className="rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 px-3 py-1 text-xs font-semibold">
+                {project.category}
+              </span>
+              <span className="rounded-lg bg-secondary/80 text-muted-foreground px-2.5 py-1 text-xs font-semibold">
+                Amrita {project.campus}
+              </span>
               {project.fundingSource && (
-                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
+                <span className="rounded-lg bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   {project.fundingSource}
                 </span>
               )}
             </div>
-            <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{project.title}</h2>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">{project.labName} · {project.department}</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">{project.title}</h2>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{project.labName} · {project.department}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* PI Card */}
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-secondary/30 p-3.5">
+        <div className="mt-5 flex items-center justify-between rounded-2xl border border-border/80 bg-secondary/30 p-3.5">
           <div className="flex items-center gap-3">
             <Avatar user={project.principalInvestigator} size="md" />
             <div>
               <div className="text-xs font-bold text-foreground">
                 Principal Investigator: Prof. {project.principalInvestigator.fullName}
               </div>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 {project.principalInvestigator.headline || `${project.principalInvestigator.department}`}
               </p>
             </div>
@@ -8432,26 +8021,28 @@ function ResearchDetailModal({
 
           <Link
             href={`/messages/${project.principalInvestigator.id}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-secondary transition-colors"
           >
-            <MessageSquare className="h-3.5 w-3.5 text-accent" /> Message PI
+            <MessageSquare className="h-3.5 w-3.5 text-orange-500" /> Message PI
           </Link>
         </div>
 
         {/* Abstract */}
-        <div className="mt-5">
+        <div className="mt-6">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Abstract</h3>
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground">{project.abstract}</p>
+          <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-foreground bg-secondary/20 p-4 rounded-2xl border border-border/80">
+            {project.abstract}
+          </p>
         </div>
 
         {/* Research Objectives */}
         {project.objectives?.length > 0 && (
-          <div className="mt-5">
+          <div className="mt-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Key Objectives</h3>
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-2.5 space-y-2">
               {project.objectives.map((obj, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-foreground">
-                  <Check className="h-4 w-4 shrink-0 text-accent mt-0.5" />
+                <li key={i} className="flex items-start gap-2.5 text-xs text-foreground bg-card p-3 rounded-xl border border-border/80">
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5" />
                   <span>{obj}</span>
                 </li>
               ))}
@@ -8461,22 +8052,24 @@ function ResearchDetailModal({
 
         {/* Open Positions */}
         {project.openPositions?.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-accent/30 bg-accent/5 p-4">
-            <div className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+          <div className="mt-6 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-4 sm:p-5">
+            <div className="text-xs font-bold uppercase tracking-wider text-orange-500 flex items-center gap-1.5">
               <Rocket className="h-4 w-4" /> Open Student & Fellow Positions
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {project.openPositions.map((pos, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+                <div key={i} className="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">{pos.roleTitle}</span>
-                    <span className="rounded bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent">
+                    <span className="rounded-md bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">
                       {pos.spots} {pos.spots === 1 ? 'Spot' : 'Spots'}
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {pos.prerequisites.map((p) => (
-                      <Tag key={p}>{p}</Tag>
+                      <span key={p} className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        {p}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -8487,21 +8080,21 @@ function ResearchDetailModal({
 
         {/* Publications */}
         {project.publications?.length > 0 && (
-          <div className="mt-5">
+          <div className="mt-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selected Publications</h3>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2.5 space-y-2">
               {project.publications.map((pub, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-3 flex items-center justify-between">
+                <div key={i} className="rounded-2xl border border-border/80 bg-card p-3.5 flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-foreground">{pub.title}</div>
-                    <div className="text-[10px] text-muted-foreground">{pub.venue}</div>
+                    <div className="text-[11px] text-muted-foreground">{pub.venue}</div>
                   </div>
                   {pub.link && (
                     <a
                       href={pub.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-bold text-accent hover:underline flex items-center gap-1"
+                      className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1"
                     >
                       View <ArrowUpRight className="h-3 w-3" />
                     </a>
@@ -8514,27 +8107,27 @@ function ResearchDetailModal({
 
         {/* Applicant Review Queue (For Principal Investigator Only) */}
         {project.isPI && project.applications && (
-          <div className="mt-6 border-t border-border pt-4">
+          <div className="mt-7 border-t border-border/80 pt-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
               Applicant Review Queue ({project.applications.length})
             </h3>
 
             {project.applications.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/80 p-5 text-center text-xs text-muted-foreground">
                 No student research applications received yet.
               </div>
             ) : (
               <div className="space-y-3">
                 {project.applications.map((app) => (
-                  <div key={app.id} className="rounded-xl border border-border bg-card p-4">
+                  <div key={app.id} className="rounded-2xl border border-border/80 bg-card p-4 shadow-2xs">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar user={app.applicant} size="sm" />
                         <div>
                           <div className="text-xs font-bold text-foreground">
-                            {app.applicant.fullName} · <span className="text-accent">{app.roleAppliedFor}</span>
+                            {app.applicant.fullName} · <span className="text-orange-500">{app.roleAppliedFor}</span>
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-[11px] text-muted-foreground">
                             Amrita {app.applicant.campus} · Applied {relative(app.appliedAt)}
                           </div>
                         </div>
@@ -8554,14 +8147,16 @@ function ResearchDetailModal({
                       </span>
                     </div>
 
-                    <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-foreground bg-secondary/30 p-2.5 rounded-lg">
+                    <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-foreground bg-secondary/30 p-3 rounded-xl">
                       {app.statementOfInterest}
                     </p>
 
                     {app.relevantSkills?.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {app.relevantSkills.map((s) => (
-                          <Tag key={s}>{s}</Tag>
+                          <span key={s} className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                            {s}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -8577,7 +8172,7 @@ function ResearchDetailModal({
                           Decline
                         </Button>
                         <Button
-                          className="px-3 py-1 text-xs font-bold"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 text-xs font-bold rounded-xl"
                           onClick={() => respondMutation.mutate({ appId: app.id, status: 'accepted' })}
                           disabled={respondMutation.isPending}
                         >
@@ -8593,7 +8188,7 @@ function ResearchDetailModal({
         )}
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+        <div className="mt-6 flex items-center justify-between border-t border-border/80 pt-4">
           <Button variant="quiet" onClick={onClose}>
             Close
           </Button>
@@ -8601,7 +8196,7 @@ function ResearchDetailModal({
           {!project.isPI && (
             <div>
               {project.myApplication ? (
-                <span className="rounded-xl border border-border bg-secondary px-4 py-2 text-xs font-bold text-foreground">
+                <span className="rounded-xl border border-border/80 bg-secondary px-4 py-2 text-xs font-bold text-foreground">
                   Application Status: {project.myApplication.status.toUpperCase()}
                 </span>
               ) : (
@@ -8610,7 +8205,7 @@ function ResearchDetailModal({
                     onClose();
                     onApply(project);
                   }}
-                  className="font-bold"
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-xs"
                 >
                   <Rocket className="h-4 w-4" /> Express Research Interest
                 </Button>
@@ -8641,15 +8236,25 @@ function ResearchProjectCard({
   });
 
   return (
-    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all">
       <div>
+        {/* Card Header Badges & Bookmark */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Tag warm>{project.category}</Tag>
-            <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-1 text-[11px] font-semibold">
+              {project.category}
+            </span>
+            <span className="rounded-lg bg-secondary/80 text-muted-foreground border border-border/70 px-2.5 py-1 text-[11px] font-medium flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-orange-500" />
+              <span>Amrita {project.campus}</span>
+            </span>
             {project.status === 'recruiting' && (
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
-                Recruiting Open 🔬
+              <span className="rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Recruiting Open</span>
               </span>
             )}
           </div>
@@ -8658,59 +8263,104 @@ function ResearchProjectCard({
             type="button"
             onClick={() => bookmarkMutation.mutate()}
             className={cx(
-              'rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors',
-              project.isBookmarked && 'text-accent'
+              'rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors border border-transparent hover:border-border/60',
+              project.isBookmarked && 'text-orange-500 bg-orange-500/10 border-orange-500/20'
             )}
+            title={project.isBookmarked ? 'Saved to bookmarks' : 'Bookmark project'}
           >
-            <Bookmark className={cx('h-4 w-4', project.isBookmarked && 'fill-accent')} />
+            <Bookmark className={cx('h-4 w-4', project.isBookmarked && 'fill-orange-500 text-orange-500')} />
           </button>
         </div>
 
+        {/* Title */}
         <h3
           onClick={onSelect}
-          className="mt-3 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
+          className="mt-3.5 text-base sm:text-lg font-bold text-foreground group-hover:text-orange-500 cursor-pointer tracking-tight transition-colors line-clamp-2 leading-snug"
         >
           {project.title}
         </h3>
 
-        <div className="mt-1 text-xs font-semibold text-muted-foreground">
-          {project.labName} {project.fundingSource && `· ${project.fundingSource}`}
+        {/* Lab Info */}
+        <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-foreground/85">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span>{project.labName}</span>
         </div>
 
-        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.abstract}</p>
+        {/* Dedicated Funding / Grant Badge */}
+        {project.fundingSource && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            <Award className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>{project.fundingSource}</span>
+          </div>
+        )}
 
-        {/* Open Positions preview */}
+        {/* Abstract */}
+        <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.abstract}</p>
+
+        {/* Open Positions Section */}
         {project.openPositions?.length > 0 && (
-          <div className="mt-3.5 flex flex-wrap gap-1">
-            {project.openPositions.map((pos, i) => (
-              <span key={i} className="rounded-lg bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground">
-                🎯 {pos.roleTitle} ({pos.spots} open)
+          <div className="mt-3.5 pt-3 border-t border-border/60">
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-orange-500" /> Open Lab Positions
               </span>
-            ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {project.openPositions.map((pos, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-foreground"
+                >
+                  <span className="font-semibold">{pos.roleTitle}</span>
+                  <span className="rounded bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[10px] font-bold">
+                    {pos.spots} open
+                  </span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      {/* Card Footer */}
+      <div className="mt-5 border-t border-border/80 pt-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Avatar user={project.principalInvestigator} size="sm" />
-          <div>
-            <Link href={`/people/${project.principalInvestigator.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+          <div className="min-w-0 truncate">
+            <Link
+              href={`/people/${project.principalInvestigator.id}`}
+              className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors truncate block"
+            >
               Prof. {project.principalInvestigator.fullName}
             </Link>
-            <p className="text-[10px] text-muted-foreground">{project.department}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{project.department}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
-            View Details <ArrowRight className="h-3 w-3" />
-          </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onSelect}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/80 hover:bg-secondary px-3 py-1.5 text-xs font-bold text-foreground transition-colors"
+          >
+            <span>View Details</span>
+            <ArrowRight className="h-3 w-3 text-orange-500" />
+          </button>
 
-          {!project.isPI && !project.myApplication && (
-            <Button className="px-3 py-1.5 text-xs font-bold" onClick={onApply}>
-              Apply
-            </Button>
+          {!project.isPI && (
+            project.myApplication ? (
+              <span className="rounded-xl border border-border/80 bg-secondary/60 px-3 py-1.5 text-[11px] font-bold text-muted-foreground">
+                Applied
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={onApply}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-colors active:scale-95"
+              >
+                Apply
+              </button>
+            )
           )}
         </div>
       </div>
@@ -8743,100 +8393,131 @@ function ResearchPage() {
   const { data, isLoading, isError, refetch } = useListResearchProjects(params);
   const items = data?.items ?? [];
 
-  const categories = [
-    '',
-    'Artificial Intelligence',
-    'Robotics & IoT',
-    'Biotechnology & Healthcare',
-    'Cyber Security',
-    'Sustainable Energy',
-    'Computational Systems',
-  ];
-
   const isFacultyOrResearcher = user?.role === 'faculty' || user?.role === 'researcher' || user?.role === 'admin';
 
   return (
     <>
       <PageTitle
-        eyebrow="Academic Excellence"
+        eyebrow="Academic Excellence & Labs"
         title="Research & Faculty Collaboration."
         detail="Discover funded research grants, join interdisciplinary lab initiatives, and collaborate on high-impact publications with faculty across all Amrita campuses."
         action={
           <div className="flex items-center gap-2">
             {isFacultyOrResearcher && (
-              <Button data-testid="button-post-research" onClick={() => setShowCreate(true)}>
-                <BookOpen className="h-4 w-4" /> Post Research Project
-              </Button>
+              <button
+                type="button"
+                data-testid="button-post-research"
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs active:scale-95 transition-all"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Post Research Project</span>
+              </button>
             )}
           </div>
         }
       />
 
-      {/* Category Filter Pills */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setCategory(cat)}
-            className={cx(
-              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
-              category === cat
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
-            )}
-          >
-            {cat || 'All Research Fields'}
-          </button>
-        ))}
-      </div>
+      {/* Unified Search & Filters Bar */}
+      <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 p-2 sm:p-2.5 shadow-xs backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search research topics, lab names, grants, or required skills (e.g. PyTorch, ROS2)..."
+              className="w-full rounded-xl border border-transparent bg-secondary/40 py-2 pl-10 pr-4 text-xs font-medium text-foreground outline-none focus:border-orange-500/50 focus:bg-background transition-all"
+            />
+          </div>
 
-      {/* Filters & Search */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <label className="relative block">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search research topics, lab names, grants, or required skills (e.g. PyTorch, ROS2)..."
-            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
-          />
-        </label>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {/* Campus Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={selectedCampus}
+                onChange={(e) => setSelectedCampus(e.target.value)}
+                className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3 pr-7 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+              >
+                <option value="">All Campuses</option>
+                {campuses.map((c) => (
+                  <option key={c} value={c}>
+                    Amrita {c}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            </div>
 
-        <select
-          value={selectedCampus}
-          onChange={(e) => setSelectedCampus(e.target.value)}
-          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none"
-        >
-          <option value="">All Campuses</option>
-          {campuses.map((c) => (
-            <option key={c} value={c}>
-              Amrita {c}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex rounded-xl border border-border bg-card p-1">
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Recruiting 🔬', value: 'recruiting' },
-            { label: 'Active', value: 'active' },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setStatus(tab.value)}
-              className={cx(
-                'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-                status === tab.value ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+            {/* Status Switcher */}
+            <div className="flex rounded-xl border border-border/80 bg-secondary/40 p-0.5">
+              {[
+                { label: 'All', value: 'all' },
+                { label: 'Recruiting', value: 'recruiting' },
+                { label: 'Active', value: 'active' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setStatus(tab.value)}
+                  className={cx(
+                    'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+                    status === tab.value
+                      ? 'bg-orange-500 text-white shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Active Filter Summary (if any active) */}
+      {(category || selectedCampus || search || status !== 'all') && (
+        <div className="mb-4 flex items-center justify-between px-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Filtered by:</span>
+            {category && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                {category}
+              </span>
+            )}
+            {selectedCampus && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                Amrita {selectedCampus}
+              </span>
+            )}
+            {status !== 'all' && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground capitalize">
+                {status}
+              </span>
+            )}
+            {search && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                "{search}"
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCategory('');
+              setSelectedCampus('');
+              setStatus('all');
+              setSearch('');
+            }}
+            className="text-orange-500 font-bold hover:underline"
+          >
+            Reset filters
+          </button>
+        </div>
+      )}
+
+      {/* Main Grid Stream */}
       {isLoading ? (
         <LoadingState rows={4} />
       ) : isError ? (
@@ -8846,7 +8527,13 @@ function ResearchPage() {
           icon={BookOpen}
           title="No research projects found"
           detail="Faculty and student research calls will appear here. Start a new project or adjust your filters."
-          action={isFacultyOrResearcher ? <Button onClick={() => setShowCreate(true)}>Post Research Call</Button> : undefined}
+          action={
+            isFacultyOrResearcher ? (
+              <Button onClick={() => setShowCreate(true)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl">
+                Post Research Call
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -8956,6 +8643,24 @@ function useShowcaseProjectDetail(id: string | null) {
   });
 }
 
+function getEmbedVideoUrl(url?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  const ytMatch = trimmed.match(
+    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
+  );
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}`;
+  }
+  const vimeoMatch = trimmed.match(
+    /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/i
+  );
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+  return null;
+}
+
 function CreateShowcaseModal({
   onClose,
   onSuccess,
@@ -8964,6 +8669,9 @@ function CreateShowcaseModal({
   onSuccess: () => void;
 }) {
   const { data: user } = useGetCurrentUser();
+  const [activeTab, setActiveTab] = useState<'basics' | 'media'>('basics');
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     title: '',
     tagline: '',
@@ -8974,9 +8682,22 @@ function CreateShowcaseModal({
     department: user?.department || 'Computer Science & Engineering',
     githubUrl: '',
     liveDemoUrl: '',
+    videoUrl: '',
     imageUrl: '',
     award: '',
   });
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setForm((prev) => ({ ...prev, imageUrl: reader.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -8995,136 +8716,309 @@ function CreateShowcaseModal({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.title.trim() || !form.tagline.trim() || !form.description.trim()) {
+      setActiveTab('basics');
+      return;
+    }
     createMutation.mutate();
   };
 
+  const embedPreview = getEmbedVideoUrl(form.videoUrl);
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
-        <div className="flex items-start justify-between">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/90 bg-card shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border/80 px-6 py-4">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Innovation & Demos</div>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Showcase Your Project</h2>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-orange-500">Innovation Gallery</span>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Showcase Your Project</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <X className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={submit} className="mt-5 space-y-4">
-          <Field
-            id="showcase-title"
-            label="Project Title"
-            placeholder="e.g. Amrita RoverBot: Autonomous Campus Delivery Rover"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
+        {/* Step Tabs Header */}
+        <div className="flex border-b border-border/80 bg-secondary/20 px-6 pt-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('basics')}
+            className={cx(
+              'flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-all',
+              activeTab === 'basics'
+                ? 'border-orange-500 text-orange-500'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>1. Project Details</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('media')}
+            className={cx(
+              'flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition-all',
+              activeTab === 'media'
+                ? 'border-orange-500 text-orange-500'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Video className="h-4 w-4" />
+            <span>2. Video & Media Links</span>
+            {(form.videoUrl || form.githubUrl || form.liveDemoUrl || form.imageUrl) && (
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+            )}
+          </button>
+        </div>
 
-          <Field
-            id="showcase-tagline"
-            label="One-line Tagline / Pitch"
-            placeholder="e.g. 4WD LiDAR SLAM ground rover delivering lab hardware across campus"
-            value={form.tagline}
-            onChange={(e) => setForm({ ...form, tagline: e.target.value })}
-            required
-          />
+        <form onSubmit={submit} className="p-6 space-y-4">
+          {/* TAB 1: BASICS & DETAILS */}
+          {activeTab === 'basics' && (
+            <div className="space-y-4 animate-rise">
+              <Field
+                id="showcase-title"
+                label="Project Title"
+                placeholder="e.g. Amrita RoverBot"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <SelectField
-              id="showcase-category"
-              label="Category"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              options={[
-                'AI / ML',
-                'Web & Mobile',
-                'Robotics / IoT',
-                'Cyber Security',
-                'Healthcare Tech',
-                'Blockchain',
-                'Open Source',
-              ].map((c) => ({ value: c, label: c }))}
-            />
-            <SelectField
-              id="showcase-campus"
-              label="Campus"
-              value={form.campus}
-              onChange={(e) => setForm({ ...form, campus: e.target.value })}
-              options={campuses.map((c) => ({ value: c, label: c }))}
-            />
-            <SelectField
-              id="showcase-dept"
-              label="Department"
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-              options={departments.map((d) => ({ value: d, label: d }))}
-            />
-          </div>
+              <Field
+                id="showcase-tagline"
+                label="One-line Pitch"
+                placeholder="e.g. Autonomous 4WD LiDAR SLAM ground rover for campus delivery"
+                value={form.tagline}
+                onChange={(e) => setForm({ ...form, tagline: e.target.value })}
+                required
+              />
 
-          <Field
-            id="showcase-tech"
-            label="Tech Stack & Tools (comma-separated)"
-            placeholder="e.g. ROS2, Python, LiDAR, React, FastAPI, Jetson Orin"
-            value={form.techStack}
-            onChange={(e) => setForm({ ...form, techStack: e.target.value })}
-            required
-          />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <SelectField
+                  id="showcase-category"
+                  label="Category"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  options={[
+                    'AI / ML',
+                    'Web & Mobile',
+                    'Robotics / IoT',
+                    'Cyber Security',
+                    'Healthcare Tech',
+                    'Blockchain',
+                    'Open Source',
+                  ].map((c) => ({ value: c, label: c }))}
+                />
+                <SelectField
+                  id="showcase-campus"
+                  label="Campus"
+                  value={form.campus}
+                  onChange={(e) => setForm({ ...form, campus: e.target.value })}
+                  options={campuses.map((c) => ({ value: c, label: c }))}
+                />
+                <SelectField
+                  id="showcase-dept"
+                  label="Department"
+                  value={form.department}
+                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  options={departments.map((d) => ({ value: d, label: d }))}
+                />
+              </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              id="showcase-github"
-              label="GitHub Repository URL (Optional)"
-              placeholder="https://github.com/username/project"
-              value={form.githubUrl}
-              onChange={(e) => setForm({ ...form, githubUrl: e.target.value })}
-            />
-            <Field
-              id="showcase-demo"
-              label="Live Demo / Website URL (Optional)"
-              placeholder="https://myproject.dev"
-              value={form.liveDemoUrl}
-              onChange={(e) => setForm({ ...form, liveDemoUrl: e.target.value })}
-            />
-          </div>
+              <Field
+                id="showcase-tech"
+                label="Tech Stack & Tools"
+                placeholder="e.g. ROS2, Python, LiDAR, React, FastAPI, Jetson Orin"
+                value={form.techStack}
+                onChange={(e) => setForm({ ...form, techStack: e.target.value })}
+                required
+              />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              id="showcase-image"
-              label="Cover Image / Banner URL (Optional)"
-              placeholder="https://images.unsplash.com/..."
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-            />
-            <Field
-              id="showcase-award"
-              label="Hackathon / Award Recognition (Optional)"
-              placeholder="e.g. 🏆 1st Prize · Smart India Hackathon 2025"
-              value={form.award}
-              onChange={(e) => setForm({ ...form, award: e.target.value })}
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1">Architecture & Description</label>
+                <textarea
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Explain system architecture, technical approach, challenges solved, and real-world impact..."
+                  className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+              </div>
+            </div>
+          )}
 
-          <div>
-            <label className="block text-xs font-bold text-foreground mb-1">Project Description & Architecture</label>
-            <textarea
-              rows={4}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Explain how it was built, the architecture, challenges solved, and how it impacts users..."
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
-              required
-            />
-          </div>
+          {/* TAB 2: VIDEO, DEMO LINKS & MEDIA */}
+          {activeTab === 'media' && (
+            <div className="space-y-4 animate-rise">
+              {/* Video Demo Field */}
+              <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                    <Video className="h-4 w-4 text-orange-500" />
+                    <span>Project Demo Video (YouTube / Vimeo / Loom / MP4)</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-semibold">Recommended</span>
+                </div>
+                <input
+                  value={form.videoUrl}
+                  onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                  className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500 transition-colors"
+                />
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-border">
-            <Button type="button" variant="quiet" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending || !form.title.trim()} className="font-bold">
-              {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-              Publish Showcase
-            </Button>
+                {embedPreview && (
+                  <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border/80 mt-2 bg-black shadow-xs">
+                    <iframe
+                      src={embedPreview}
+                      title="Video Demo Preview"
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Code & Live App Links */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Code className="h-3.5 w-3.5 text-sky-500" />
+                    <span>GitHub Code URL</span>
+                  </label>
+                  <input
+                    value={form.githubUrl}
+                    onChange={(e) => setForm({ ...form, githubUrl: e.target.value })}
+                    placeholder="https://github.com/user/project"
+                    className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Globe className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Live App / Demo URL</span>
+                  </label>
+                  <input
+                    value={form.liveDemoUrl}
+                    onChange={(e) => setForm({ ...form, liveDemoUrl: e.target.value })}
+                    placeholder="https://myproject.app"
+                    className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Cover Image & Award */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Image className="h-3.5 w-3.5 text-purple-500" />
+                    <span>Cover Image / Screenshot</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={form.imageUrl}
+                      onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                      placeholder="Image URL or upload"
+                      className="flex-1 rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500 transition-colors"
+                    />
+                    <input
+                      ref={imageFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileUpload}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageFileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-secondary/50 px-3 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-colors shrink-0"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Upload</span>
+                    </button>
+                  </div>
+                  {form.imageUrl && (
+                    <div className="relative h-20 w-full overflow-hidden rounded-xl border border-border mt-1.5">
+                      <img src={form.imageUrl} alt="Cover Preview" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, imageUrl: '' })}
+                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Hackathon / Award Recognition</span>
+                  </label>
+                  <input
+                    value={form.award}
+                    onChange={(e) => setForm({ ...form, award: e.target.value })}
+                    placeholder="e.g. 1st Prize · Smart India Hackathon 2025"
+                    className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500 transition-colors"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Optional achievement to display as badge</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Footer Controls */}
+          <div className="flex items-center justify-between pt-4 border-t border-border/80">
+            {activeTab === 'basics' ? (
+              <>
+                <Button type="button" variant="quiet" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!form.title.trim() || !form.tagline.trim() || !form.description.trim()) {
+                      alert('Please provide project title, tagline, and description first.');
+                      return;
+                    }
+                    setActiveTab('media');
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+                >
+                  <span>Continue to Media & Links</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="button" variant="quiet" onClick={() => setActiveTab('basics')}>
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back</span>
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || !form.title.trim()}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+                >
+                  {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                  <span>Publish Showcase</span>
+                </Button>
+              </>
+            )}
           </div>
         </form>
       </div>
@@ -9170,58 +9064,84 @@ function ShowcaseDetailModal({
 
   if (isLoading || !project) {
     return (
-      <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+      <div className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-12 pb-8 backdrop-blur-md">
+        <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl">
           <LoadingState rows={4} />
         </div>
       </div>
     );
   }
 
+  const embedVideoUrl = getEmbedVideoUrl(project.videoUrl);
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
-        {/* Header */}
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-8 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header Badges & Title */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Tag warm>{project.category}</Tag>
-              <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+              <span className="rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 px-3 py-1 text-xs font-semibold">
+                {project.category}
+              </span>
+              <span className="rounded-lg bg-secondary/80 text-muted-foreground px-2.5 py-1 text-xs font-semibold">
+                Amrita {project.campus}
+              </span>
               {project.award && (
-                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold text-amber-500 flex items-center gap-1">
-                  <Trophy className="h-3 w-3" /> {project.award}
+                <span className="rounded-lg bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <Trophy className="h-3.5 w-3.5" /> {project.award}
                 </span>
               )}
             </div>
-            <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{project.title}</h2>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">{project.title}</h2>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">{project.tagline}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Links bar & Upvote */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary/30 p-3.5">
-          <div className="flex items-center gap-2">
-            {project.githubUrl && (
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted"
-              >
-                <Code className="h-3.5 w-3.5 text-accent" /> GitHub Repository
-              </a>
-            )}
+        {/* Action Links Bar & Upvotes */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5">
+          <div className="flex flex-wrap items-center gap-2">
             {project.liveDemoUrl && (
               <a
                 href={project.liveDemoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-colors"
               >
-                <Globe className="h-3.5 w-3.5 text-accent" /> Live Demo <ArrowUpRight className="h-3 w-3" />
+                <Globe className="h-4 w-4" /> Live Demo <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            )}
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-colors"
+              >
+                <Code className="h-4 w-4 text-sky-500" /> Source Code
+              </a>
+            )}
+            {project.videoUrl && !embedVideoUrl && (
+              <a
+                href={project.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-colors"
+              >
+                <Video className="h-4 w-4 text-purple-500" /> Watch Video Demo
               </a>
             )}
           </div>
@@ -9230,76 +9150,98 @@ function ShowcaseDetailModal({
             type="button"
             onClick={() => upvoteMutation.mutate()}
             className={cx(
-              'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm',
+              'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-xs active:scale-95',
               project.isUpvoted
                 ? 'bg-rose-500 text-white shadow-rose-500/20'
-                : 'border border-border bg-card text-foreground hover:bg-muted'
+                : 'border border-border/80 bg-card text-foreground hover:bg-secondary'
             )}
           >
-            <Flame className={cx('h-4 w-4', project.isUpvoted && 'fill-white')} />
+            <Flame className={cx('h-4 w-4', project.isUpvoted ? 'fill-white text-white' : 'text-rose-500')} />
             <span>{project.upvotesCount} Upvotes</span>
           </button>
         </div>
 
-        {/* Media preview */}
-        {project.imageUrl && (
-          <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+        {/* Embedded Video Demo (if available) */}
+        {embedVideoUrl ? (
+          <div className="mt-5 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Video className="h-4 w-4 text-orange-500" /> Video Demo Walkthrough
+            </h3>
+            <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-border/80 bg-black shadow-sm">
+              <iframe
+                src={embedVideoUrl}
+                title={project.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        ) : project.videoUrl ? (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-border/80 bg-black">
+            <video src={project.videoUrl} controls className="w-full max-h-96" />
+          </div>
+        ) : null}
+
+        {/* Cover image preview if provided (and no video player already shown) */}
+        {project.imageUrl && !embedVideoUrl && (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-border/80">
             <img src={project.imageUrl} alt={project.title} className="h-64 w-full object-cover" />
           </div>
         )}
 
         {/* Tech Stack */}
-        <div className="mt-5">
+        <div className="mt-6">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tech Stack & Tools</h3>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {project.techStack.map((tech) => (
-              <span key={tech} className="rounded-lg bg-secondary px-3 py-1 text-xs font-bold text-foreground">
-                ⚡ {tech}
+              <span key={tech} className="rounded-lg bg-secondary/80 px-3 py-1.5 text-xs font-semibold text-foreground">
+                {tech}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Description */}
-        <div className="mt-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">About the Project</h3>
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground bg-card p-4 rounded-xl border border-border">
+        {/* About & Architecture */}
+        <div className="mt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">About the Project & Architecture</h3>
+          <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-foreground bg-secondary/20 p-4 rounded-2xl border border-border/80 font-normal">
             {project.description}
           </p>
         </div>
 
-        {/* Team Members */}
-        <div className="mt-5">
+        {/* Creators & Team */}
+        <div className="mt-6">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Creators & Team</h3>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2.5 rounded-2xl border border-border/80 bg-card p-3 shadow-2xs">
               <Avatar user={project.author} size="sm" />
               <div>
-                <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
-                  {project.author.fullName} (Lead)
+                <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors">
+                  {project.author.fullName} (Project Lead)
                 </Link>
-                <div className="text-[10px] text-muted-foreground">{project.author.department}</div>
+                <div className="text-[11px] text-muted-foreground">{project.author.department} · {project.author.campus}</div>
               </div>
             </div>
 
             {project.teamMembers?.map((m) => (
-              <div key={m.id} className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5">
+              <div key={m.id} className="flex items-center gap-2.5 rounded-2xl border border-border/80 bg-card p-3 shadow-2xs">
                 <Avatar user={m} size="sm" />
                 <div>
-                  <Link href={`/people/${m.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                  <Link href={`/people/${m.id}`} className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors">
                     {m.fullName}
                   </Link>
-                  <div className="text-[10px] text-muted-foreground">{m.department}</div>
+                  <div className="text-[11px] text-muted-foreground">{m.department} · {m.campus}</div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Comments & Discussion */}
-        <div className="mt-6 border-t border-border pt-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-            <MessageSquare className="h-4 w-4 text-accent" /> Feedback & Discussion ({project.comments?.length || 0})
+        {/* Feedback & Discussion */}
+        <div className="mt-7 border-t border-border/80 pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-orange-500" /> Feedback & Discussion ({project.comments?.length || 0})
           </h3>
 
           <form
@@ -9312,32 +9254,39 @@ function ShowcaseDetailModal({
             <input
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Leave feedback, ask about tech stack, or suggest features..."
-              className="flex-1 rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-accent"
+              placeholder="Leave feedback, ask about tech stack, or suggest collaboration..."
+              className="flex-1 rounded-xl border border-border/80 bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500 transition-colors"
             />
-            <Button type="submit" disabled={commentMutation.isPending || !commentText.trim()} className="font-bold">
+            <Button type="submit" disabled={commentMutation.isPending || !commentText.trim()} className="font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl">
               {commentMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Comment
+              Send
             </Button>
           </form>
 
-          <div className="space-y-2.5">
-            {project.comments?.map((c) => (
-              <div key={c.id} className="rounded-xl border border-border bg-card p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar user={c.author} size="xs" />
-                    <span className="text-xs font-bold text-foreground">{c.author.fullName}</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{relative(c.createdAt)}</span>
-                </div>
-                <p className="mt-1.5 text-xs text-foreground leading-relaxed pl-7">{c.text}</p>
+          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+            {project.comments?.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/80 p-4 text-center text-xs text-muted-foreground">
+                No comments yet. Be the first faculty or student to leave feedback!
               </div>
-            ))}
+            ) : (
+              project.comments?.map((c) => (
+                <div key={c.id} className="rounded-2xl border border-border/80 bg-secondary/30 p-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar user={c.author} size="xs" />
+                      <span className="text-xs font-bold text-foreground">{c.author.fullName}</span>
+                      <span className="text-[10px] text-muted-foreground">({c.author.role})</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{relative(c.createdAt)}</span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-foreground leading-relaxed pl-6">{c.text}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end border-t border-border pt-4">
+        <div className="mt-6 flex justify-end border-t border-border/80 pt-4">
           <Button variant="quiet" onClick={onClose}>
             Close
           </Button>
@@ -9362,15 +9311,25 @@ function ShowcaseCard({
   });
 
   return (
-    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise group">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all backdrop-blur-xs">
       <div>
+        {/* Card Header Tags & Upvote */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <Tag warm>{project.category}</Tag>
-            <span className="mono text-[10px] font-bold uppercase text-accent">Amrita {project.campus}</span>
+            <span className="rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 text-xs font-semibold">
+              {project.category}
+            </span>
+            <span className="rounded-lg bg-secondary/80 text-muted-foreground px-2.5 py-1 text-xs font-semibold">
+              Amrita {project.campus}
+            </span>
             {project.award && (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500 flex items-center gap-1">
+              <span className="rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5">
                 <Trophy className="h-3 w-3" /> {project.award}
+              </span>
+            )}
+            {project.videoUrl && (
+              <span className="rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
+                <Video className="h-3 w-3" /> Video Demo
               </span>
             )}
           </div>
@@ -9382,20 +9341,21 @@ function ShowcaseCard({
               upvoteMutation.mutate();
             }}
             className={cx(
-              'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm',
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all shadow-2xs',
               project.isUpvoted
                 ? 'bg-rose-500 text-white shadow-rose-500/20'
-                : 'border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
+                : 'border border-border/80 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
             )}
           >
-            <Flame className={cx('h-3.5 w-3.5', project.isUpvoted && 'fill-white text-white')} />
+            <Flame className={cx('h-3.5 w-3.5', project.isUpvoted ? 'fill-white text-white' : 'text-rose-500')} />
             <span>{project.upvotesCount}</span>
           </button>
         </div>
 
+        {/* Title & Tagline */}
         <h3
           onClick={onSelect}
-          className="mt-3 text-lg font-bold text-foreground group-hover:text-accent cursor-pointer tracking-[-.03em]"
+          className="mt-3.5 text-base sm:text-lg font-bold text-foreground group-hover:text-orange-500 cursor-pointer tracking-tight transition-colors"
         >
           {project.title}
         </h3>
@@ -9407,23 +9367,24 @@ function ShowcaseCard({
         {/* Tech Stack Preview */}
         <div className="mt-3.5 flex flex-wrap gap-1">
           {project.techStack.slice(0, 4).map((tech) => (
-            <span key={tech} className="rounded-lg bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground">
-              ⚡ {tech}
+            <span key={tech} className="rounded-lg bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+              {tech}
             </span>
           ))}
           {project.techStack.length > 4 && (
-            <span className="rounded-lg bg-secondary/60 px-2 py-1 text-[10px] font-bold text-muted-foreground">
+            <span className="rounded-lg bg-secondary/40 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
               +{project.techStack.length - 4} more
             </span>
           )}
         </div>
       </div>
 
-      <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
+      {/* Card Footer */}
+      <div className="mt-5 border-t border-border/80 pt-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Avatar user={project.author} size="sm" />
           <div>
-            <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+            <Link href={`/people/${project.author.id}`} className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors">
               {project.author.fullName}
             </Link>
             <p className="text-[10px] text-muted-foreground">{project.department}</p>
@@ -9436,15 +9397,21 @@ function ShowcaseCard({
               href={project.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+              className="rounded-xl border border-border/80 bg-card p-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="View GitHub Repository"
             >
               <Code className="h-3.5 w-3.5" />
             </a>
           )}
 
-          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
-            Explore Demo <ArrowRight className="h-3 w-3" />
-          </Button>
+          <button
+            type="button"
+            onClick={onSelect}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/80 hover:bg-secondary px-3 py-1.5 text-xs font-bold text-foreground transition-colors"
+          >
+            <span>Explore Demo</span>
+            <ArrowRight className="h-3 w-3 text-orange-500" />
+          </button>
         </div>
       </div>
     </div>
@@ -9475,14 +9442,14 @@ function ShowcasePage() {
   const items = data?.items ?? [];
 
   const categories = [
-    '',
-    'AI / ML',
-    'Web & Mobile',
-    'Robotics / IoT',
-    'Cyber Security',
-    'Healthcare Tech',
-    'Blockchain',
-    'Open Source',
+    { id: '', label: 'All Innovations' },
+    { id: 'AI / ML', label: 'AI / ML' },
+    { id: 'Web & Mobile', label: 'Web & Mobile' },
+    { id: 'Robotics / IoT', label: 'Robotics / IoT' },
+    { id: 'Cyber Security', label: 'Cyber Security' },
+    { id: 'Healthcare Tech', label: 'Healthcare Tech' },
+    { id: 'Blockchain', label: 'Blockchain' },
+    { id: 'Open Source', label: 'Open Source' },
   ];
 
   return (
@@ -9492,76 +9459,133 @@ function ShowcasePage() {
         title="Project Showcase & Innovation Gallery."
         detail="Discover hackathon-winning prototypes, open-source repositories, and innovative research demos built by Amrita students and alumni across all campuses."
         action={
-          <Button data-testid="button-post-showcase" onClick={() => setShowCreate(true)}>
-            <Rocket className="h-4 w-4" /> Showcase Your Project
-          </Button>
+          <button
+            type="button"
+            data-testid="button-post-showcase"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs active:scale-95 transition-all"
+          >
+            <Rocket className="h-4 w-4" />
+            <span>Showcase Your Project</span>
+          </button>
         }
       />
 
-      {/* Category Pills */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setCategory(cat)}
-            className={cx(
-              'rounded-xl px-3.5 py-2 text-xs font-bold shrink-0 transition-all shadow-sm',
-              category === cat
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
-            )}
-          >
-            {cat || 'All Innovations'}
-          </button>
-        ))}
-      </div>
-
-      {/* Search & Sort Controls */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <label className="relative block">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects by name, tech stack (ROS2, PyTorch, React), or awards..."
-            className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent"
-          />
-        </label>
-
-        <select
-          value={selectedCampus}
-          onChange={(e) => setSelectedCampus(e.target.value)}
-          className="rounded-xl border border-input bg-card px-3 py-2 text-xs font-bold text-foreground outline-none"
-        >
-          <option value="">All Campuses</option>
-          {campuses.map((c) => (
-            <option key={c} value={c}>
-              Amrita {c}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex rounded-xl border border-border bg-card p-1">
-          {[
-            { label: '🔥 Top Upvoted', value: 'upvotes' },
-            { label: '⏱ Recent', value: 'recent' },
-          ].map((tab) => (
+      {/* Optimized Category Pills */}
+      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {categories.map((cat) => {
+          const isSelected = category === cat.id;
+          return (
             <button
-              key={tab.value}
+              key={cat.id || 'all'}
               type="button"
-              onClick={() => setSortBy(tab.value)}
+              onClick={() => setCategory(cat.id)}
               className={cx(
-                'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-                sortBy === tab.value ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground'
+                'rounded-full px-4 py-1.5 text-xs font-semibold shrink-0 transition-all shadow-2xs',
+                isSelected
+                  ? 'bg-orange-500 text-white shadow-xs'
+                  : 'border border-border/80 bg-card/80 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
               )}
             >
-              {tab.label}
+              {cat.label}
             </button>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* Unified Glassmorphic Search & Filter Bar */}
+      <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 p-2 sm:p-2.5 shadow-xs backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search projects by title, tech stack (ROS2, PyTorch, React), or awards..."
+              className="w-full rounded-xl border border-transparent bg-secondary/40 py-2 pl-10 pr-4 text-xs font-medium text-foreground outline-none focus:border-orange-500/50 focus:bg-background transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {/* Campus Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={selectedCampus}
+                onChange={(e) => setSelectedCampus(e.target.value)}
+                className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3 pr-7 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+              >
+                <option value="">All Campuses</option>
+                {campuses.map((c) => (
+                  <option key={c} value={c}>
+                    Amrita {c}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+
+            {/* Sort Toggle */}
+            <div className="flex rounded-xl border border-border/80 bg-secondary/40 p-0.5">
+              {[
+                { label: 'Top Upvoted', value: 'upvotes' },
+                { label: 'Recent', value: 'recent' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setSortBy(tab.value)}
+                  className={cx(
+                    'rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+                    sortBy === tab.value
+                      ? 'bg-orange-500 text-white shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Active Filter Summary if filters are active */}
+      {(category || selectedCampus || search) && (
+        <div className="mb-4 flex items-center justify-between px-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Filtered by:</span>
+            {category && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                {category}
+              </span>
+            )}
+            {selectedCampus && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                Amrita {selectedCampus}
+              </span>
+            )}
+            {search && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                "{search}"
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCategory('');
+              setSelectedCampus('');
+              setSearch('');
+            }}
+            className="text-orange-500 font-bold hover:underline"
+          >
+            Reset filters
+          </button>
+        </div>
+      )}
+
+      {/* Main Grid Stream */}
       {isLoading ? (
         <LoadingState rows={4} />
       ) : isError ? (
@@ -9571,7 +9595,11 @@ function ShowcasePage() {
           icon={Trophy}
           title="No showcase projects found"
           detail="Be the first to publish your prototype or demo to the Amrita community!"
-          action={<Button onClick={() => setShowCreate(true)}>Showcase Your Project</Button>}
+          action={
+            <Button onClick={() => setShowCreate(true)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl">
+              <Rocket className="h-4 w-4" /> Showcase Your Project
+            </Button>
+          }
         />
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -9605,12 +9633,13 @@ function ShowcasePage() {
 
 
 /* =========================================================================
-   PEOPLE & SOCIAL FEED OF AMRITA — LINKEDIN-STYLE COMMUNITY PLATFORM
+   COMMUNITY FEED — STANDARD SOCIAL MEDIA PLATFORM FEED
    ========================================================================= */
 
-function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' | 'messages' | 'notifications' | 'saved' | 'my_posts' } = {}) {
+function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } = {}) {
   const { data: currentUser } = useGetCurrentUser();
-  const [activeTab, setActiveTab] = useState<'feed' | 'members' | 'messages' | 'notifications' | 'saved' | 'my_posts'>(initialTab);
+  const [, setLocation] = useLocation();
+  const [activeView, setActiveView] = useState<'feed' | 'discover'>(initialTab);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCampus, setSelectedCampus] = useState<string>('');
@@ -9620,32 +9649,82 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
   const [createCategory, setCreateCategory] = useState<PostCategory>('General');
   const [createContent, setCreateContent] = useState('');
   const [createImageUrl, setCreateImageUrl] = useState('');
+  const [createDocumentUrl, setCreateDocumentUrl] = useState('');
+  const [createDocumentName, setCreateDocumentName] = useState('');
+  const [createLinkUrl, setCreateLinkUrl] = useState('');
+  const [activeAttachmentTab, setActiveAttachmentTab] = useState<'none' | 'photo' | 'document' | 'link' | 'milestone'>('none');
   const [editingPost, setEditingPost] = useState<PostItem | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Photo size exceeds 5MB limit.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCreateImageUrl(reader.result);
+        setActiveAttachmentTab('none');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Document size exceeds 10MB limit.');
+      return;
+    }
+    setCreateDocumentName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCreateDocumentUrl(reader.result);
+        setActiveAttachmentTab('none');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const resetCreateForm = () => {
+    setCreateContent('');
+    setCreateImageUrl('');
+    setCreateDocumentUrl('');
+    setCreateDocumentName('');
+    setCreateLinkUrl('');
+    setActiveAttachmentTab('none');
+    setShowCreateModal(false);
+  };
+
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'discover') setActiveView('discover');
+      else if (tabParam === 'feed') setActiveView('feed');
+      else if (initialTab) setActiveView(initialTab);
     }
   }, [initialTab]);
 
-  const { data: notificationsData } = useListNotifications();
-  const unreadNotificationsCount = notificationsData?.filter((n) => !n.read).length || 0;
-
-  const { data: convData } = useConversations();
-  const unreadMessagesCount = convData?.items?.reduce((acc, c) => acc + (c.unreadCount || 0), 0) || 0;
-
   // Users query for member discovery
   const userParams = useMemo(() => ({
-    search: search || undefined,
-    role: selectedRole ? (selectedRole as 'student' | 'alumni' | 'faculty' | 'researcher' | 'admin') : undefined,
+    search: activeView === 'discover' ? search || undefined : undefined,
+    role: selectedRole ? (selectedRole as any) : undefined,
+    campus: selectedCampus || undefined,
     page: 1,
     pageSize: 30,
-  }), [search, selectedRole]);
+  }), [activeView, search, selectedRole, selectedCampus]);
 
   const { data: usersData, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useListUsers(userParams, {
-    query: { queryKey: getListUsersQueryKey(userParams) }
+    query: { queryKey: getListUsersQueryKey(userParams), enabled: activeView === 'discover' }
   });
 
   const memberItems = usersData?.items ?? [];
@@ -9654,22 +9733,21 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
   const postsQueryKey = useMemo(() => [
     'posts',
     {
-      view: activeTab === 'saved' ? 'saved' : activeTab === 'my_posts' ? 'my_posts' : 'all',
+      view: 'all',
       category: selectedCategory || undefined,
       campus: selectedCampus || undefined,
-      search: search || undefined,
+      search: activeView === 'feed' ? search || undefined : undefined,
     }
-  ], [activeTab, selectedCategory, selectedCampus, search]);
+  ], [activeView, selectedCategory, selectedCampus, search]);
 
   const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: postsQueryKey,
+    enabled: activeView === 'feed',
     queryFn: async () => {
       const q = new URLSearchParams();
       if (selectedCategory) q.set('category', selectedCategory);
       if (selectedCampus) q.set('campus', selectedCampus);
       if (search) q.set('search', search);
-      if (activeTab === 'saved') q.set('filter', 'saved');
-      if (activeTab === 'my_posts') q.set('filter', 'my_posts');
       return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
     },
   });
@@ -9678,15 +9756,20 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
 
   // Create post mutation
   const createPostMutation = useMutation({
-    mutationFn: (data: { content: string; category: PostCategory; imageUrl?: string | null }) =>
+    mutationFn: (data: {
+      content: string;
+      category: PostCategory;
+      imageUrl?: string | null;
+      documentUrl?: string | null;
+      documentName?: string | null;
+      linkUrl?: string | null;
+    }) =>
       apiFetch<PostItem>('/posts', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      setCreateContent('');
-      setCreateImageUrl('');
-      setShowCreateModal(false);
+      resetCreateForm();
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
@@ -9704,181 +9787,453 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
     setShowCreateModal(true);
   };
 
-  const isFeedTab = activeTab === 'feed' || activeTab === 'saved' || activeTab === 'my_posts';
+  const trendingTags = ['#SIH2026', '#Placements', '#Research', '#HuTLabs', '#Hackathon', '#WebDev', '#AI'];
 
   return (
-    <div className="space-y-6 animate-rise pb-16">
-      {/* 1. Header with Breadcrumbs, Title, Search & Quick Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
-            <span>Amrita Connect</span>
-            <span>›</span>
-            <span className="text-foreground font-semibold">
-              {activeTab === 'messages'
-                ? 'Messages'
-                : activeTab === 'notifications'
-                ? 'Notifications'
-                : activeTab === 'members'
-                ? 'Explore Members'
-                : 'Feed & Network'}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-            {activeTab === 'messages'
-              ? 'Direct Messages & Chat'
-              : activeTab === 'notifications'
-              ? 'Notifications'
-              : activeTab === 'members'
-              ? 'Explore People & Network'
-              : 'Amrita Social Feed & People'}
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            {activeTab === 'messages'
-              ? 'Real-time peer discussions, mentor advisories, and faculty conversations.'
-              : activeTab === 'notifications'
-              ? 'A quiet inbox for connection requests, mentorship invites, and updates.'
-              : 'Discover recent posts, blogs, achievements, research updates, and connect with peers across 7 campuses.'}
-          </p>
+    <div className="animate-rise pb-16">
+      {/* Top Social Switcher & Post Trigger */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex rounded-2xl border border-border/80 bg-card p-1 shadow-2xs gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('feed');
+              setSearch('');
+            }}
+            className={cx(
+              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2',
+              activeView === 'feed'
+                ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+            )}
+          >
+            <Rss className="h-3.5 w-3.5" />
+            <span>Community Feed</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('discover');
+              setSearch('');
+            }}
+            className={cx(
+              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2',
+              activeView === 'discover'
+                ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+            )}
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>Discover Members</span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start md:self-center">
+        {activeView === 'feed' ? (
           <button
             type="button"
             onClick={() => handleOpenCreateWithCategory('General')}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95 active:scale-95 transition-all"
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95 transition-all"
           >
-            <Pencil className="h-4 w-4" />
-            <span>Create Post / Blog</span>
+            <Pencil className="h-3.5 w-3.5" />
+            <span>Start a Post</span>
           </button>
-
+        ) : (
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-xs font-bold text-foreground hover:bg-muted shadow-sm transition-all"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary/70 shadow-2xs transition-all"
           >
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
-            <span className="hidden sm:inline">Invite People</span>
+            <UserPlus className="h-3.5 w-3.5 text-orange-500" />
+            <span>Invite People</span>
           </button>
-        </div>
-      </div>
-
-      {/* 2. Top Tabs Switcher (Emoji-Free, with Unread Counts) */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-sm gap-0.5">
-          {[
-            { id: 'feed', label: 'Community Feed' },
-            { id: 'members', label: 'Explore Members', count: memberItems.length },
-            { id: 'messages', label: 'Messages', badge: unreadMessagesCount },
-            { id: 'notifications', label: 'Notifications', badge: unreadNotificationsCount },
-            { id: 'saved', label: 'Saved' },
-            { id: 'my_posts', label: 'My Posts' },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(t.id as any);
-              }}
-              className={cx(
-                'relative rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5',
-                activeTab === t.id
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )}
-            >
-              <span>{t.label}</span>
-              {t.badge && t.badge > 0 ? (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold text-white">
-                  {t.badge > 9 ? '9+' : t.badge}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-
-        {/* Campus filter dropdown (for feed/members views) */}
-        {(isFeedTab || activeTab === 'members') && (
-          <select
-            value={selectedCampus}
-            onChange={(e) => setSelectedCampus(e.target.value)}
-            className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none shadow-sm"
-          >
-            <option value="">All Campuses</option>
-            {campuses.map((c) => (
-              <option key={c} value={c}>
-                Amrita {c}
-              </option>
-            ))}
-          </select>
         )}
       </div>
 
-      {/* 3. Render Messages Tab */}
-      {activeTab === 'messages' && (
-        <div className="pt-1">
-          <MessagesPage embedded />
-        </div>
-      )}
+      {/* VIEW 1: COMMUNITY FEED */}
+      {activeView === 'feed' && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] gap-6 items-start">
+          
+          {/* Main Feed Column */}
+          <div className="space-y-5 min-w-0">
+            
+            {/* Social Post Creator Box */}
+            <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs hover:border-border transition-colors">
+              <div className="flex items-center gap-3">
+                <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('General')}
+                  className="flex-1 rounded-full border border-input/80 bg-secondary/40 hover:bg-secondary/70 px-4 py-2.5 text-left text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-all truncate"
+                >
+                  What's on your mind? Share an update, blog, or project...
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('General')}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>Post</span>
+                </button>
+              </div>
 
-      {/* 4. Render Notifications Tab */}
-      {activeTab === 'notifications' && (
-        <div className="pt-1">
-          <NotificationsPage embedded />
-        </div>
-      )}
+              {/* Action buttons with rich colors */}
+              <div className="flex flex-wrap items-center justify-between gap-1 pt-3.5 mt-3.5 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('General')}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                >
+                  <Image className="h-4 w-4 text-sky-500" />
+                  <span>Photo</span>
+                </button>
 
-      {/* 5. Render Members Tab */}
-      {activeTab === 'members' && (
-        <div className="space-y-3.5 pt-1">
-          {/* Keyword Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search members by name, skill, department..."
-              className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-sm"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('Resource')}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                >
+                  <FileText className="h-4 w-4 text-rose-500" />
+                  <span>Document</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('Blog')}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 transition-colors"
+                >
+                  <BookOpen className="h-4 w-4 text-purple-500" />
+                  <span>Article</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('Project')}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                >
+                  <Rocket className="h-4 w-4 text-emerald-500" />
+                  <span>Project</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateWithCategory('Achievement')}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                >
+                  <PartyPopper className="h-4 w-4 text-amber-500" />
+                  <span>Milestone</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Optimized Clean Category & Campus Filter Bar */}
+            <div className="rounded-2xl border border-border/80 bg-card/80 p-2 sm:p-2.5 shadow-xs backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                {/* Clean Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                  {[
+                    { id: '', label: 'All Feed' },
+                    { id: 'Blog', label: 'Blogs' },
+                    { id: 'Project', label: 'Projects' },
+                    { id: 'Achievement', label: 'Achievements' },
+                    { id: 'Opportunity', label: 'Opportunities' },
+                    { id: 'Interview Experience', label: 'Interview Prep' },
+                    { id: 'Research', label: 'Research' },
+                    { id: 'Help Needed', label: 'Q&A' },
+                  ].map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id || 'all'}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={cx(
+                          'rounded-full px-3.5 py-1.5 text-xs transition-all shrink-0 font-medium',
+                          isSelected
+                            ? 'bg-orange-500 text-white font-semibold shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                        )}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Campus Filter Dropdown */}
+                <div className="relative shrink-0 self-end sm:self-auto">
+                  <select
+                    value={selectedCampus}
+                    onChange={(e) => setSelectedCampus(e.target.value)}
+                    className="appearance-none rounded-full border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-1.5 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+                  >
+                    <option value="">All Campuses</option>
+                    {campuses.map((c) => (
+                      <option key={c} value={c}>
+                        Amrita {c}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </div>
+            </div>
+
+            {/* Active Filters Summary (if any active) */}
+            {(selectedCategory || selectedCampus || search) && (
+              <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span>Filtered by:</span>
+                  {selectedCategory && (
+                    <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                      {selectedCategory}
+                    </span>
+                  )}
+                  {selectedCampus && (
+                    <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                      Amrita {selectedCampus}
+                    </span>
+                  )}
+                  {search && (
+                    <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                      "{search}"
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory('');
+                    setSelectedCampus('');
+                    setSearch('');
+                  }}
+                  className="text-orange-500 font-bold hover:underline"
+                >
+                  Reset all
+                </button>
+              </div>
             )}
+
+            {/* Post Stream */}
+            <div className="space-y-5">
+              {postsLoading ? (
+                <LoadingState rows={3} />
+              ) : postsError ? (
+                <ErrorState onRetry={() => refetchPosts()} />
+              ) : posts.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center animate-rise">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    {search || selectedCategory || selectedCampus
+                      ? 'No posts match your filters'
+                      : 'No posts in the community feed yet'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    {search || selectedCategory || selectedCampus
+                      ? 'Try selecting a different campus or clearing filters to see all posts.'
+                      : 'Be the first to share an achievement, blog, or project update with Amrita Connect!'}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-5">
+                    {(search || selectedCategory || selectedCampus) && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSearch('');
+                          setSelectedCategory('');
+                          setSelectedCampus('');
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => handleOpenCreateWithCategory('General')}
+                      className="px-3 py-1.5 text-xs font-bold"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Start First Post
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                posts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onEdit={(p) => setEditingPost(p)}
+                    onRefresh={() => queryClient.invalidateQueries({ queryKey: ['posts'] })}
+                  />
+                ))
+              )}
+            </div>
           </div>
 
-          {/* Role filter pills (Emoji-Free) */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            {[
-              { id: '', label: 'All Roles' },
-              { id: 'student', label: 'Students' },
-              { id: 'alumni', label: 'Alumni Mentors' },
-              { id: 'researcher', label: 'Researchers' },
-              { id: 'faculty', label: 'Faculty' },
-            ].map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setSelectedRole(r.id)}
-                className={cx(
-                  'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs',
-                  selectedRole === r.id
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-transparent shadow-sm'
-                    : 'bg-card border-border text-muted-foreground hover:text-foreground'
+          {/* Right Sidebar (Desktop only) */}
+          <div className="hidden lg:flex flex-col gap-5 sticky top-6">
+            
+            {/* 1. Search & Trending Topics Card */}
+            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3.5">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search posts or #tags..."
+                  className="w-full rounded-xl border border-input bg-secondary/30 py-2 pl-9 pr-8 text-xs outline-none focus:border-orange-500 shadow-2xs"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2.5 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                  Popular Topics
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {trendingTags.map((tag) => {
+                    const isActive = search === tag;
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setSearch(isActive ? '' : tag)}
+                        className={cx(
+                          'rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all',
+                          isActive
+                            ? 'bg-orange-500 text-white font-bold'
+                            : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                        )}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Discover Amrita Members Shortcut */}
+            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-foreground">
+                  Amrita Directory
+                </h4>
+                <span className="text-[10px] text-muted-foreground font-medium">7 Campuses</span>
+              </div>
+              
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Find alumni mentors, student peers, and faculty across departments.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('discover')}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/50 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-all active:scale-95"
               >
-                {r.label}
+                <Users className="h-3.5 w-3.5 text-orange-500" />
+                <span>Discover Members</span>
               </button>
-            ))}
+            </div>
+
+            {/* 3. Invite Batchmates */}
+            <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-orange-500/10 via-card to-card p-4 shadow-2xs flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-foreground">Invite Batchmates</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Grow your campus network</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(true)}
+                className="rounded-xl border border-border/80 bg-card p-2 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all shrink-0"
+                title="Invite to Amrita Connect"
+              >
+                <UserPlus className="h-4 w-4 text-orange-500" />
+              </button>
+            </div>
+
           </div>
 
-          {/* Members Directory View */}
-          <div className="space-y-4 pt-2">
+        </div>
+      )}
+
+      {/* VIEW 2: DISCOVER MEMBERS */}
+      {activeView === 'discover' && (
+        <div className="space-y-4 max-w-4xl">
+          {/* Member Search Bar and Role Filter */}
+          <div className="space-y-3 bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search members by name, skill, department, research lab..."
+                  className="w-full rounded-xl border border-input bg-secondary/30 py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-xs"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <select
+                value={selectedCampus}
+                onChange={(e) => setSelectedCampus(e.target.value)}
+                className="rounded-xl border border-border bg-secondary/30 px-3 py-2.5 text-xs font-semibold text-foreground outline-none shadow-xs shrink-0"
+              >
+                <option value="">All Campuses</option>
+                {campuses.map((c) => (
+                  <option key={c} value={c}>
+                    Amrita {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Role filter pills */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {[
+                { id: '', label: 'All Roles' },
+                { id: 'student', label: 'Students' },
+                { id: 'alumni', label: 'Alumni Mentors' },
+                { id: 'researcher', label: 'Researchers' },
+                { id: 'faculty', label: 'Faculty' },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSelectedRole(r.id)}
+                  className={cx(
+                    'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs',
+                    selectedRole === r.id
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-xs'
+                      : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Members List */}
+          <div className="space-y-4 pt-1">
             {usersLoading ? (
               <LoadingState rows={4} />
             ) : usersError ? (
@@ -9888,9 +10243,9 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
                 <Search className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
                 <h3 className="text-base font-bold text-foreground">No members found</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Try adjusting your search keywords or role filters.
+                  Try adjusting your keywords or role filters.
                 </p>
-                <Button onClick={() => { setSearch(''); setSelectedRole(''); }} className="mt-4" variant="outline">
+                <Button onClick={() => { setSearch(''); setSelectedRole(''); setSelectedCampus(''); }} className="mt-4" variant="outline">
                   Reset filters
                 </Button>
               </div>
@@ -9907,178 +10262,51 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
         </div>
       )}
 
-      {/* 6. Render Feed / Saved / My Posts Tabs */}
-      {isFeedTab && (
-        <div className="space-y-6">
-          {/* Create Post Trigger Card */}
-          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-3.5 animate-rise">
-            <div className="flex items-center gap-3">
-              <Avatar user={currentUser} size="md" />
-              <button
-                type="button"
-                onClick={() => handleOpenCreateWithCategory('General')}
-                className="flex-1 rounded-full border border-input bg-secondary/40 hover:bg-secondary/70 px-4 py-2.5 text-left text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-all"
-              >
-                Start a post, write a blog, or share an achievement...
-              </button>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="flex flex-wrap items-center justify-between gap-1 pt-2 border-t border-border/60">
-              <button
-                type="button"
-                onClick={() => handleOpenCreateWithCategory('General')}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-sky-500 hover:bg-sky-500/10 transition-colors"
-              >
-                <Image className="h-4 w-4" />
-                <span>Photo</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenCreateWithCategory('Blog')}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-purple-500 hover:bg-purple-500/10 transition-colors"
-              >
-                <BookOpen className="h-4 w-4" />
-                <span>Write Blog</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenCreateWithCategory('Project')}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-500 hover:bg-emerald-500/10 transition-colors"
-              >
-                <Rocket className="h-4 w-4" />
-                <span>Project</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenCreateWithCategory('Opportunity')}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-amber-500 hover:bg-amber-500/10 transition-colors"
-              >
-                <BriefcaseBusiness className="h-4 w-4" />
-                <span>Opportunity</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search & Category Filters (Emoji-Free) */}
-          <div className="space-y-3.5">
-            {/* Keyword Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search posts, blogs, achievements, hashtags (#SIH2026)..."
-                className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-sm"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Category Filter Pills (Emoji-Free) */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {[
-                { id: '', label: 'All Feed' },
-                { id: 'Blog', label: 'Blogs & Articles' },
-                { id: 'Project', label: 'Project Updates' },
-                { id: 'Achievement', label: 'Achievements' },
-                { id: 'Opportunity', label: 'Opportunities' },
-                { id: 'Interview Experience', label: 'Interview Prep' },
-                { id: 'Research', label: 'Research Calls' },
-                { id: 'Help Needed', label: 'Q&A & Help' },
-              ].map((cat) => {
-                const isSelected = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id || 'all'}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={cx(
-                      'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border shadow-xs',
-                      isSelected
-                        ? 'bg-primary text-primary-foreground font-bold border-transparent shadow-sm'
-                        : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-                    )}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Social Feed Stream */}
-          <div className="space-y-4 pt-1">
-            {postsLoading ? (
-              <LoadingState rows={4} />
-            ) : postsError ? (
-              <ErrorState onRetry={() => refetchPosts()} />
-            ) : posts.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center animate-rise">
-                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
-                  <Sparkles className="h-7 w-7" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  {activeTab === 'saved'
-                    ? 'No saved posts yet'
-                    : activeTab === 'my_posts'
-                    ? 'You have not shared any posts yet'
-                    : 'No posts found in this feed'}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  {activeTab === 'saved'
-                    ? 'Click the bookmark icon on any post to save it for quick reading later.'
-                    : 'Be the first to share an achievement, blog, hackathon victory, or ask a question to the Amrita community!'}
-                </p>
-                <Button
-                  onClick={() => handleOpenCreateWithCategory('General')}
-                  className="mt-5 text-xs font-bold"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Start First Post
-                </Button>
-              </div>
-            ) : (
-              posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onEdit={(p) => setEditingPost(p)}
-                  onRefresh={() => queryClient.invalidateQueries({ queryKey: ['posts'] })}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Create Post Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) resetCreateForm();
+          }}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 p-3 sm:p-4 pt-6 sm:pt-12 pb-8 backdrop-blur-md animate-fade-in overflow-y-auto"
+        >
+          <div className="relative w-full max-w-2xl max-h-[86vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden mt-1 sm:mt-2">
+            {/* Hidden native file inputs for local uploads */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFileChange}
+            />
+            <input
+              ref={docInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+              className="hidden"
+              onChange={handleDocFileChange}
+            />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border px-5 py-4 bg-muted/20">
               <div className="flex items-center gap-3">
-                <Avatar user={currentUser} size="md" />
+                <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    {currentUser?.fullName ?? 'You'}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-muted-foreground">Publish as:</span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-foreground">
+                      {currentUser?.fullName ?? 'You'}
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <Globe className="h-3 w-3" />
+                      Anyone
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">Category:</span>
                     <select
                       value={createCategory}
                       onChange={(e) => setCreateCategory(e.target.value as PostCategory)}
-                      className="rounded-lg border border-input bg-secondary/50 px-2 py-0.5 text-xs font-bold text-foreground outline-none"
+                      className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
                     >
                       {POST_CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -10092,13 +10320,15 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
 
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+                onClick={resetCreateForm}
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Close dialog"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
+            {/* Modal Body (Scrollable) */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -10107,85 +10337,407 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
                   content: createContent.trim(),
                   category: createCategory,
                   imageUrl: createImageUrl.trim() || null,
+                  documentUrl: createDocumentUrl.trim() || null,
+                  documentName: createDocumentName.trim() || null,
+                  linkUrl: createLinkUrl.trim() || null,
                 });
               }}
-              className="space-y-3.5"
+              className="flex flex-col flex-1 overflow-y-auto"
             >
-              <textarea
-                value={createContent}
-                onChange={(e) => setCreateContent(e.target.value)}
-                placeholder={
-                  createCategory === 'Blog' || createCategory === 'Article'
-                    ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
-                    : createCategory === 'Achievement'
-                    ? 'Share your achievement, hackathon win, publication, or placement story...'
-                    : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
-                }
-                rows={6}
-                className="w-full rounded-xl border border-input bg-card p-3.5 text-xs sm:text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 leading-relaxed"
-                autoFocus
-                required
-              />
-
-              {/* Optional image input */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-muted-foreground">
-                  Attach Image URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={createImageUrl}
-                  onChange={(e) => setCreateImageUrl(e.target.value)}
-                  placeholder="https://.../photo.png"
-                  className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500"
+              <div className="p-5 space-y-4 flex-1">
+                {/* Text Area */}
+                <textarea
+                  value={createContent}
+                  onChange={(e) => setCreateContent(e.target.value)}
+                  placeholder={
+                    createCategory === 'Blog' || createCategory === 'Article'
+                      ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
+                      : createCategory === 'Achievement'
+                      ? 'Share your achievement, hackathon win, publication, or placement story...'
+                      : createCategory === 'Job' || createCategory === 'Internship' || createCategory === 'Placement'
+                      ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
+                      : createCategory === 'Question'
+                      ? 'Ask a question to students, professors, or alumni across campuses...'
+                      : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
+                  }
+                  rows={5}
+                  className="w-full resize-none rounded-xl border border-transparent bg-transparent p-1 text-sm sm:text-base outline-none focus:ring-0 leading-relaxed placeholder:text-muted-foreground/70"
+                  autoFocus
+                  required
                 />
-                {createImageUrl.trim() && (
-                  <div className="relative max-h-36 overflow-hidden rounded-xl border border-border mt-2">
-                    <img
-                      src={createImageUrl.trim()}
-                      alt="Preview"
-                      className="max-h-36 w-full object-cover"
-                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                    />
+
+                {/* Attachments Previews */}
+                {/* 1. Image Preview */}
+                {createImageUrl && (
+                  <div className="relative rounded-xl border border-border bg-muted/30 p-2 overflow-hidden group">
+                    <div className="relative max-h-56 overflow-hidden rounded-lg">
+                      <img
+                        src={createImageUrl}
+                        alt="Post attachment"
+                        className="w-full max-h-56 object-contain bg-black/5 dark:bg-white/5 rounded-lg"
+                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCreateImageUrl('')}
+                      className="absolute top-4 right-4 p-1.5 rounded-full bg-background/90 hover:bg-destructive hover:text-white text-foreground shadow-md transition-colors"
+                      title="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="flex items-center justify-between px-2 pt-2 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Image className="h-3.5 w-3.5 text-blue-500" />
+                        Attached Image
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="text-orange-500 hover:underline font-medium"
+                      >
+                        Change photo
+                      </button>
+                    </div>
                   </div>
                 )}
+
+                {/* 2. Document / PDF Preview */}
+                {createDocumentUrl && (
+                  <div className="relative flex items-center justify-between rounded-xl border border-border bg-gradient-to-r from-red-500/10 via-background to-orange-500/10 p-3 shadow-sm">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="p-2.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                          {createDocumentName || 'Attached Document.pdf'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Document ready to share with Amrita network
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateDocumentUrl('');
+                        setCreateDocumentName('');
+                      }}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+                      title="Remove document"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* 3. Link Preview */}
+                {createLinkUrl && (
+                  <div className="relative flex items-center justify-between rounded-xl border border-border bg-secondary/40 p-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="p-2 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                        <Link2 className="h-5 w-5" />
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-semibold text-foreground truncate">{createLinkUrl}</p>
+                        <p className="text-[11px] text-muted-foreground">External link attachment</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCreateLinkUrl('')}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+                      title="Remove link"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Expandable Attachment Inputs Tabs */}
+                {activeAttachmentTab === 'photo' && !createImageUrl && (
+                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Image className="h-4 w-4 text-blue-500" />
+                        Add a Photo
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAttachmentTab('none')}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="flex-1 justify-center gap-2 text-xs"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload from Device
+                      </Button>
+                      <div className="relative flex-1">
+                        <input
+                          type="url"
+                          placeholder="Or paste Image URL (https://...)"
+                          value={createImageUrl}
+                          onChange={(e) => setCreateImageUrl(e.target.value)}
+                          className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeAttachmentTab === 'document' && !createDocumentUrl && (
+                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <FileText className="h-4 w-4 text-red-500" />
+                        Attach Document / PDF
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAttachmentTab('none')}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => docInputRef.current?.click()}
+                        className="flex-1 justify-center gap-2 text-xs"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload PDF / Doc (.pdf, .docx, .ppt)
+                      </Button>
+                      <div className="relative flex-1">
+                        <input
+                          type="url"
+                          placeholder="Or paste Doc URL (e.g. Google Drive/Dropbox)"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setCreateDocumentUrl(e.target.value);
+                              setCreateDocumentName('Online Document');
+                            }
+                          }}
+                          className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeAttachmentTab === 'link' && !createLinkUrl && (
+                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Link2 className="h-4 w-4 text-indigo-500" />
+                        Attach Web Link or Article
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAttachmentTab('none')}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://example.com/article-or-repo"
+                        value={createLinkUrl}
+                        onChange={(e) => setCreateLinkUrl(e.target.value)}
+                        className="flex-1 rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (createLinkUrl.trim()) {
+                            setActiveAttachmentTab('none');
+                          }
+                        }}
+                        disabled={!createLinkUrl.trim()}
+                        className="text-xs"
+                      >
+                        Attach
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {activeAttachmentTab === 'milestone' && (
+                  <div className="p-3.5 rounded-xl border border-border bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 space-y-2.5 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <PartyPopper className="h-4 w-4 text-amber-500" />
+                        Celebrate a Milestone
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAttachmentTab('none')}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Done
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {[
+                        { title: 'New Job / Placement', cat: 'Placement' },
+                        { title: 'Hackathon Win', cat: 'Achievement' },
+                        { title: 'Research Published', cat: 'Research' },
+                        { title: 'Launched Project', cat: 'Project' },
+                        { title: 'Patent Filed', cat: 'Achievement' },
+                        { title: 'Certificate Earned', cat: 'Achievement' },
+                      ].map((item) => (
+                        <button
+                          key={item.title}
+                          type="button"
+                          onClick={() => {
+                            setCreateCategory(item.cat as PostCategory);
+                            setCreateContent((prev) =>
+                              prev.trim()
+                                ? `Excited to share: ${item.title}!\n\n${prev}`
+                                : `Excited to share that I have accomplished: ${item.title}!\n\n`
+                            );
+                            setActiveAttachmentTab('none');
+                          }}
+                          className="p-2 rounded-lg border border-border bg-card/80 text-left text-xs font-medium text-foreground hover:border-orange-500 hover:bg-orange-500/10 transition-all truncate"
+                        >
+                          {item.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Trending Hashtags */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground">Add Tag:</span>
+                  {trendingTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        if (!createContent.includes(tag)) {
+                          setCreateContent((prev) => `${prev.trim()} ${tag}`);
+                        }
+                      }}
+                      className="rounded-lg border border-border bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-orange-500/50 transition-colors"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Quick Hashtags insertion */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-muted-foreground">Add Tag:</span>
-                {['#SIH2026', '#Research', '#Placements', '#HuTLabs', '#WebDev'].map((tag) => (
+              {/* Modal Footer with Rich LinkedIn-Style Attachment Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5 bg-muted/20">
+                {/* Left Attachment Icon Toolbar */}
+                <div className="flex items-center gap-1 sm:gap-2">
                   <button
-                    key={tag}
                     type="button"
-                    onClick={() => setCreateContent((prev) => `${prev} ${tag}`)}
-                    className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (!createImageUrl) imageInputRef.current?.click();
+                      else setActiveAttachmentTab('photo');
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                      createImageUrl || activeAttachmentTab === 'photo'
+                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                    title="Attach Photo"
                   >
-                    {tag}
+                    <Image className="h-4 w-4 text-blue-500" />
+                    <span className="hidden sm:inline">Photo</span>
                   </button>
-                ))}
-              </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-                <Button
-                  type="button"
-                  variant="quiet"
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createPostMutation.isPending || !createContent.trim()}
-                  className="px-5 py-2 font-bold"
-                >
-                  {createPostMutation.isPending ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  <span>Publish Post</span>
-                </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!createDocumentUrl) docInputRef.current?.click();
+                      else setActiveAttachmentTab('document');
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                      createDocumentUrl || activeAttachmentTab === 'document'
+                        ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                    title="Attach PDF or Document"
+                  >
+                    <FileText className="h-4 w-4 text-red-500" />
+                    <span className="hidden sm:inline">Document</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveAttachmentTab((prev) => (prev === 'link' ? 'none' : 'link'))
+                    }
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                      createLinkUrl || activeAttachmentTab === 'link'
+                        ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                    title="Add Web Link"
+                  >
+                    <Link2 className="h-4 w-4 text-indigo-500" />
+                    <span className="hidden sm:inline">Link</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveAttachmentTab((prev) => (prev === 'milestone' ? 'none' : 'milestone'))
+                    }
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                      activeAttachmentTab === 'milestone'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                    title="Celebrate Milestone"
+                  >
+                    <PartyPopper className="h-4 w-4 text-amber-500" />
+                    <span className="hidden sm:inline">Milestone</span>
+                  </button>
+                </div>
+
+                {/* Right Action Buttons & Character Counter */}
+                <div className="flex items-center gap-3 ml-auto">
+                  <span className="text-[11px] text-muted-foreground hidden xs:inline">
+                    {createContent.length} / 3000
+                  </span>
+                  <Button
+                    type="button"
+                    variant="quiet"
+                    onClick={resetCreateForm}
+                    className="text-xs sm:text-sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createPostMutation.isPending || !createContent.trim()}
+                    className="px-5 py-2 font-bold shadow-md shadow-orange-500/20 text-xs sm:text-sm"
+                  >
+                    {createPostMutation.isPending ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    <span>Publish Post</span>
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
@@ -10245,6 +10797,8 @@ function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' |
     </div>
   );
 }
+
+const PeoplePage = FeedPage;
 
 /* =========================================================================
    COMMUNITY SPOTLIGHT / PERSON FEED CARD (Matching Reference Image)
@@ -10649,7 +11203,7 @@ function CollaborationDetailModal({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {item.rolesNeeded.map((r) => (
                     <span key={r} className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
-                      🎯 {r}
+                      {r}
                     </span>
                   ))}
                 </div>
@@ -11081,7 +11635,7 @@ function CollaborationCard({
           <div className="mt-4 flex flex-wrap gap-1.5">
             {item.rolesNeeded.map((role) => (
               <span key={role} className="rounded-md border border-accent/20 bg-accent/5 px-2 py-0.5 text-[11px] font-bold text-accent">
-                🎯 {role}
+                {role}
               </span>
             ))}
           </div>
@@ -11279,61 +11833,2013 @@ function CreateCollaborationDialog({ onClose }: { onClose: () => void }) {
 }
 
 
-function OpportunitiesPage() {
+function EventsAndOpportunitiesPage() {
+  const [activeTab, setActiveTab] = useState<'all' | 'events' | 'jobs' | 'hackathons' | 'scholarships'>('all');
   const [search, setSearch] = useState('');
+  const [selectedCampus, setSelectedCampus] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
-  const params = useMemo(() => ({ search: search || undefined, page: 1, pageSize: 20 }), [search]);
   const queryClient = useQueryClient();
+
+  // Fetch opportunities
+  const oppParams = useMemo(
+    () => ({ search: search || undefined, page: 1, pageSize: 30 }),
+    [search]
+  );
+  const {
+    data: oppData,
+    isLoading: oppLoading,
+    isError: oppError,
+    refetch: refetchOpps,
+  } = useListOpportunities(oppParams, {
+    query: { queryKey: getListOpportunitiesQueryKey(oppParams) },
+  });
+  const rawOpportunities = oppData?.items ?? [];
+
+  // Fetch events
+  const eventParams = useMemo(
+    () => ({ campus: selectedCampus || undefined, page: 1, pageSize: 30 }),
+    [selectedCampus]
+  );
+  const {
+    data: eventData,
+    isLoading: eventLoading,
+    isError: eventError,
+    refetch: refetchEvents,
+  } = useListEvents(eventParams, {
+    query: { queryKey: getListEventsQueryKey(eventParams) },
+  });
+  const rawEvents = eventData?.items ?? [];
+
+  // Opportunity Save/Unsave
   const save = useSaveOpportunity();
   const unsave = useUnsaveOpportunity();
-  const { data, isLoading, isError, refetch } = useListOpportunities(params, { query: { queryKey: getListOpportunitiesQueryKey(params) } });
-  const items = data?.items ?? [];
   const saving = save.isPending || unsave.isPending;
   const toggleSave = (item: Opportunity) => {
     setActionError(null);
     const mutation = item.saved ? unsave : save;
-    mutation.mutate({ id: item.id }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListOpportunitiesQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-      },
-      onError: () => setActionError('That save could not be updated. Please try again.'),
-    });
+    mutation.mutate(
+      { id: item.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListOpportunitiesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+        },
+        onError: () => setActionError('Save status could not be updated. Please try again.'),
+      }
+    );
   };
-  return <><PageTitle eyebrow="Opportunities" title="A next step, if it fits." detail="Fellowships, roles, research calls, and chances to turn your interests into momentum." /><label className="relative mb-6 block max-w-xl"><Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" /><input data-testid="input-opportunities-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search opportunities..." className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 text-sm outline-none focus:border-accent-foreground" /></label>{actionError && <p role="alert" className="mb-4 text-sm font-semibold text-destructive">{actionError}</p>}{isLoading ? <LoadingState rows={4} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={BriefcaseBusiness} title="No opportunities found" detail="Try a different phrase. New calls are added throughout the year." /> : <div className="space-y-3">{items.map((item) => <OpportunityRow key={item.id} item={item} onSave={() => toggleSave(item)} saving={saving} />)}</div>}</>;
-}
-function OpportunityRow({ item, onSave, saving }: { item: Opportunity; onSave: () => void; saving: boolean }) { return <div className="surface flex flex-col gap-5 rounded-xl border border-border p-5 sm:flex-row sm:items-start sm:p-6"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary text-foreground"><BriefcaseBusiness className="h-5 w-5" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Tag warm>{item.category}</Tag><span className="text-xs text-muted-foreground">{item.organization}</span></div><h2 className="mt-2 text-lg font-bold tracking-[-.03em] text-foreground">{item.title}</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{item.description}</p><div className="mt-4 flex flex-wrap gap-1.5">{item.requiredSkills?.slice(0, 4).map((skill) => <Tag key={skill}>{skill}</Tag>)}</div><div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span>Eligibility: {item.eligibility}</span><span>Deadline: <strong className="text-foreground">{formatDate(item.deadline, true)}</strong></span></div></div><div className="flex shrink-0 gap-2 sm:flex-col"><button aria-label={item.saved ? `Remove ${item.title} from saved opportunities` : `Save ${item.title}`} data-testid={`button-save-opportunity-${item.id}`} onClick={onSave} disabled={saving} className={cx('rounded-lg border p-2.5', item.saved ? 'border-accent bg-accent/20 text-accent' : 'border-border text-muted-foreground hover:text-foreground')}>{item.saved ? <Check className="h-4 w-4" /> : <HeartHandshake className="h-4 w-4" />}</button><a data-testid={`link-apply-opportunity-${item.id}`} href={item.applicationUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground hover:opacity-90">Apply <ArrowRight className="h-3.5 w-3.5" /></a></div></div>; }
 
-function EventsPage() {
-  const [campus, setCampus] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-  const params = useMemo(() => ({ campus: campus || undefined, page: 1, pageSize: 20 }), [campus]);
-  const queryClient = useQueryClient();
+  // Event Register/Unregister
   const register = useRegisterForEvent();
   const unregister = useUnregisterFromEvent();
-  const { data, isLoading, isError, refetch } = useListEvents(params, { query: { queryKey: getListEventsQueryKey(params) } });
-  const items = data?.items ?? [];
   const registering = register.isPending || unregister.isPending;
   const toggleRegistration = (event: Event) => {
     setActionError(null);
     const mutation = event.registered ? unregister : register;
-    mutation.mutate({ id: event.id }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListEventsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-      },
-      onError: () => setActionError('That registration could not be updated. The event may be full.'),
-    });
+    mutation.mutate(
+      { id: event.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListEventsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+        },
+        onError: () => setActionError('Event registration could not be updated. The event may be full.'),
+      }
+    );
   };
-  return <><PageTitle eyebrow="Events" title="Show up for something." detail="Talks, workshops, reunions, and the small moments that make a campus feel connected." action={<SelectField id="events-campus-filter" label="" value={campus} onChange={(e) => setCampus(e.target.value)} options={[{ value: '', label: 'All campuses' }, ...campuses.map((value) => ({ value, label: value }))]} />} />{actionError && <p role="alert" className="mb-4 text-sm font-semibold text-destructive">{actionError}</p>}{isLoading ? <LoadingState rows={4} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={CalendarDays} title="Nothing on the calendar yet" detail="Check back soon for the next set of gatherings." /> : <div className="grid gap-4 md:grid-cols-2">{items.map((event) => <EventCard key={event.id} event={event} registered={event.registered} onRegister={() => toggleRegistration(event)} registering={registering} />)}</div>}</>;
+
+  // Filtered lists
+  const filteredEvents = useMemo(() => {
+    return rawEvents.filter((ev) => {
+      if (search && !ev.title.toLowerCase().includes(search.toLowerCase()) && !ev.description.toLowerCase().includes(search.toLowerCase()) && !ev.organizer.toLowerCase().includes(search.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+  }, [rawEvents, search]);
+
+  const filteredOpps = useMemo(() => {
+    return rawOpportunities.filter((op) => {
+      if (selectedCampus && !op.eligibility?.toLowerCase().includes(selectedCampus.toLowerCase()) && !op.organization?.toLowerCase().includes(selectedCampus.toLowerCase())) {
+        return false;
+      }
+      if (activeTab === 'jobs') {
+        const cat = op.category.toLowerCase();
+        return cat.includes('intern') || cat.includes('job') || cat.includes('career') || cat.includes('mentorship');
+      }
+      if (activeTab === 'hackathons') {
+        const cat = op.category.toLowerCase();
+        return cat.includes('hackathon') || cat.includes('sprint') || cat.includes('contest') || cat.includes('competition');
+      }
+      if (activeTab === 'scholarships') {
+        const cat = op.category.toLowerCase();
+        return cat.includes('scholarship') || cat.includes('fellowship') || cat.includes('grant') || cat.includes('research');
+      }
+      return true;
+    });
+  }, [rawOpportunities, activeTab, selectedCampus]);
+
+  const showEvents = activeTab === 'all' || activeTab === 'events';
+  const showOpps = activeTab === 'all' || activeTab !== 'events';
+
+  const isLoading = oppLoading || eventLoading;
+  const isError = oppError && eventError;
+  const totalItemsCount = (showEvents ? filteredEvents.length : 0) + (showOpps ? filteredOpps.length : 0);
+
+  const tabs = [
+    { id: 'all' as const, label: 'All Happenings' },
+    { id: 'events' as const, label: 'Events & Fests', count: rawEvents.length },
+    {
+      id: 'jobs' as const,
+      label: 'Jobs & Internships',
+      count: rawOpportunities.filter((o) => {
+        const c = o.category.toLowerCase();
+        return c.includes('intern') || c.includes('job') || c.includes('career') || c.includes('mentorship');
+      }).length,
+    },
+    {
+      id: 'hackathons' as const,
+      label: 'Hackathons & Sprints',
+      count: rawOpportunities.filter((o) => {
+        const c = o.category.toLowerCase();
+        return c.includes('hackathon') || c.includes('sprint') || c.includes('contest');
+      }).length,
+    },
+    {
+      id: 'scholarships' as const,
+      label: 'Scholarships & Grants',
+      count: rawOpportunities.filter((o) => {
+        const c = o.category.toLowerCase();
+        return c.includes('scholarship') || c.includes('fellowship') || c.includes('grant');
+      }).length,
+    },
+  ];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Campus Happenings & Career Hub"
+        title="Events & Opportunities."
+        detail="Discover upcoming campus fests, guest lectures, hackathons, internship drives, and fellowships across all 7 Amrita campuses."
+      />
+
+      {/* Tabs Row */}
+      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {tabs.map((tab) => {
+          const isSelected = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold shrink-0 transition-all shadow-2xs',
+                isSelected
+                  ? 'bg-orange-500 text-white shadow-xs'
+                  : 'border border-border/80 bg-card/80 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+              )}
+            >
+              <span>{tab.label}</span>
+              {tab.count !== undefined && tab.count > 0 && (
+                <span
+                  className={cx(
+                    'rounded-full px-1.5 py-0.2 text-[10px] font-bold',
+                    isSelected ? 'bg-white/20 text-white' : 'bg-secondary text-muted-foreground'
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Controls Bar */}
+      <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 p-2 sm:p-2.5 shadow-xs backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              data-testid="input-opportunities-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search fests, hackathons, job roles, skills, or organizations..."
+              className="w-full rounded-xl border border-transparent bg-secondary/40 py-2 pl-10 pr-4 text-xs font-medium text-foreground outline-none focus:border-orange-500/50 focus:bg-background transition-all"
+            />
+          </div>
+
+          {/* Campus Dropdown */}
+          <div className="relative shrink-0 self-end sm:self-auto">
+            <select
+              value={selectedCampus}
+              onChange={(e) => setSelectedCampus(e.target.value)}
+              className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3 pr-7 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+            >
+              <option value="">All Campuses</option>
+              {campuses.map((c) => (
+                <option key={c} value={c}>
+                  Amrita {c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+
+      {actionError && (
+        <p role="alert" className="mb-4 text-xs font-semibold text-destructive">
+          {actionError}
+        </p>
+      )}
+
+      {/* Active Filter Summary */}
+      {(search || selectedCampus || activeTab !== 'all') && (
+        <div className="mb-4 flex items-center justify-between px-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Filtered by:</span>
+            {activeTab !== 'all' && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground capitalize">
+                {activeTab}
+              </span>
+            )}
+            {selectedCampus && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                Amrita {selectedCampus}
+              </span>
+            )}
+            {search && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                "{search}"
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearch('');
+              setSelectedCampus('');
+              setActiveTab('all');
+            }}
+            className="text-orange-500 font-bold hover:underline"
+          >
+            Reset filters
+          </button>
+        </div>
+      )}
+
+      {/* Main Stream */}
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState
+          onRetry={() => {
+            refetchOpps();
+            refetchEvents();
+          }}
+        />
+      ) : totalItemsCount === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="No events or opportunities found"
+          detail="Try adjusting your search query or campus filter to see upcoming activities."
+        />
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Render Event Cards */}
+          {showEvents &&
+            filteredEvents.map((event) => (
+              <EventCard
+                key={`event-${event.id}`}
+                event={event}
+                registered={event.registered}
+                onRegister={() => toggleRegistration(event)}
+                registering={registering}
+              />
+            ))}
+
+          {/* Render Opportunity Cards */}
+          {showOpps &&
+            filteredOpps.map((item) => (
+              <OpportunityCard
+                key={`opp-${item.id}`}
+                item={item}
+                onSave={() => toggleSave(item)}
+                saving={saving}
+              />
+            ))}
+        </div>
+      )}
+    </>
+  );
 }
-function EventCard({ event, registered, onRegister, registering }: { event: Event; registered: boolean; onRegister: () => void; registering: boolean }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex gap-4"><div className="w-14 shrink-0 rounded-lg bg-secondary border border-border p-2 text-center text-foreground"><div className="mono text-[9px] font-bold uppercase tracking-wider text-accent">{new Date(event.date).toLocaleDateString('en-IN', { month: 'short' })}</div><div className="text-2xl font-bold">{new Date(event.date).getDate()}</div><div className="text-[9px] uppercase text-muted-foreground">{new Date(event.date).toLocaleDateString('en-IN', { weekday: 'short' })}</div></div><div className="min-w-0"><h2 className="text-lg font-bold tracking-[-.03em] text-foreground">{event.title}</h2><p className="mt-1 text-xs text-muted-foreground">{event.campus} · {event.venue}</p></div></div><p className="mt-5 line-clamp-3 text-sm leading-6 text-muted-foreground">{event.description}</p><div className="mt-5 flex items-center justify-between border-t border-border pt-4"><span className="text-xs text-muted-foreground">By {event.organizer}</span><Button aria-label={registered ? `Cancel registration for ${event.title}` : `Register for ${event.title}`} data-testid={`button-register-event-${event.id}`} variant={registered ? 'quiet' : 'outline'} className="px-3 py-2" disabled={registering} onClick={onRegister}>{registered ? <><Check className="h-3.5 w-3.5" />Registered</> : 'Register'}</Button></div></div>; }
+
+function OpportunityCard({
+  item,
+  onSave,
+  saving,
+}: {
+  item: Opportunity;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all">
+      <div>
+        {/* Header Badges & Bookmark */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-1 text-[11px] font-semibold">
+              {item.category}
+            </span>
+            <span className="rounded-lg bg-secondary/80 text-muted-foreground border border-border/70 px-2.5 py-1 text-[11px] font-medium flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-muted-foreground" />
+              <span>{item.organization}</span>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            aria-label={item.saved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
+            data-testid={`button-save-opportunity-${item.id}`}
+            onClick={onSave}
+            disabled={saving}
+            className={cx(
+              'rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors border border-transparent hover:border-border/60',
+              item.saved && 'text-orange-500 bg-orange-500/10 border-orange-500/20'
+            )}
+            title={item.saved ? 'Saved to bookmarks' : 'Bookmark opportunity'}
+          >
+            <Bookmark className={cx('h-4 w-4', item.saved && 'fill-orange-500 text-orange-500')} />
+          </button>
+        </div>
+
+        {/* Title */}
+        <h3 className="mt-3 text-base sm:text-lg font-bold text-foreground group-hover:text-orange-500 tracking-tight transition-colors line-clamp-2 leading-snug">
+          {item.title}
+        </h3>
+
+        {/* Description */}
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {item.description}
+        </p>
+
+        {/* Required Skills */}
+        {item.requiredSkills?.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {item.requiredSkills.slice(0, 4).map((skill) => (
+              <span
+                key={skill}
+                className="rounded-lg border border-border/70 bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-foreground"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Card Footer */}
+      <div className="mt-5 border-t border-border/80 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
+          <div>Eligibility: <span className="font-semibold text-foreground/85">{item.eligibility}</span></div>
+          <div>Deadline: <strong className="text-foreground">{formatDate(item.deadline, true)}</strong></div>
+        </div>
+
+        <a
+          data-testid={`link-apply-opportunity-${item.id}`}
+          href={item.applicationUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-95 shrink-0"
+        >
+          <span>Apply Now</span>
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function EventCard({
+  event,
+  registered,
+  onRegister,
+  registering,
+}: {
+  event: Event;
+  registered: boolean;
+  onRegister: () => void;
+  registering: boolean;
+}) {
+  const eventDate = new Date(event.date);
+
+  return (
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all">
+      <div>
+        {/* Header with Date Badge & Location */}
+        <div className="flex items-start gap-3.5">
+          {/* Calendar Date Block */}
+          <div className="w-13 shrink-0 rounded-2xl bg-orange-500/10 border border-orange-500/20 p-2 text-center text-orange-600 dark:text-orange-400 shadow-2xs">
+            <div className="text-[10px] font-bold uppercase tracking-wider">
+              {eventDate.toLocaleDateString('en-IN', { month: 'short' })}
+            </div>
+            <div className="text-xl font-black leading-tight text-foreground">
+              {eventDate.getDate()}
+            </div>
+            <div className="text-[9px] font-semibold uppercase text-muted-foreground">
+              {eventDate.toLocaleDateString('en-IN', { weekday: 'short' })}
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+              <span>Amrita {event.campus} · {event.venue}</span>
+            </div>
+            <h3 className="mt-1 text-base sm:text-lg font-bold text-foreground group-hover:text-orange-500 tracking-tight transition-colors line-clamp-2 leading-snug">
+              {event.title}
+            </h3>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="mt-3.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {event.description}
+        </p>
+      </div>
+
+      {/* Footer with Organizer and Register Action */}
+      <div className="mt-5 border-t border-border/80 pt-4 flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          Organized by <span className="font-semibold text-foreground/90">{event.organizer}</span>
+        </div>
+
+        <Button
+          aria-label={registered ? `Cancel registration for ${event.title}` : `Register for ${event.title}`}
+          data-testid={`button-register-event-${event.id}`}
+          variant={registered ? 'outline' : 'primary'}
+          className={cx(
+            'px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all shadow-xs shrink-0',
+            !registered && 'bg-orange-500 hover:bg-orange-600 text-white border-transparent'
+          )}
+          disabled={registering}
+          onClick={onRegister}
+        >
+          {registered ? (
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+              <Check className="h-3.5 w-3.5" /> Registered
+            </span>
+          ) : (
+            <span>Register Now</span>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Backward-compatible component aliases
+function OpportunitiesPage() {
+  return <EventsAndOpportunitiesPage />;
+}
+
+function EventsPage() {
+  return <EventsAndOpportunitiesPage />;
+}
+
+// ==========================================
+// BLOGS & CAMPUS ARTICLES PAGE
+// ==========================================
+
+interface BlogPostResource {
+  title: string;
+  url: string;
+  type?: 'sheet' | 'repo' | 'video' | 'docs' | 'notes' | 'book' | 'link';
+}
+
+interface InterviewRound {
+  roundName: string;
+  focus: string;
+  questionsAsked?: string;
+  tips?: string;
+}
+
+interface BlogPostItem {
+  id: string;
+  postType: 'interview' | 'tech_discovery' | 'study_guide' | 'tutorial' | 'general';
+  title: string;
+  date: string;
+  readTime: string;
+  tags: string[];
+  summary: string;
+  content: string;
+  keyTakeaways?: string[];
+  authorName: string;
+  authorAvatar?: string;
+  authorRole: string;
+  authorCampus: string;
+  authorCompany?: string;
+  authorSlug?: string;
+  category: string;
+  likes: number;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  company?: string;
+  roleOffer?: string;
+  difficulty?: 'Super Dream' | 'Dream' | 'Enterprise' | 'Moderate' | 'Advanced';
+  rounds?: InterviewRound[];
+  resources?: BlogPostResource[];
+}
+
+function getInitialBlogs(): BlogPostItem[] {
+  const defaultBlogs: BlogPostItem[] = [
+    {
+      id: 'amazon-sde-roadmap',
+      postType: 'interview',
+      title: 'Amazon SDE-1 Recruitment: Interview Process and Preparation Strategy',
+      date: 'Aug 2024',
+      readTime: '6 min read',
+      tags: ['Amazon SDE', 'Campus Placements', 'DSA', 'Interview Prep', 'Super Dream'],
+      summary: 'A structured breakdown of the assessment rounds, algorithmic problem categories, system design fundamentals, and STAR responses for Amazon Leadership Principles.',
+      company: 'Amazon',
+      roleOffer: 'Software Development Engineer (SDE-1)',
+      difficulty: 'Super Dream',
+      category: 'Interview Experiences',
+      authorName: 'Nitesh Kumar',
+      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'nitesh')?.avatar,
+      authorRole: 'Software Development Engineer (SDE)',
+      authorCampus: 'Bengaluru',
+      authorCompany: 'Amazon',
+      authorSlug: 'nitesh',
+      likes: 84,
+      isLiked: false,
+      rounds: [
+        {
+          roundName: 'Round 1: Online Assessment (OA)',
+          focus: '2 Algorithmic Coding Problems + Work Simulation / Leadership Assessment',
+          questionsAsked: '1. Optimal Substring Partitioning using Greedy / Two-pointer. 2. Critical Network Connections (Tarjan Algorithm for Bridges).',
+          tips: 'Ensure all edge cases are handled. The work simulation section evaluates Amazon Leadership Principles—prioritize customer-first decisions.'
+        },
+        {
+          roundName: 'Round 2: Technical Interview 1 (DSA & Problem Solving)',
+          focus: 'Data Structures, Binary Trees & Dynamic Programming with Live Dry-Run',
+          questionsAsked: 'Lowest Common Ancestor in Binary Tree, followed by a follow-up with parent pointers. Then a dynamic programming problem on coin change with min coins.',
+          tips: 'State time and space complexity upfront before writing code. Explain trade-offs between recursive and iterative approaches.'
+        },
+        {
+          roundName: 'Round 3: Low-Level Design (LLD) & Clean Architecture',
+          focus: 'Object-Oriented Design, SOLID Principles & Extensibility',
+          questionsAsked: 'Design a scalable Parking Lot Management System with multi-tier parking, dynamic pricing, and concurrent ticket validation.',
+          tips: 'Apply Strategy and Factory design patterns. Structure modular classes with clear interfaces and thread-safety considerations.'
+        },
+        {
+          roundName: 'Round 4: Bar Raiser & Leadership Principles (LP)',
+          focus: 'Behavioral Evaluation & Algorithmic Problem Solving',
+          questionsAsked: 'STAR responses on "Bias for Action" and "Customer Obsession", followed by a Graph BFS/Dijkstra optimization scenario.',
+          tips: 'Quantify impact in STAR responses (e.g. reduced latency by 35%).'
+        }
+      ],
+      resources: [
+        {
+          title: "Striver's SDE Sheet (180 Core Interview Problems)",
+          url: 'https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/',
+          type: 'sheet'
+        },
+        {
+          title: 'System Design Primer (GitHub Repository)',
+          url: 'https://github.com/donnemartin/system-design-primer',
+          type: 'repo'
+        },
+        {
+          title: 'Amazon Leadership Principles Official Guide',
+          url: 'https://www.amazon.jobs/content/en/how-we-hire/principles-and-practices',
+          type: 'docs'
+        },
+        {
+          title: 'NeetCode 150 Categorized Practice Map',
+          url: 'https://neetcode.io/practice',
+          type: 'sheet'
+        }
+      ],
+      keyTakeaways: [
+        'Master core graph, tree, and dynamic programming patterns.',
+        'Always communicate time and space complexities before implementing solutions.',
+        'Prepare quantifiable STAR responses for behavioral leadership evaluations.'
+      ],
+      content: `Preparing for Amazon on-campus and off-campus recruitment requires a structured framework.
+
+1. Data Structures & Algorithmic Focus:
+- Graphs: BFS/DFS traversals, Dijkstra, Topological Sort, Disjoint Set Union.
+- Dynamic Programming: 0/1 Knapsack, Longest Common Subsequence, Grid-based DP.
+- Trees & Heaps: Lowest Common Ancestor, Trie prefix lookups, Median in a stream.
+
+2. Low-Level Design (LLD):
+- SOLID design principles applied to real-world architectures.
+- Structural & behavioral design patterns: Strategy, Observer, Factory, Singleton.
+- Modular code organization with clear exception handling.
+
+3. Leadership Principles (LP):
+Prepare concrete Situation, Task, Action, Result (STAR) stories for key principles including Customer Obsession, Ownership, Bias for Action, and Deliver Results.`
+    },
+    {
+      id: 'rust-cli-tech-discovery',
+      postType: 'tech_discovery',
+      title: 'Building High-Performance Command-Line Tools with Rust',
+      date: 'Sep 2024',
+      readTime: '5 min read',
+      tags: ['Rust', 'Technical Discovery', 'CLI Tools', 'Systems Programming', 'Open Source'],
+      summary: 'An evaluation of memory safety, zero-cost abstractions, and sub-10ms startup benchmarks achieved by migrating campus utilities to Rust.',
+      category: 'Tech Discoveries & Tools',
+      authorName: 'Karthik Menon',
+      authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=280&q=80',
+      authorRole: '3rd Year CSE Student',
+      authorCampus: 'Coimbatore',
+      likes: 62,
+      isLiked: false,
+      resources: [
+        {
+          title: 'Clap (Command Line Argument Parser for Rust)',
+          url: 'https://docs.rs/clap/latest/clap/',
+          type: 'docs'
+        },
+        {
+          title: 'Rust By Example (Official Guide)',
+          url: 'https://doc.rust-lang.org/rust-by-example/',
+          type: 'book'
+        },
+        {
+          title: 'Hyperfine: CLI Benchmarking Tool (GitHub)',
+          url: 'https://github.com/sharkdp/hyperfine',
+          type: 'repo'
+        }
+      ],
+      keyTakeaways: [
+        'Single static binary distribution eliminates runtime dependency requirements.',
+        'Pattern matching and Result/Option types prevent unhandled null pointer exceptions.',
+        'Cold startup execution latency decreased from 240ms to 6ms.'
+      ],
+      content: `Our student engineering team migrated our campus data parser and log analyzer to Rust. Here is a summary of findings:
+
+1. Zero-Cost Abstractions:
+Rust provides functional iterator syntax that compiles directly to optimized assembly without runtime overhead.
+
+2. CLI Ecosystem:
+Using 'clap' with derive macros provides structured command line interfaces with automated help documentation and shell completions.
+
+3. Cross-Compilation:
+Using standard toolchains, standalone binaries can be compiled targeting Linux, macOS, Windows, and ARM architectures.`
+    },
+    {
+      id: 'gate-cse-os-cheat-sheet',
+      postType: 'study_guide',
+      title: 'GATE CSE 2025: Operating Systems and Deadlock Resolution Revision Guide',
+      date: 'Aug 2024',
+      readTime: '7 min read',
+      tags: ['GATE CSE', 'Study Notes', 'Operating Systems', 'Deadlocks', 'Semaphores'],
+      summary: 'Comprehensive formula summary covering process synchronization, Peterson algorithm proofs, Banker algorithm safety checks, and virtual memory page replacement.',
+      category: 'Study Notes & Guides',
+      authorName: 'Aditya Verma',
+      authorAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=280&q=80',
+      authorRole: 'GATE AIR 42 Scholar',
+      authorCampus: 'Amritapuri',
+      likes: 95,
+      isLiked: false,
+      resources: [
+        {
+          title: 'GATE Overflow: Operating Systems Question Bank',
+          url: 'https://gateoverflow.in/questions/operating-system',
+          type: 'notes'
+        },
+        {
+          title: 'Operating Systems: Three Easy Pieces (Reference Text)',
+          url: 'https://pages.cs.wisc.edu/~remzi/OSTEP/',
+          type: 'book'
+        },
+        {
+          title: 'Galvin OS Concepts Exercise Solutions',
+          url: 'https://github.com',
+          type: 'repo'
+        }
+      ],
+      keyTakeaways: [
+        'Review the 4 necessary conditions for Deadlock: Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait.',
+        'For Banker Algorithm, verify Work >= Need iteratively to confirm system safety.',
+        'Understand concurrency distinctions between counting and binary semaphores.'
+      ],
+      content: `Consolidated Operating Systems revision notes for GATE CSE and university examinations:
+
+1. Process Synchronization:
+- Critical Section Requirements: Mutual Exclusion (Mandatory), Progress (Mandatory), Bounded Waiting (Desirable).
+- Peterson Algorithm: Ensures mutual exclusion and progress for two concurrent processes using shared variables.
+- Classical Problems: Producer-Consumer (bounded buffer), Readers-Writers, Dining Philosophers.
+
+2. Deadlock Detection & Avoidance:
+- Resource Allocation Graph (RAG): Cycle indicates deadlock under single-instance resource constraints.
+- Banker Algorithm: Simulates safe allocation sequence before granting resource requests.
+
+3. Virtual Memory & Paging:
+- Page Replacement Algorithms: FIFO, Optimal (Belady anomaly-free), LRU (Stack-based, Belady anomaly-free).`
+    },
+    {
+      id: 'lam-servicenow-strategy',
+      postType: 'interview',
+      title: 'Dual Super Dream Recruitment: Lam Research and ServiceNow Technical Strategy',
+      date: 'Aug 2024',
+      readTime: '7 min read',
+      tags: ['Lam Research', 'ServiceNow', 'Super Dream', 'Core CS', 'Operating Systems'],
+      summary: 'In-depth guide covering OS memory management, multithreading, advanced DSA, and enterprise SaaS system design.',
+      company: 'Lam Research · ServiceNow',
+      roleOffer: 'Software Engineer (Super Dream)',
+      difficulty: 'Super Dream',
+      category: 'Interview Experiences',
+      authorName: 'Kavya R',
+      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'kavya')?.avatar,
+      authorRole: 'Software Engineer / Cloud Specialist',
+      authorCampus: 'Amritapuri',
+      authorCompany: 'Lam Research · ServiceNow',
+      authorSlug: 'kavya',
+      likes: 71,
+      isLiked: false,
+      rounds: [
+        {
+          roundName: 'Round 1: Online Technical Assessment',
+          focus: 'C++ Systems, Memory Pointers, Advanced DSA & Aptitude',
+          questionsAsked: 'Graph cycle detection with weights, and bitwise manipulation for cache line alignment.',
+          tips: 'Lam Research emphasizes low-level memory and C++; ServiceNow evaluates rapid graph and tree operations.'
+        },
+        {
+          roundName: 'Round 2: Systems & Core CS Interview',
+          focus: 'Operating Systems, Concurrency, Virtual Memory, Semaphores & Mutexes',
+          questionsAsked: 'Explain page tables, TLB miss penalty, and implement a thread-safe circular buffer.',
+          tips: 'Demonstrate clear understanding of race conditions and synchronization primitives.'
+        },
+        {
+          roundName: 'Round 3: High-Level Architecture & SaaS Workflow',
+          focus: 'Enterprise SaaS Design & Database Schema Normalization',
+          questionsAsked: 'Design an event-driven workflow engine with webhook retries and idempotent processing.',
+          tips: 'Explain B+ Tree indexing in relational databases and connection pool optimization.'
+        }
+      ],
+      resources: [
+        {
+          title: 'Operating Systems: Three Easy Pieces',
+          url: 'https://pages.cs.wisc.edu/~remzi/OSTEP/',
+          type: 'book'
+        },
+        {
+          title: 'Computer Networks: Systems Approach Summary',
+          url: 'https://github.com',
+          type: 'notes'
+        },
+        {
+          title: 'Java Concurrency Reference Guide',
+          url: 'https://github.com',
+          type: 'sheet'
+        }
+      ],
+      keyTakeaways: [
+        'Core computer science fundamentals carry equal weight to DSA in tier-1 product evaluations.',
+        'Be prepared to write thread synchronization and race condition demonstrations.',
+        'Structured technical communication is a primary scoring metric in advanced rounds.'
+      ],
+      content: `A technical guide on securing offers across semiconductor systems engineering (Lam Research) and enterprise cloud infrastructure (ServiceNow).
+
+1. Systems Engineering Focus (Lam Research):
+- Low-level C++ & memory management: Virtual functions, vtable mechanics, memory allocation, smart pointers.
+- Operating Systems: Process scheduling, semaphores vs mutexes, Banker Algorithm, virtual memory and paging.
+- Concurrency: Cache locality, memory alignment, thread safety.
+
+2. Enterprise Architecture Focus (ServiceNow):
+- Data Structures: Graph traversals, binary search variations, hash table collision handling.
+- Object-Oriented Design: Modular workflows, finite state machines.
+- Database concepts: Indexing structures (B+ Trees), transaction isolation levels, normalization.`
+    },
+    {
+      id: 'local-ollama-deepseek-guide',
+      postType: 'tech_discovery',
+      title: 'Deploying Local Language Models with Ollama for Academic Research',
+      date: 'Sep 2024',
+      readTime: '6 min read',
+      tags: ['AI & LLMs', 'DeepSeek', 'Ollama', 'Local AI', 'Technical Discovery'],
+      summary: 'A guide on deploying quantized open-weights models locally without internet or GPU cloud API costs for capstone and lab research.',
+      category: 'Tech Discoveries & Tools',
+      authorName: 'Sneha Nair',
+      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=280&q=80',
+      authorRole: 'Final Year AI & Data Science',
+      authorCampus: 'Kochi',
+      likes: 79,
+      isLiked: false,
+      resources: [
+        {
+          title: 'Ollama Framework Documentation',
+          url: 'https://ollama.com/',
+          type: 'docs'
+        },
+        {
+          title: 'HuggingFace GGUF Quantization Reference',
+          url: 'https://huggingface.co/docs',
+          type: 'docs'
+        },
+        {
+          title: 'Open WebUI Self-Hosted Interface',
+          url: 'https://github.com/open-webui/open-webui',
+          type: 'repo'
+        }
+      ],
+      keyTakeaways: [
+        '4-bit quantized GGUF models allow executing 7B-14B parameter models on workstations with 16GB RAM.',
+        'Ollama exposes a local HTTP REST endpoint compatible with standard OpenAI SDK formats.',
+        'Ensures complete data confidentiality for academic research datasets.'
+      ],
+      content: `A workflow for running open-source large language models locally for research capstones:
+
+1. Installation and Model Execution:
+- Install Ollama on Linux, macOS, or Windows.
+- Execute 'ollama run deepseek-r1:8b' or 'ollama run mistral:7b'.
+- The model runs locally via llama.cpp backend.
+
+2. Application Integration:
+Ollama operates a local HTTP server at http://localhost:11434, allowing direct integration with Python via langchain or official client libraries.
+
+3. Local Retrieval Augmented Generation (RAG):
+Pairing Ollama with local vector stores (ChromaDB, FAISS) allows building localized question-answering systems on course materials without transmitting data externally.`
+    },
+    {
+      id: 'mathco-analytics-guide',
+      postType: 'interview',
+      title: 'Data Science and Analytics Interviews: The Math Company Technical Breakdown',
+      date: 'Aug 2024',
+      readTime: '6 min read',
+      tags: ['MathCo', 'Data Science', 'Analytics', 'SQL Puzzles', 'Consulting'],
+      summary: 'Preparation guidelines for business case interviews, complex SQL window queries, machine learning metrics, and market estimation.',
+      company: 'The Math Company (MathCo)',
+      roleOffer: 'Associate Consultant / Data Scientist',
+      difficulty: 'Dream',
+      category: 'Interview Experiences',
+      authorName: 'Shudarsan S',
+      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'shudarsan')?.avatar,
+      authorRole: 'Data Scientist / ML Engineer',
+      authorCampus: 'Coimbatore',
+      authorCompany: 'The Math Company',
+      authorSlug: 'shudarsan',
+      likes: 64,
+      isLiked: false,
+      rounds: [
+        {
+          roundName: 'Round 1: SQL & Data Manipulation Assessment',
+          focus: 'Complex Joins, Window Functions & CTEs',
+          questionsAsked: 'Find the 2nd highest salary by department using DENSE_RANK(), and calculate 7-day rolling revenue averages with ROWS BETWEEN.',
+          tips: 'Practice SQL window functions on DataLemur. Master ROW_NUMBER vs RANK vs DENSE_RANK.'
+        },
+        {
+          roundName: 'Round 2: Machine Learning & Statistical Intuition',
+          focus: 'Model Evaluation Metrics, Overfitting & Feature Engineering',
+          questionsAsked: 'Evaluation metrics for imbalanced datasets, Bias-Variance tradeoff, and L1 vs L2 regularization.',
+          tips: 'Tie machine learning metrics (Precision-Recall, AUC-ROC) to business cost implications.'
+        },
+        {
+          roundName: 'Round 3: Business Case Study & Estimation',
+          focus: 'Problem Structuring & Root Cause Analysis',
+          questionsAsked: 'Estimate the logistics capacity required in an urban metro area during peak hours.',
+          tips: 'Apply MECE (Mutually Exclusive, Collectively Exhaustive) structuring and document assumptions explicitly.'
+        }
+      ],
+      resources: [
+        {
+          title: 'DataLemur: SQL Interview Practice Bank',
+          url: 'https://datalemur.com/',
+          type: 'sheet'
+        },
+        {
+          title: 'StatQuest: Machine Learning Fundamentals',
+          url: 'https://statquest.org/',
+          type: 'video'
+        },
+        {
+          title: 'Case Interview and Estimation Frameworks',
+          url: 'https://github.com',
+          type: 'notes'
+        }
+      ],
+      keyTakeaways: [
+        'Master SQL window functions and aggregation queries.',
+        'Explain the business rationale behind algorithmic selections.',
+        'Structure case studies and estimation problems logically with explicit assumptions.'
+      ],
+      content: `An overview of technical and case interview expectations for data science and analytics consulting roles:
+
+1. SQL Assessment:
+Expect tasks requiring window functions (ROW_NUMBER, RANK, DENSE_RANK, LEAD/LAG), Common Table Expressions (CTEs), and cumulative calculations.
+
+2. Statistical and Machine Learning Evaluation:
+- Precision, Recall, and ROC-AUC curves for imbalanced datasets.
+- Bias-Variance tradeoff and regularization techniques (Ridge vs Lasso).
+- Missing data imputation and feature scaling.
+
+3. Business Case Studies:
+- Structured problem solving using the MECE framework.
+- Translating quantitative predictions into business insights.`
+    }
+  ];
+
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('amrita_custom_blogs');
+      if (stored) {
+        const custom: BlogPostItem[] = JSON.parse(stored);
+        return [...custom, ...defaultBlogs];
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return defaultBlogs;
+}
+
+function BlogsPage() {
+  const { data: currentUser } = useGetCurrentUser();
+  const [blogs, setBlogs] = useState<BlogPostItem[]>(getInitialBlogs);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [selectedCampus, setSelectedCampus] = useState<string>('');
+  const [search, setSearch] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [readingBlog, setReadingBlog] = useState<BlogPostItem | null>(null);
+
+  const categories = [
+    { id: 'all', label: 'All Articles', icon: FileText },
+    { id: 'Interview Experiences', label: 'Interview Experiences', icon: Briefcase },
+    { id: 'Tech Discoveries & Tools', label: 'Technical Discoveries', icon: Terminal },
+    { id: 'Study Notes & Guides', label: 'Study Notes & Coursework', icon: BookOpen },
+    { id: 'Tutorials & Systems', label: 'Tutorials & Systems', icon: Code },
+  ];
+
+  const handleLikeToggle = (blogId: string) => {
+    setBlogs((prev) =>
+      prev.map((b) => {
+        if (b.id === blogId) {
+          const isLiked = !b.isLiked;
+          return {
+            ...b,
+            isLiked,
+            likes: isLiked ? b.likes + 1 : b.likes - 1,
+          };
+        }
+        return b;
+      })
+    );
+  };
+
+  const handleBookmarkToggle = (blogId: string) => {
+    setBlogs((prev) =>
+      prev.map((b) => {
+        if (b.id === blogId) {
+          return {
+            ...b,
+            isBookmarked: !b.isBookmarked,
+          };
+        }
+        return b;
+      })
+    );
+  };
+
+  const handlePublishBlog = (newBlog: BlogPostItem) => {
+    setBlogs((prev) => {
+      const updated = [newBlog, ...prev];
+      if (typeof window !== 'undefined') {
+        const customOnly = updated.filter((b) => !b.authorSlug);
+        localStorage.setItem('amrita_custom_blogs', JSON.stringify(customOnly));
+      }
+      return updated;
+    });
+    setShowCreateModal(false);
+  };
+
+  const filteredBlogs = useMemo(() => {
+    return blogs.filter((b) => {
+      if (activeCategory !== 'all') {
+        if (activeCategory === 'Interview Experiences' && b.category !== 'Interview Experiences' && b.postType !== 'interview') {
+          return false;
+        }
+        if (activeCategory === 'Tech Discoveries & Tools' && b.category !== 'Tech Discoveries & Tools' && b.postType !== 'tech_discovery') {
+          return false;
+        }
+        if (activeCategory === 'Study Notes & Guides' && b.category !== 'Study Notes & Guides' && b.postType !== 'study_guide') {
+          return false;
+        }
+        if (activeCategory === 'Tutorials & Systems' && b.category !== 'Tutorials & Systems' && b.postType !== 'tutorial') {
+          return false;
+        }
+      }
+      if (selectedCampus && !b.authorCampus.toLowerCase().includes(selectedCampus.toLowerCase())) {
+        return false;
+      }
+      if (search) {
+        const query = search.toLowerCase();
+        const matchesTitle = b.title.toLowerCase().includes(query);
+        const matchesSummary = b.summary.toLowerCase().includes(query);
+        const matchesAuthor = b.authorName.toLowerCase().includes(query);
+        const matchesCompany = b.company?.toLowerCase().includes(query);
+        const matchesTags = b.tags.some((t) => t.toLowerCase().includes(query));
+        if (!matchesTitle && !matchesSummary && !matchesAuthor && !matchesCompany && !matchesTags) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [blogs, activeCategory, selectedCampus, search]);
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="ACADEMIC & CAREER KNOWLEDGE BASE"
+        title="Articles & Interview Experiences"
+        detail="Senior interview records, technical guides, preparation resources, and academic study notes contributed by the Amrita community."
+        action={
+          <button
+            type="button"
+            data-testid="button-write-blog"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors"
+          >
+            <PenLine className="h-4 w-4" />
+            <span>Write Article</span>
+          </button>
+        }
+      />
+
+      {/* Categories Row */}
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {categories.map((cat) => {
+          const isSelected = activeCategory === cat.id;
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCategory(cat.id)}
+              className={cx(
+                'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium shrink-0 transition-colors',
+                isSelected
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                  : 'border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:bg-secondary'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{cat.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Campus Filter */}
+      <div className="mb-6 rounded-2xl border border-border/80 bg-card p-2 sm:p-2.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by company, topic, keywords, or author..."
+              className="w-full rounded-xl border border-transparent bg-secondary/40 py-2 pl-10 pr-4 text-xs font-normal text-foreground outline-none focus:border-border focus:bg-background transition-colors"
+            />
+          </div>
+
+          {/* Campus Filter Dropdown */}
+          <div className="relative shrink-0 self-end sm:self-auto">
+            <select
+              value={selectedCampus}
+              onChange={(e) => setSelectedCampus(e.target.value)}
+              className="appearance-none rounded-xl border border-border/80 bg-secondary/40 pl-3 pr-8 py-2 text-xs font-medium text-foreground outline-none hover:bg-secondary/70 transition-colors cursor-pointer"
+            >
+              <option value="">All Campuses</option>
+              {campuses.map((c) => (
+                <option key={c} value={c}>
+                  Amrita {c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+
+      {/* Active Filter Summary */}
+      {(search || selectedCampus || activeCategory !== 'all') && (
+        <div className="mb-4 flex items-center justify-between px-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Filtered by:</span>
+            {activeCategory !== 'all' && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-medium text-foreground">
+                {activeCategory}
+              </span>
+            )}
+            {selectedCampus && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-medium text-foreground">
+                Amrita {selectedCampus}
+              </span>
+            )}
+            {search && (
+              <span className="rounded-md bg-secondary px-2 py-0.5 font-medium text-foreground">
+                "{search}"
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearch('');
+              setSelectedCampus('');
+              setActiveCategory('all');
+            }}
+            className="text-orange-600 dark:text-orange-400 font-semibold hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {/* Blog Cards Grid */}
+      {filteredBlogs.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No articles found"
+          detail="Try adjusting your search criteria or contribute an article or interview experience."
+          action={
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
+            >
+              <PenLine className="h-4 w-4" />
+              <span>Write First Article</span>
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2">
+          {filteredBlogs.map((blog) => (
+            <BlogCard
+              key={blog.id}
+              blog={blog}
+              onRead={() => setReadingBlog(blog)}
+              onLike={() => handleLikeToggle(blog.id)}
+              onBookmark={() => handleBookmarkToggle(blog.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Read Article Detail Modal */}
+      {readingBlog && (
+        <BlogDetailModal
+          blog={readingBlog}
+          onClose={() => setReadingBlog(null)}
+          onLike={() => handleLikeToggle(readingBlog.id)}
+          onBookmark={() => handleBookmarkToggle(readingBlog.id)}
+        />
+      )}
+
+      {/* Write / Publish Knowledge Modal */}
+      {showCreateModal && (
+        <CreateBlogModal
+          user={currentUser}
+          onClose={() => setShowCreateModal(false)}
+          onPublish={handlePublishBlog}
+        />
+      )}
+    </>
+  );
+}
+
+function BlogCard({
+  blog,
+  onRead,
+  onLike,
+  onBookmark,
+}: {
+  blog: BlogPostItem;
+  onRead: () => void;
+  onLike: () => void;
+  onBookmark: () => void;
+}) {
+  const isInterview = blog.postType === 'interview' || blog.category === 'Interview Experiences';
+  const isTechDiscovery = blog.postType === 'tech_discovery' || blog.category === 'Tech Discoveries & Tools';
+  const isStudyGuide = blog.postType === 'study_guide' || blog.category === 'Study Notes & Guides';
+
+  return (
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:border-border transition-colors">
+      <div>
+        {/* Author row & Bookmark */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {blog.authorAvatar ? (
+              <img
+                src={blog.authorAvatar}
+                alt={blog.authorName}
+                className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
+              />
+            ) : (
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-foreground font-semibold text-xs shrink-0">
+                {blog.authorName[0]}
+              </div>
+            )}
+            <div className="min-w-0 truncate">
+              {blog.authorSlug ? (
+                <Link
+                  href={`/profile/${blog.authorSlug}`}
+                  className="text-xs font-semibold text-foreground hover:underline truncate block"
+                >
+                  {blog.authorName}
+                </Link>
+              ) : (
+                <span className="text-xs font-semibold text-foreground truncate block">
+                  {blog.authorName}
+                </span>
+              )}
+              <p className="text-[11px] text-muted-foreground truncate">
+                {blog.authorCompany ? `${blog.authorCompany} · ` : ''}Amrita {blog.authorCampus}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onBookmark}
+            className={cx(
+              'rounded-xl p-2 text-muted-foreground hover:bg-secondary transition-colors shrink-0',
+              blog.isBookmarked && 'text-orange-500'
+            )}
+            title={blog.isBookmarked ? 'Saved' : 'Save article'}
+          >
+            <Bookmark className={cx('h-4 w-4', blog.isBookmarked && 'fill-orange-500')} />
+          </button>
+        </div>
+
+        {/* Badges: Post Type + Company / Difficulty + Read Time */}
+        <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+          {isInterview ? (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+              <Briefcase className="h-3 w-3 text-muted-foreground" />
+              <span>Interview Experience</span>
+            </span>
+          ) : isTechDiscovery ? (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+              <Terminal className="h-3 w-3 text-muted-foreground" />
+              <span>Technical Article</span>
+            </span>
+          ) : isStudyGuide ? (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+              <BookOpen className="h-3 w-3 text-muted-foreground" />
+              <span>Study Guide</span>
+            </span>
+          ) : (
+            <span className="rounded-lg border border-border bg-secondary/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+              {blog.category}
+            </span>
+          )}
+
+          {blog.company && (
+            <span className="rounded-lg border border-border/80 bg-secondary/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              {blog.company}
+            </span>
+          )}
+
+          {blog.rounds && blog.rounds.length > 0 && (
+            <span className="rounded-lg border border-border/60 bg-secondary/30 px-2 py-0.5 text-[10px] text-muted-foreground">
+              {blog.rounds.length} Rounds
+            </span>
+          )}
+
+          {blog.resources && blog.resources.length > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-secondary/30 px-2 py-0.5 text-[10px] text-muted-foreground">
+              <Link2 className="h-2.5 w-2.5" />
+              <span>{blog.resources.length} Resources</span>
+            </span>
+          )}
+
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-normal ml-auto">
+            <Clock className="h-3 w-3" />
+            <span>{blog.readTime}</span>
+          </span>
+        </div>
+
+        {/* Title */}
+        <h3
+          onClick={onRead}
+          className="mt-3 text-base sm:text-lg font-semibold text-foreground group-hover:text-primary cursor-pointer tracking-tight transition-colors line-clamp-2 leading-snug"
+        >
+          {blog.title}
+        </h3>
+
+        {/* Summary */}
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {blog.summary}
+        </p>
+
+        {/* Tags */}
+        {blog.tags?.length > 0 && (
+          <div className="mt-3.5 flex flex-wrap gap-1.5">
+            {blog.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-lg border border-border/70 bg-secondary/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Card Footer */}
+      <div className="mt-5 border-t border-border/70 pt-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onLike}
+          className={cx(
+            'inline-flex items-center gap-1.5 rounded-xl border border-border/80 px-3 py-1.5 text-xs font-medium transition-colors',
+            blog.isLiked
+              ? 'bg-secondary text-foreground font-semibold'
+              : 'bg-card text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <ThumbsUp className={cx('h-3.5 w-3.5', blog.isLiked ? 'text-foreground' : 'text-muted-foreground')} />
+          <span>{blog.likes}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onRead}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-secondary hover:bg-secondary/80 px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors"
+        >
+          <span>Read Article</span>
+          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BlogDetailModal({
+  blog,
+  onClose,
+  onLike,
+  onBookmark,
+}: {
+  blog: BlogPostItem;
+  onClose: () => void;
+  onLike: () => void;
+  onBookmark: () => void;
+}) {
+  const isInterview = blog.postType === 'interview' || blog.category === 'Interview Experiences';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-8 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header Badges & Actions */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-lg border border-border bg-secondary/80 px-2.5 py-1 text-xs font-medium text-foreground">
+              {blog.category}
+            </span>
+            {blog.company && (
+              <span className="rounded-lg border border-border bg-secondary/80 px-2.5 py-1 text-xs font-medium text-foreground">
+                {blog.company}
+              </span>
+            )}
+            {blog.difficulty && (
+              <span className="rounded-lg border border-border/80 bg-secondary/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {blog.difficulty}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-normal bg-secondary/40 border border-border/60 px-2.5 py-1 rounded-lg">
+              <Clock className="h-3 w-3" /> {blog.readTime}
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-normal bg-secondary/40 border border-border/60 px-2.5 py-1 rounded-lg">
+              <CalendarDays className="h-3 w-3" /> {blog.date}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onBookmark}
+              className={cx(
+                'rounded-full p-2 text-muted-foreground hover:bg-secondary transition-colors',
+                blog.isBookmarked && 'text-orange-500'
+              )}
+            >
+              <Bookmark className={cx('h-5 w-5', blog.isBookmarked && 'fill-orange-500')} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
+          {blog.title}
+        </h1>
+
+        {/* Author Card */}
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/80 bg-secondary/30 p-3.5">
+          <div className="flex items-center gap-3">
+            {blog.authorAvatar ? (
+              <img
+                src={blog.authorAvatar}
+                alt={blog.authorName}
+                className="h-10 w-10 rounded-full object-cover border border-border shrink-0"
+              />
+            ) : (
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-secondary text-foreground font-semibold text-sm shrink-0">
+                {blog.authorName[0]}
+              </div>
+            )}
+            <div>
+              <div className="text-xs font-semibold text-foreground">{blog.authorName}</div>
+              <div className="text-[11px] text-muted-foreground">
+                {blog.authorRole} · {blog.authorCompany ? `${blog.authorCompany} · ` : ''}Amrita {blog.authorCampus}
+              </div>
+            </div>
+          </div>
+
+          {blog.authorSlug && (
+            <Link
+              href={`/profile/${blog.authorSlug}`}
+              className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
+            >
+              <span>View Profile</span>
+              <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </Link>
+          )}
+        </div>
+
+        {/* Curated Preparation Resources & Links */}
+        {blog.resources && blog.resources.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-border/80 bg-secondary/20 p-4 sm:p-5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5 mb-3">
+              <Link2 className="h-4 w-4 text-muted-foreground" /> Reference Resources & Materials ({blog.resources.length})
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {blog.resources.map((res, idx) => (
+                <a
+                  key={idx}
+                  href={res.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2.5 rounded-xl border border-border/80 bg-card p-3 shadow-2xs hover:bg-secondary transition-colors group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-secondary text-muted-foreground shrink-0 text-xs">
+                      <FileText className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-xs font-medium text-foreground truncate">
+                      {res.title}
+                    </span>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Round-by-Round Breakdown Timeline (For Interviews) */}
+        {isInterview && blog.rounds && blog.rounds.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+              <Briefcase className="h-4 w-4 text-muted-foreground" /> Interview Process Breakdown
+            </div>
+            <div className="space-y-3">
+              {blog.rounds.map((round, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-border/80 bg-card p-4 relative pl-5 border-l-4 border-l-slate-700 dark:border-l-slate-300"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-semibold text-foreground">{round.roundName}</h4>
+                    <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      Step {idx + 1}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground font-medium">
+                    Focus Area: {round.focus}
+                  </p>
+                  {round.questionsAsked && (
+                    <p className="mt-2 text-xs text-foreground/90 leading-relaxed bg-secondary/30 p-2.5 rounded-xl border border-border/60">
+                      <strong className="text-foreground">Questions & Topics:</strong> {round.questionsAsked}
+                    </p>
+                  )}
+                  {round.tips && (
+                    <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+                      <span className="font-semibold text-foreground">Recommendation:</span> {round.tips}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key Takeaways Highlight Box */}
+        {blog.keyTakeaways && blog.keyTakeaways.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-border/80 bg-secondary/20 p-4 sm:p-5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5 mb-2.5">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" /> Key Takeaways & Strategy
+            </div>
+            <ul className="space-y-2">
+              {blog.keyTakeaways.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-xs text-foreground/90 leading-relaxed">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-foreground shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Full Article Content */}
+        <div className="mt-6">
+          <div className="whitespace-pre-line text-sm leading-relaxed text-foreground font-normal space-y-4">
+            {blog.content}
+          </div>
+        </div>
+
+        {/* Tags */}
+        {blog.tags?.length > 0 && (
+          <div className="mt-7 flex flex-wrap gap-1.5 pt-4 border-t border-border/80">
+            {blog.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-lg border border-border/70 bg-secondary/40 px-3 py-1 text-xs font-medium text-muted-foreground"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Modal Bottom Actions */}
+        <div className="mt-6 flex items-center justify-between border-t border-border/80 pt-4">
+          <button
+            type="button"
+            onClick={onLike}
+            className={cx(
+              'inline-flex items-center gap-2 rounded-xl border border-border/80 px-4 py-2 text-xs font-medium transition-colors',
+              blog.isLiked
+                ? 'bg-secondary text-foreground font-semibold'
+                : 'bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}
+          >
+            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+            <span>{blog.likes} Helpful</span>
+          </button>
+
+          <Button variant="quiet" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateBlogModal({
+  user,
+  onClose,
+  onPublish,
+}: {
+  user?: Partial<User> | null;
+  onClose: () => void;
+  onPublish: (blog: BlogPostItem) => void;
+}) {
+  const [postMode, setPostMode] = useState<'interview' | 'discovery'>('interview');
+  
+  // Common fields
+  const [title, setTitle] = useState('');
+  const [readTime, setReadTime] = useState('5 min read');
+  const [tags, setTags] = useState('Interview, Placement, SDE');
+  const [summary, setSummary] = useState('');
+  const [takeaways, setTakeaways] = useState('');
+  const [content, setContent] = useState('');
+
+  // Interview specific fields
+  const [company, setCompany] = useState('');
+  const [roleOffer, setRoleOffer] = useState('');
+  const [difficulty, setDifficulty] = useState<'Super Dream' | 'Dream' | 'Enterprise' | 'Moderate'>('Super Dream');
+  
+  // Interactive rounds list
+  const [rounds, setRounds] = useState<InterviewRound[]>([
+    { roundName: 'Round 1: Online Assessment (OA)', focus: 'DSA & Coding logic', questionsAsked: '', tips: '' },
+    { roundName: 'Round 2: Technical Interview', focus: 'Data structures & Algorithms', questionsAsked: '', tips: '' }
+  ]);
+
+  // Discovery specific subcategory
+  const [discoveryCategory, setDiscoveryCategory] = useState('Tech Discoveries & Tools');
+
+  // Curated Resources list
+  const [resources, setResources] = useState<BlogPostResource[]>([
+    { title: "Striver's SDE Sheet", url: 'https://takeuforward.org', type: 'sheet' }
+  ]);
+
+  const addRound = () => {
+    setRounds((prev) => [
+      ...prev,
+      { roundName: `Round ${prev.length + 1}: Technical Interview`, focus: '', questionsAsked: '', tips: '' }
+    ]);
+  };
+
+  const removeRound = (index: number) => {
+    setRounds((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateRound = (index: number, field: keyof InterviewRound, value: string) => {
+    setRounds((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const addResource = () => {
+    setResources((prev) => [...prev, { title: '', url: '', type: 'link' }]);
+  };
+
+  const removeResource = (index: number) => {
+    setResources((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateResource = (index: number, field: keyof BlogPostResource, value: string) => {
+    setResources((prev) =>
+      prev.map((res, i) => (i === index ? { ...res, [field]: value } : res))
+    );
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim() || !summary.trim()) return;
+
+    const newBlog: BlogPostItem = {
+      id: `custom-blog-${Date.now()}`,
+      postType: postMode === 'interview' ? 'interview' : discoveryCategory.includes('Study') ? 'study_guide' : 'tech_discovery',
+      title: title.trim(),
+      date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+      readTime: readTime.trim() || '4 min read',
+      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      summary: summary.trim(),
+      content: content.trim(),
+      keyTakeaways: takeaways.split('\n').map((t) => t.trim()).filter(Boolean),
+      authorName: user?.fullName || 'Amrita Contributor',
+      authorRole: user?.role === 'alumni' ? 'Alumni' : user?.role === 'faculty' ? 'Faculty' : 'Student',
+      authorCampus: user?.campus || 'Coimbatore',
+      category: postMode === 'interview' ? 'Interview Experiences' : discoveryCategory,
+      company: postMode === 'interview' ? company.trim() : undefined,
+      roleOffer: postMode === 'interview' ? roleOffer.trim() : undefined,
+      difficulty: postMode === 'interview' ? difficulty : undefined,
+      rounds: postMode === 'interview' ? rounds.filter((r) => r.roundName.trim() && r.focus.trim()) : undefined,
+      resources: resources.filter((res) => res.title.trim() && res.url.trim()),
+      likes: 1,
+      isLiked: true,
+    };
+
+    onPublish(newBlog);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-7 shadow-2xl animate-rise relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Publication Editor</span>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Write & Share Publication</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Mode Selector */}
+        <div className="mt-4 flex rounded-2xl border border-border/80 bg-secondary/40 p-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setPostMode('interview');
+              setTags('Interview, Placement, SDE');
+            }}
+            className={cx(
+              'flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold transition-colors',
+              postMode === 'interview'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Briefcase className="h-4 w-4" />
+            <span>Interview Experience & Resources</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPostMode('discovery');
+              setTags('Technical Article, Study Notes, Guide');
+            }}
+            className={cx(
+              'flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold transition-colors',
+              postMode === 'discovery'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Technical Article / Study Notes</span>
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <Field
+            id="blog-title"
+            label="Article Title"
+            placeholder={
+              postMode === 'interview'
+                ? 'e.g. Amazon SDE-1: Interview Breakdown and Preparation Strategy'
+                : 'e.g. GATE CSE 2025: Operating Systems High-Yield Summary'
+            }
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+
+          {postMode === 'interview' ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field
+                id="interview-company"
+                label="Company Name"
+                placeholder="e.g. Amazon, Cisco, TCS"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                required
+              />
+              <Field
+                id="interview-role"
+                label="Role / Offer"
+                placeholder="e.g. SDE-1, Cloud Engineer"
+                value={roleOffer}
+                onChange={(e) => setRoleOffer(e.target.value)}
+                required
+              />
+              <SelectField
+                id="interview-tier"
+                label="Offer Tier"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as any)}
+                options={[
+                  { value: 'Super Dream', label: 'Super Dream (15+ LPA)' },
+                  { value: 'Dream', label: 'Dream (8-15 LPA)' },
+                  { value: 'Enterprise', label: 'Enterprise Core' },
+                  { value: 'Moderate', label: 'Standard Recruitment' },
+                ]}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SelectField
+                id="discovery-cat"
+                label="Category"
+                value={discoveryCategory}
+                onChange={(e) => setDiscoveryCategory(e.target.value)}
+                options={[
+                  { value: 'Tech Discoveries & Tools', label: 'Technical Discoveries & Tools' },
+                  { value: 'Study Notes & Guides', label: 'Study Notes & Guides' },
+                  { value: 'Tutorials & Systems', label: 'Tutorials & Systems' },
+                ]}
+              />
+              <Field
+                id="blog-readtime"
+                label="Estimated Read Time"
+                placeholder="e.g. 5 min read"
+                value={readTime}
+                onChange={(e) => setReadTime(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Interactive Interview Rounds Breakdown (If in Interview Mode) */}
+          {postMode === 'interview' && (
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" /> Round-by-Round Breakdown ({rounds.length})
+                </label>
+                <button
+                  type="button"
+                  onClick={addRound}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Add Round
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {rounds.map((round, idx) => (
+                  <div key={idx} className="rounded-xl border border-border/80 bg-card p-3 space-y-2 relative">
+                    <div className="flex items-center justify-between gap-2">
+                      <input
+                        value={round.roundName}
+                        onChange={(e) => updateRound(idx, 'roundName', e.target.value)}
+                        placeholder={`Round ${idx + 1} Title`}
+                        className="w-full rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-1 text-xs font-semibold text-foreground outline-none"
+                      />
+                      {rounds.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRound(idx)}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      value={round.focus}
+                      onChange={(e) => updateRound(idx, 'focus', e.target.value)}
+                      placeholder="Focus area (e.g. DSA, Dynamic Programming, System Design)"
+                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-2.5 py-1 text-xs text-foreground outline-none"
+                    />
+                    <input
+                      value={round.questionsAsked || ''}
+                      onChange={(e) => updateRound(idx, 'questionsAsked', e.target.value)}
+                      placeholder="Specific questions or challenges asked in this round"
+                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-2.5 py-1 text-xs text-foreground outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Preparation Resources Builder */}
+          <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" /> Attached Resources & Reference Links ({resources.length})
+              </label>
+              <button
+                type="button"
+                onClick={addResource}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground hover:underline"
+              >
+                <Plus className="h-3 w-3" /> Add Link
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {resources.map((res, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    value={res.title}
+                    onChange={(e) => updateResource(idx, 'title', e.target.value)}
+                    placeholder="Resource Name (e.g. Striver SDE Sheet, GitHub Repo)"
+                    className="flex-1 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs text-foreground outline-none focus:border-border"
+                  />
+                  <input
+                    value={res.url}
+                    onChange={(e) => updateResource(idx, 'url', e.target.value)}
+                    placeholder="URL Link (https://...)"
+                    className="flex-1 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs text-foreground outline-none focus:border-border"
+                  />
+                  {resources.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeResource(idx)}
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Field
+            id="blog-tags"
+            label="Tags (comma separated)"
+            placeholder="e.g. SDE, Amazon, DSA, System Design, Rust, OS"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+          />
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Executive Summary / Abstract</label>
+            <textarea
+              rows={2}
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="A concise summary of what readers will learn from your article..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Key Takeaways (one per line)</label>
+            <textarea
+              rows={3}
+              value={takeaways}
+              onChange={(e) => setTakeaways(e.target.value)}
+              placeholder="Master core algorithm and data structure patterns&#10;Prepare quantifiable STAR responses for behavioral rounds&#10;Conduct mock interviews with peers"
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Full Article / Experience Content</label>
+            <textarea
+              rows={8}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write the full content. Detail preparation timelines, reference materials, technical questions, and recommendations..."
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border/80">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!title.trim() || !content.trim() || !summary.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
+            >
+              <PenLine className="h-4 w-4" />
+              <span>Publish Article</span>
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { data, isLoading, isError, refetch } = useListNotifications();
+  const { data: connData, isLoading: connLoading } = useConnections();
   const mark = useMarkNotificationRead();
   const queryClient = useQueryClient();
+
+  const acceptMutation = useMutation({
+    mutationFn: (connId: string) => apiFetch(`/connections/${connId}/accept`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+      queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (connId: string) => apiFetch(`/connections/${connId}/reject`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+      queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
+    },
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: (connId: string) => apiFetch(`/connections/${connId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+    },
+  });
+
   const items = data ?? [];
+  const incomingList = connData?.incoming ?? [];
+  const outgoingList = connData?.outgoing ?? [];
+
   const read = (notification: Notification) => {
     if (!notification.read) {
       mark.mutate({ id: notification.id }, {
@@ -11341,24 +13847,92 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
       });
     }
   };
+
   return (
     <>
       {!embedded && (
         <PageTitle
-          eyebrow="Notifications"
+          eyebrow="Notifications & Requests"
           title="Keep in the loop."
-          detail="A quiet inbox for the things that need your attention."
-          action={<Link data-testid="link-notifications-people" href="/people" className="text-sm font-semibold text-accent">Find people <ArrowRight className="inline h-4 w-4" /></Link>}
+          detail="Review received connection requests, invitations, and campus updates."
+          action={<Link data-testid="link-notifications-people" href="/feed?tab=discover" className="text-sm font-semibold text-accent">Discover Members <ArrowRight className="inline h-4 w-4" /></Link>}
         />
       )}
+
+      {/* Connection Invitations Card (if any pending incoming requests) */}
+      {incomingList.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-orange-500/30 bg-orange-50/40 dark:bg-orange-950/15 p-5 sm:p-6 shadow-sm animate-rise">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold">
+                <UserPlus className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Connection Invitations</h3>
+                <p className="text-xs text-muted-foreground">Members who want to connect with you</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-orange-500 text-white px-2.5 py-0.5 text-xs font-bold shadow-xs">
+              {incomingList.length} new
+            </span>
+          </div>
+
+          <div className="divide-y divide-border/70 rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+            {incomingList.map((item) => (
+              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 hover:bg-secondary/30 transition-colors">
+                <div className="flex items-start gap-3.5">
+                  <Avatar user={item.user} size="md" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/people/${item.user.id}`} className="text-sm font-bold text-foreground hover:text-orange-500 transition-colors">
+                        {item.user.fullName}
+                      </Link>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                        {roleLabels[item.user.role] ?? item.user.role}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{item.user.headline || `${item.user.department} · ${item.user.campus}`}</p>
+                    {item.message && (
+                      <div className="mt-2 rounded-lg border border-orange-500/20 bg-orange-500/5 p-2.5 text-xs text-foreground italic">
+                        "{item.message}"
+                      </div>
+                    )}
+                    <span className="mt-1 block text-[10px] text-muted-foreground">Received {relative(item.createdAt || '')}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    onClick={() => acceptMutation.mutate(item.id)}
+                    disabled={acceptMutation.isPending}
+                    className="px-4 py-1.5 text-xs font-bold"
+                  >
+                    {acceptMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Accept
+                  </Button>
+                  <Button
+                    variant="quiet"
+                    onClick={() => rejectMutation.mutate(item.id)}
+                    disabled={rejectMutation.isPending}
+                    className="px-3.5 py-1.5 text-xs"
+                  >
+                    Decline
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* General Notifications List */}
       {isLoading ? (
         <LoadingState rows={4} />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : !items.length ? (
-        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, invitations, and updates will land here." />
+      ) : !items.length && incomingList.length === 0 ? (
+        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, invitations, and platform updates will land here." />
       ) : (
-        <div className="w-full divide-y divide-border rounded-xl border border-border bg-card">
+        <div className="w-full divide-y divide-border rounded-xl border border-border bg-card shadow-xs overflow-hidden">
           {items.map((item) => (
             <button
               data-testid={`button-notification-${item.id}`}
@@ -11378,133 +13952,1398 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
           ))}
         </div>
       )}
+
+      {/* Outgoing sent invitations (optional collapsible / clean view) */}
+      {outgoingList.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+            Pending Sent Invitations ({outgoingList.length})
+          </h3>
+          <div className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            {outgoingList.map((item) => (
+              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Avatar user={item.user} size="sm" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/people/${item.user.id}`} className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors">
+                        {item.user.fullName}
+                      </Link>
+                      <span className="rounded bg-secondary px-1.5 py-0.2 text-[9px] font-medium text-muted-foreground">
+                        {roleLabels[item.user.role] ?? item.user.role}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{item.user.department} · {item.user.campus}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => withdrawMutation.mutate(item.id)}
+                  disabled={withdrawMutation.isPending}
+                  className="px-2.5 py-1 text-[11px] text-muted-foreground hover:text-destructive shrink-0"
+                >
+                  Withdraw
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-function ProfilePage() {
+const COVER_PRESETS = [
+  {
+    id: 'amrita-campus',
+    title: 'Amrita Academic Campus',
+    url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'cyber-code',
+    title: 'Deep Tech & Algorithms',
+    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'modern-quad',
+    title: 'Research & Library Commons',
+    url: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'robotics-lab',
+    title: 'Robotics & Hardware Lab',
+    url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'minimal-gradient',
+    title: 'Minimal Geometric Slate',
+    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80',
+  },
+];
+
+const DEFAULT_COVER = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1600&q=80';
+
+function CoverPhotoDialog({
+  currentCover,
+  onSave,
+  onClose,
+}: {
+  currentCover: string;
+  onSave: (url: string) => void;
+  onClose: () => void;
+}) {
+  const [selectedUrl, setSelectedUrl] = useState(currentCover || DEFAULT_COVER);
+  const [customUrl, setCustomUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSelectedUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Update Cover Banner</h3>
+            <p className="text-xs text-muted-foreground">Upload from device, enter a URL, or pick an Amrita preset.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Live Preview */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Banner Preview</label>
+          <div className="relative h-36 w-full overflow-hidden rounded-xl border border-border bg-muted">
+            <img src={selectedUrl} alt="Cover Preview" className="h-full w-full object-cover" />
+          </div>
+        </div>
+
+        {/* Device Upload */}
+        <div className="flex items-center gap-3">
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full text-xs font-bold border-dashed border-2 py-3"
+          >
+            <Upload className="h-4 w-4 text-orange-500" />
+            Upload Image from Device
+          </Button>
+        </div>
+
+        {/* Direct Link Input */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Or Paste Image URL</label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={customUrl}
+              onChange={(e) => {
+                setCustomUrl(e.target.value);
+                if (e.target.value.startsWith('http')) {
+                  setSelectedUrl(e.target.value);
+                }
+              }}
+              placeholder="https://images.unsplash.com/..."
+              className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (customUrl) setSelectedUrl(customUrl);
+              }}
+              className="px-3 py-2 text-xs"
+            >
+              Apply
+            </Button>
+          </div>
+        </div>
+
+        {/* Presets Gallery */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-foreground">Amrita & Tech Presets</label>
+          <div className="grid grid-cols-5 gap-2">
+            {COVER_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setSelectedUrl(preset.url)}
+                className={cx(
+                  'group relative h-14 overflow-hidden rounded-lg border transition-all',
+                  selectedUrl === preset.url ? 'ring-2 ring-orange-500 border-transparent shadow-sm' : 'border-border hover:opacity-90'
+                )}
+                title={preset.title}
+              >
+                <img src={preset.url} alt={preset.title} className="h-full w-full object-cover" />
+                {selectedUrl === preset.url && (
+                  <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
+                    <Check className="h-4 w-4 text-white drop-shadow" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => setSelectedUrl(DEFAULT_COVER)}
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            Reset to Default
+          </button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                onSave(selectedUrl);
+                onClose();
+              }}
+              className="text-xs font-bold"
+            >
+              Save Cover Banner
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AvatarPhotoDialog({
+  currentAvatar,
+  onSave,
+  onClose,
+  isPending,
+}: {
+  currentAvatar?: string | null;
+  onSave: (url: string) => void;
+  onClose: () => void;
+  isPending: boolean;
+}) {
+  const [selectedUrl, setSelectedUrl] = useState(currentAvatar || '');
+  const [customUrl, setCustomUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSelectedUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Change Profile Photo</h3>
+            <p className="text-xs text-muted-foreground">Upload an image or provide an image link.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Live Preview */}
+        <div className="flex flex-col items-center justify-center py-2">
+          {selectedUrl ? (
+            <img src={selectedUrl} alt="Avatar Preview" className="h-32 w-32 rounded-full object-cover ring-4 ring-orange-500 shadow-md" />
+          ) : (
+            <div className="h-32 w-32 rounded-full bg-secondary text-primary flex items-center justify-center text-3xl font-bold ring-4 ring-border shadow-md">
+              <Camera className="h-10 w-10 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        {/* Device Upload */}
+        <div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full text-xs font-bold border-dashed border-2 py-3"
+          >
+            <Upload className="h-4 w-4 text-orange-500" />
+            Upload Photo from Device
+          </Button>
+        </div>
+
+        {/* Direct Link Input */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Or Image URL</label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={customUrl}
+              onChange={(e) => {
+                setCustomUrl(e.target.value);
+                if (e.target.value.startsWith('http')) {
+                  setSelectedUrl(e.target.value);
+                }
+              }}
+              placeholder="https://example.com/photo.jpg"
+              className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (customUrl) setSelectedUrl(customUrl);
+              }}
+              className="px-3 py-2 text-xs"
+            >
+              Apply
+            </Button>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => setSelectedUrl('')}
+            className="text-xs font-semibold text-destructive hover:underline"
+          >
+            Remove Photo
+          </button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                onSave(selectedUrl);
+              }}
+              className="text-xs font-bold"
+            >
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Photo
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditProfileModal({
+  user,
+  onClose,
+  onSave,
+  isPending,
+}: {
+  user: User;
+  onClose: () => void;
+  onSave: (values: Partial<User>) => void;
+  isPending: boolean;
+}) {
+  const [form, setForm] = useState<Partial<User>>({
+    headline: user.headline ?? '',
+    bio: user.bio ?? '',
+    company: user.company ?? '',
+    jobRole: user.jobRole ?? '',
+    skills: user.skills ?? [],
+    interests: user.interests ?? [],
+    helpWith: user.helpWith ?? [],
+    lookingFor: user.lookingFor ?? [],
+    avatarUrl: user.avatarUrl ?? '',
+  });
+
+  const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const setList = (key: string, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value.split(',').map((item) => item.trim()).filter(Boolean) }));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(form);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border p-5 sticky top-0 bg-card z-10">
+          <div>
+            <h3 className="text-lg font-bold text-foreground">Edit Intro & Profile</h3>
+            <p className="text-xs text-muted-foreground">Keep your identity, background, and academic presence up to date.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+          {/* Basic Headline & Bio */}
+          <div>
+            <Field
+              id="modal-headline"
+              label="Headline"
+              value={form.headline ?? ''}
+              onChange={(e) => set('headline', e.target.value)}
+              placeholder="e.g. Assistant Professor · AI & Robotics Lab · IEEE Member"
+            />
+            <p className="mt-1 text-[11px] text-muted-foreground">Summarize your current focus, research topics, or role at Amrita.</p>
+          </div>
+
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-foreground">About / Summary</span>
+              <textarea
+                value={form.bio ?? ''}
+                onChange={(e) => set('bio', e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm outline-none focus:border-orange-500"
+                placeholder="Share your academic background, research interests, career milestones, or personal philosophy..."
+              />
+            </label>
+          </div>
+
+          {/* Current Experience / Affiliation */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="modal-company"
+              label="Current Organization / Lab"
+              value={form.company ?? ''}
+              onChange={(e) => set('company', e.target.value)}
+              placeholder="e.g. Center for Cyber Security (bi0s)"
+            />
+            <Field
+              id="modal-job-role"
+              label="Position / Title"
+              value={form.jobRole ?? ''}
+              onChange={(e) => set('jobRole', e.target.value)}
+              placeholder="e.g. Lead Researcher / Core Member"
+            />
+          </div>
+
+          {/* Skills & Interests */}
+          <Field
+            id="modal-skills"
+            label="Skills & Expertise (comma separated)"
+            value={form.skills?.join(', ') ?? ''}
+            onChange={(e) => setList('skills', e.target.value)}
+            placeholder="e.g. Machine Learning, Python, Robotics, Distributed Systems"
+          />
+
+          <Field
+            id="modal-interests"
+            label="Interests & Focus Areas (comma separated)"
+            value={form.interests?.join(', ') ?? ''}
+            onChange={(e) => setList('interests', e.target.value)}
+            placeholder="e.g. Generative AI, Quantum Computing, Space Tech, Open Source"
+          />
+
+          {/* Mentorship / Collaboration Matrix */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="modal-help-with"
+              label="I Can Help With"
+              value={form.helpWith?.join(', ') ?? ''}
+              onChange={(e) => setList('helpWith', e.target.value)}
+              placeholder="e.g. Mock Interviews, Paper Review, Hackathons"
+            />
+            <Field
+              id="modal-looking-for"
+              label="I Am Looking For"
+              value={form.lookingFor?.join(', ') ?? ''}
+              onChange={(e) => setList('lookingFor', e.target.value)}
+              placeholder="e.g. Research Partner, Mentorship, Team Members"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'connections' | 'my_posts' | 'saved' } = {}) {
   const { data: user, isLoading, isError, refetch } = useGetCurrentUser();
   const update = useUpdateMyProfile();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<'profile' | 'connections' | 'my_posts' | 'saved'>(initialTab);
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState<Partial<User> | null>(null);
-  if (isLoading) return <LoadingState rows={3} />;
-  if (isError || !user) return <ErrorState onRetry={() => refetch()} />;
-  const values = form ?? user;
-  const set = (key: string, value: string) => setForm((prev) => ({ ...(prev ?? user), [key]: value }));
-  const setList = (key: string, value: string) => setForm((prev) => ({ ...(prev ?? user), [key]: value.split(',').map((item) => item.trim()).filter(Boolean) }));
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [editingPost, setEditingPost] = useState<PostItem | null>(null);
+  const [connSearch, setConnSearch] = useState('');
+  const [showCoverModal, setShowCoverModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [newSkillInput, setNewSkillInput] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Cover photo state backed by localStorage
+  const [coverUrl, setCoverUrl] = useState<string>(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const stored = localStorage.getItem(`amrita_user_cover_${user.id}`);
+      if (stored) return stored;
+    }
+    return DEFAULT_COVER;
+  });
+
+  // Re-sync cover on user load
+  useEffect(() => {
+    if (user?.id) {
+      const stored = localStorage.getItem(`amrita_user_cover_${user.id}`);
+      if (stored) setCoverUrl(stored);
+    }
+  }, [user?.id]);
+
+  const handleSaveCover = (newUrl: string) => {
+    setCoverUrl(newUrl);
+    if (user?.id) {
+      localStorage.setItem(`amrita_user_cover_${user.id}`, newUrl);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2400);
+  };
+
+  const handleSaveAvatar = (newAvatarUrl: string) => {
     update.mutate(
       {
         data: {
-          headline: values.headline,
-          bio: values.bio,
-          company: values.company,
-          jobRole: values.jobRole,
-          skills: values.skills,
-          interests: values.interests,
-          helpWith: values.helpWith,
-          lookingFor: values.lookingFor,
-          avatarUrl: values.avatarUrl,
+          avatarUrl: newAvatarUrl,
         },
       },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          setShowAvatarModal(false);
           setSaved(true);
           setTimeout(() => setSaved(false), 2400);
         },
-      },
+      }
     );
   };
+
+  const handleSaveProfileForm = (updatedFields: Partial<User>) => {
+    update.mutate(
+      {
+        data: updatedFields,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          setShowEditProfileModal(false);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2400);
+        },
+      }
+    );
+  };
+
+  const handleAddQuickSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSkillInput.trim() || !user) return;
+    const skill = newSkillInput.trim();
+    const existing = user.skills ?? [];
+    if (existing.includes(skill)) {
+      setNewSkillInput('');
+      return;
+    }
+    const updatedSkills = [...existing, skill];
+    update.mutate(
+      {
+        data: {
+          skills: updatedSkills,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          setNewSkillInput('');
+        },
+      }
+    );
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
+    if (!user) return;
+    const updatedSkills = (user.skills ?? []).filter((s) => s !== skillToRemove);
+    update.mutate(
+      {
+        data: {
+          skills: updatedSkills,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        },
+      }
+    );
+  };
+
+  const handleCopyProfileLink = () => {
+    if (typeof window !== 'undefined' && user) {
+      const url = `${window.location.origin}/people/${user.id}`;
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2200);
+    }
+  };
+
+  // Connections Query & Mutations
+  const { data: connData, isLoading: connLoading, isError: connError, refetch: refetchConn } = useConnections();
+
+  const removeConnectionMutation = useMutation({
+    mutationFn: (connId: string) => apiFetch(`/connections/${connId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+    },
+  });
+
+  // Check search params for initial tab
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'my_posts' || tabParam === 'saved' || tabParam === 'profile' || tabParam === 'connections') {
+        setActiveTab(tabParam as any);
+      } else if (initialTab) {
+        setActiveTab(initialTab);
+      }
+    }
+  }, [initialTab]);
+
+  // Fetch posts for my_posts or saved
+  const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
+    queryKey: ['profile_posts', activeTab],
+    enabled: activeTab === 'my_posts' || activeTab === 'saved' || activeTab === 'profile',
+    queryFn: async () => {
+      const q = new URLSearchParams();
+      if (activeTab === 'saved') q.set('filter', 'saved');
+      else q.set('filter', 'my_posts');
+      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
+    },
+  });
+
+  const posts = postsData?.items ?? [];
+
+  if (isLoading) return <LoadingState rows={3} />;
+  if (isError || !user) return <ErrorState onRetry={() => refetch()} />;
+
   const handleLogout = () => {
     clearAuthSession();
     setLocation('/login');
   };
-  return <>
-    <PageTitle eyebrow="Your profile" title="Make it easy to find you." detail="A little context turns a directory listing into a useful invitation." action={saved ? <span className="inline-flex items-center gap-2 text-sm font-bold text-emerald-500"><Check className="h-4 w-4" />Changes saved</span> : undefined} />
-    <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-      <div className="surface h-fit rounded-xl border border-border p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Avatar user={values} size="lg" />
-          <div>
-            <h2 className="font-bold text-foreground">{user.fullName}</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs font-bold text-accent">{roleLabels[user.role] ?? user.role}</span>
-              <span className="text-xs text-muted-foreground">· {user.campus}</span>
-            </div>
-            {user.graduationYear && <p className="mt-1 text-[11px] font-medium text-muted-foreground">Class of {user.graduationYear}</p>}
-          </div>
+
+  // Profile strength calculation
+  const strengthChecks = [
+    { label: 'Profile Photo', done: Boolean(user.avatarUrl) },
+    { label: 'Cover Banner', done: Boolean(coverUrl) },
+    { label: 'Headline', done: Boolean(user.headline && user.headline.length > 3) },
+    { label: 'About / Bio', done: Boolean(user.bio && user.bio.length > 10) },
+    { label: 'Skills Added', done: Boolean(user.skills && user.skills.length > 0) },
+    { label: 'Interests Added', done: Boolean(user.interests && user.interests.length > 0) },
+  ];
+  const strengthScore = Math.round((strengthChecks.filter((c) => c.done).length / strengthChecks.length) * 100);
+
+  return (
+    <div className="space-y-6 animate-rise pb-20 max-w-5xl mx-auto">
+      {/* Top Banner Alert / Saved Notification */}
+      {saved && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-4 py-2.5 text-xs font-bold shadow-xl animate-bounce">
+          <Check className="h-4 w-4" /> Profile changes updated successfully!
+        </div>
+      )}
+
+      {/* Profile Header Tabs Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3">
+        <div className="flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-xs gap-1">
+          {[
+            { id: 'profile', label: 'Profile Overview', icon: UserCircle },
+            { id: 'connections', label: `Network & Connections (${connData?.totalConnected ?? 0})`, icon: Users },
+            { id: 'my_posts', label: `My Posts (${posts.length})`, icon: Rss },
+            { id: 'saved', label: 'Saved Posts', icon: Bookmark },
+          ].map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id as any)}
+                className={cx(
+                  'relative rounded-lg px-3.5 py-2 text-xs font-bold transition-all flex items-center gap-2',
+                  activeTab === t.id
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="border-t border-border pt-4">
-          <Field
-            id="profile-avatar-url"
-            label="Avatar image URL"
-            type="url"
-            value={values.avatarUrl ?? ''}
-            onChange={(e) => set('avatarUrl', e.target.value)}
-            placeholder="https://example.com/avatar.jpg"
-          />
-          <p className="mt-1 text-[11px] text-muted-foreground">Paste a public link or leave blank for your initials.</p>
-        </div>
-
-        <div className="border-t border-border pt-5">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold text-muted-foreground">Profile strength</span>
-            <span className="font-bold text-accent">Active & Verified</span>
-          </div>
-          <div className="mt-2 h-1.5 rounded-full bg-muted">
-            <div className="h-1.5 w-3/4 rounded-full bg-accent" />
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-5">
-          <button type="button" data-testid="button-profile-logout" onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 px-4 py-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors active:scale-95">
-            <LogOut className="h-4 w-4" />
-            <span>Sign out of account</span>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/people/${user.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            Public View
+          </Link>
+          <button
+            type="button"
+            onClick={handleCopyProfileLink}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
+          >
+            {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Share2 className="h-3.5 w-3.5 text-muted-foreground" />}
+            {copiedLink ? 'Copied Link' : 'Share'}
           </button>
         </div>
       </div>
 
-      <div className="surface rounded-xl border border-border p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-foreground">What should people know?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Keep it specific. Your profile is your first hello.</p>
-        <div className="mt-6 space-y-5">
-          <Field id="profile-headline" label="Headline" value={values.headline ?? ''} onChange={(e) => set('headline', e.target.value)} placeholder="What are you working on right now?" />
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-bold text-foreground">About you</span>
-            <textarea data-testid="textarea-profile-bio" value={values.bio ?? ''} onChange={(e) => set('bio', e.target.value)} rows={5} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-accent-foreground" placeholder="A short, human introduction..." />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="profile-company" label="Company / lab" value={values.company ?? ''} onChange={(e) => set('company', e.target.value)} />
-            <Field id="profile-job-role" label="Role / title" value={values.jobRole ?? ''} onChange={(e) => set('jobRole', e.target.value)} />
+      {/* Main Profile View (LinkedIn Layout) */}
+      {activeTab === 'profile' && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Main Column */}
+          <div className="space-y-6">
+            {/* 1. LinkedIn Hero Card */}
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden relative">
+              {/* Cover Banner */}
+              <div className="relative h-44 sm:h-60 w-full bg-slate-900 group">
+                <img src={coverUrl} alt="Profile Cover" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+
+                {/* Edit Cover Photo Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowCoverModal(true)}
+                  className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md px-3.5 py-1.5 text-xs font-bold shadow-md transition-all active:scale-95"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  <span>Edit cover photo</span>
+                </button>
+              </div>
+
+              {/* Profile Avatar & Top Info Area */}
+              <div className="px-6 sm:px-8 pb-6 pt-0">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-4">
+                  {/* Avatar with Camera Overlay */}
+                  <div className="relative group w-fit">
+                    <Avatar user={user} size="xl" className="border-4 border-card" />
+                    <button
+                      type="button"
+                      onClick={() => setShowAvatarModal(true)}
+                      className="absolute bottom-1 right-1 grid h-9 w-9 place-items-center rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg ring-2 ring-card transition-all active:scale-95"
+                      title="Update profile photo"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Header Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2.5 pt-2">
+                    <Button
+                      type="button"
+                      onClick={() => setShowEditProfileModal(true)}
+                      className="rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit Profile
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveTab('connections')}
+                      className="rounded-xl px-4 py-2 text-xs font-bold"
+                    >
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      Connections ({connData?.totalConnected ?? 0})
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Name, Headline & Verified Signals */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      {user.fullName}
+                    </h1>
+                    <div className="flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 text-[11px] font-bold text-orange-600 dark:text-orange-400">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>{roleLabels[user.role] ?? user.role}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-sm sm:text-base font-medium text-foreground/90 leading-snug max-w-2xl">
+                    {user.headline || 'Add a professional headline to describe your role, expertise, or research domain.'}
+                  </p>
+
+                  {/* Institutional Affiliation & Campus Meta */}
+                  <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-muted-foreground pt-1">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Building2 className="h-3.5 w-3.5 text-orange-500" />
+                      <span>Amrita Vishwa Vidyapeetham · {user.campus} Campus</span>
+                    </div>
+                    {user.department && (
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <GraduationCap className="h-3.5 w-3.5 text-orange-500" />
+                        <span>Department of {user.department}</span>
+                      </div>
+                    )}
+                    {user.graduationYear && (
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <span>Class of {user.graduationYear}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Network Link */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('connections')}
+                      className="text-xs font-bold text-orange-600 dark:text-orange-400 hover:underline"
+                    >
+                      {connData?.totalConnected ?? 0} connections
+                    </button>
+                    <span className="text-xs text-muted-foreground ml-2">· Official Amrita Network</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. About Card */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-foreground">About</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(true)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+              {user.bio ? (
+                <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{user.bio}</p>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border/80 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    You haven't written a summary yet. Introduce your academic background, research interests, and projects!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditProfileModal(true)}
+                    className="mt-2 text-xs font-bold text-orange-500 hover:underline"
+                  >
+                    + Add an About summary
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Experience & Academic Background Card */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-foreground">Experience & Academic Appointments</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(true)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Organization / Lab Role */}
+                {user.company || user.jobRole ? (
+                  <div className="flex items-start gap-3.5">
+                    <div className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                      <Briefcase className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground">{user.jobRole || 'Researcher / Specialist'}</h3>
+                      <p className="text-xs font-semibold text-muted-foreground">{user.company || 'Amrita Research Lab'}</p>
+                      <p className="text-[11px] text-muted-foreground/80 mt-0.5">Active Position · Amrita Ecosystem</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* University Institutional Entry */}
+                <div className="flex items-start gap-3.5">
+                  <div className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Amrita Vishwa Vidyapeetham</h3>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {roleLabels[user.role] ?? user.role} · Department of {user.department || 'Engineering'}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                      {user.campus} Campus {user.graduationYear ? `· Class of ${user.graduationYear}` : '· Full-time'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Skills & Endorsements Card */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Skills & Expertise</h2>
+                  <p className="text-xs text-muted-foreground">Core competencies, tools, and research methodologies.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(true)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Skills Tag Cloud */}
+              <div className="flex flex-wrap gap-2">
+                {(user.skills ?? []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No skills listed yet.</p>
+                ) : (
+                  (user.skills ?? []).map((skill) => (
+                    <span
+                      key={skill}
+                      className="group inline-flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-orange-500/40 transition-colors"
+                    >
+                      <span>{skill}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSkill(skill)}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                        title="Remove skill"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {/* Inline Quick Add Skill */}
+              <form onSubmit={handleAddQuickSkill} className="flex gap-2 pt-2 border-t border-border/60">
+                <input
+                  type="text"
+                  value={newSkillInput}
+                  onChange={(e) => setNewSkillInput(e.target.value)}
+                  placeholder="Type a skill (e.g. Distributed Systems, PyTorch) and press Enter..."
+                  className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+                />
+                <Button type="submit" disabled={!newSkillInput.trim() || update.isPending} className="px-3.5 py-2 text-xs font-bold">
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </Button>
+              </form>
+            </div>
+
+            {/* 5. Interests & Focus Areas Card */}
+            {(user.interests ?? []).length > 0 && (
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-foreground">Interests & Research Focus</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditProfileModal(true)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {user.interests?.map((interest) => (
+                    <span
+                      key={interest}
+                      className="rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-3 py-1 text-xs font-bold"
+                    >
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. Mentorship & Collaboration Matrix Card */}
+            {((user.helpWith ?? []).length > 0 || (user.lookingFor ?? []).length > 0) && (
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-foreground">Mentorship & Collaboration Matrix</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditProfileModal(true)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2">
+                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">
+                      I Can Help With
+                    </span>
+                    <ul className="space-y-1.5">
+                      {user.helpWith?.map((item) => (
+                        <li key={item} className="flex items-center gap-2 text-xs font-medium text-foreground">
+                          <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2">
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                      I Am Looking For
+                    </span>
+                    <ul className="space-y-1.5">
+                      {user.lookingFor?.map((item) => (
+                        <li key={item} className="flex items-center gap-2 text-xs font-medium text-foreground">
+                          <Sparkles className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 7. Activity & Published Content Preview */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Activity & Published Blogs</h2>
+                  <p className="text-xs text-muted-foreground">{posts.length} articles and updates shared</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('my_posts')}
+                  className="text-xs font-bold text-orange-500 hover:underline"
+                >
+                  View All Activity
+                </button>
+              </div>
+
+              {posts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/80 p-6 text-center">
+                  <Rss className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
+                  <p className="text-xs font-medium text-muted-foreground">You haven't posted any updates or blogs yet.</p>
+                  <Button onClick={() => setLocation('/feed')} className="mt-3 text-xs font-bold">
+                    Create a Post in Feed
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {posts.slice(0, 2).map((post) => (
+                    <div key={post.id} className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">{relative(post.createdAt)}</p>
+                      <p className="text-sm font-bold text-foreground line-clamp-2">{post.content}</p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+                        <span>{post.likesCount} likes</span>
+                        <span>{post.commentsCount} comments</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <Field id="profile-skills" label="Skills" value={values.skills?.join(', ') ?? ''} onChange={(e) => setList('skills', e.target.value)} placeholder="Separate skills with commas (e.g. React, Python, ML)" />
-          <Field id="profile-interests" label="Interests" value={values.interests?.join(', ') ?? ''} onChange={(e) => setList('interests', e.target.value)} placeholder="Separate interests with commas (e.g. AI, Robotics, Startups)" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="profile-help-with" label="I can help with" value={values.helpWith?.join(', ') ?? ''} onChange={(e) => setList('helpWith', e.target.value)} placeholder="e.g. Mock interviews, Hackathons" />
-            <Field id="profile-looking-for" label="I am looking for" value={values.lookingFor?.join(', ') ?? ''} onChange={(e) => setList('lookingFor', e.target.value)} placeholder="e.g. Research partner, Mentor" />
-          </div>
-          <div className="flex justify-end pt-2">
-            <Button data-testid="button-save-profile" type="submit" disabled={update.isPending}>
-              {update.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Save profile
-            </Button>
+
+          {/* Right Sidebar */}
+          <div className="space-y-6">
+            {/* Profile Strength Checklist */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Profile Strength</span>
+                <span className="rounded-md bg-orange-500/10 px-2 py-0.5 text-xs font-bold text-orange-600 dark:text-orange-400">
+                  {strengthScore}% Complete
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500"
+                  style={{ width: `${strengthScore}%` }}
+                />
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {strengthChecks.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between text-xs">
+                    <span className={item.done ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                      {item.label}
+                    </span>
+                    {item.done ? (
+                      <Check className="h-4 w-4 text-emerald-500 font-bold" />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-orange-500 hover:underline cursor-pointer" onClick={() => setShowEditProfileModal(true)}>
+                        + Add
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Public Profile Widget */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Public Profile & URL</h3>
+              <p className="text-xs text-muted-foreground font-mono truncate bg-muted px-2.5 py-1.5 rounded-lg">
+                amrita-connect.edu/people/{user.id}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCopyProfileLink}
+                className="w-full text-xs font-bold justify-center"
+              >
+                {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                {copiedLink ? 'Link Copied!' : 'Copy Public Link'}
+              </Button>
+            </div>
+
+            {/* Amrita Campus Directory Card */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Campus Directory</h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-border/60">
+                  <span className="text-muted-foreground">Primary Campus</span>
+                  <span className="font-bold text-foreground">{user.campus}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/60">
+                  <span className="text-muted-foreground">Department</span>
+                  <span className="font-bold text-foreground">{user.department}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-muted-foreground">Member Status</span>
+                  <span className="font-bold text-emerald-500">Verified Member</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Account & Security */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
+              <button
+                type="button"
+                data-testid="button-profile-logout"
+                onClick={handleLogout}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 px-4 py-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors active:scale-95"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign out of account</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </form>
-  </>;
+      )}
+
+      {/* Modals */}
+      {showCoverModal && (
+        <CoverPhotoDialog
+          currentCover={coverUrl}
+          onSave={handleSaveCover}
+          onClose={() => setShowCoverModal(false)}
+        />
+      )}
+
+      {showAvatarModal && (
+        <AvatarPhotoDialog
+          currentAvatar={user.avatarUrl}
+          onSave={handleSaveAvatar}
+          onClose={() => setShowAvatarModal(false)}
+          isPending={update.isPending}
+        />
+      )}
+
+      {showEditProfileModal && (
+        <EditProfileModal
+          user={user}
+          onClose={() => setShowEditProfileModal(false)}
+          onSave={handleSaveProfileForm}
+          isPending={update.isPending}
+        />
+      )}
+
+      {/* My Connections Tab */}
+      {activeTab === 'connections' && (
+        <div className="space-y-6 animate-rise">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                Your Network ({connData?.totalConnected ?? 0})
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                People you are connected with across all 7 Amrita campuses.
+              </p>
+            </div>
+
+            <label className="relative block w-full sm:w-72">
+              <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={connSearch}
+                onChange={(e) => setConnSearch(e.target.value)}
+                placeholder="Filter by name, department, campus..."
+                className="w-full rounded-xl border border-input bg-card py-2 pl-9 pr-3 text-xs outline-none focus:border-orange-500 shadow-sm"
+              />
+            </label>
+          </div>
+
+          {connLoading ? (
+            <LoadingState rows={4} />
+          ) : connError ? (
+            <ErrorState onRetry={() => refetchConn()} />
+          ) : (connData?.connected ?? []).length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-orange-500/30 bg-gradient-to-b from-card/80 to-orange-50/20 dark:to-orange-950/10 p-8 sm:p-12 text-center shadow-sm animate-rise">
+              <div className="relative mx-auto h-16 w-16 mb-4 flex items-center justify-center">
+                <div className="grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/15 text-orange-600 dark:text-orange-400 font-black shadow-inner">
+                  <Users className="h-7 w-7" />
+                </div>
+              </div>
+
+              <h3 className="text-xl font-bold text-foreground">
+                Your Amrita network starts here.
+              </h3>
+              <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                You have 0 active connections yet. Connect with classmates in your department, alumni mentors, and research collaborators!
+              </p>
+
+              <div className="mt-6 flex justify-center">
+                <Button onClick={() => setLocation('/feed?tab=discover')} className="rounded-xl px-5 py-2.5 text-xs font-bold shadow-md">
+                  <Sparkles className="h-4 w-4" /> Discover Members
+                </Button>
+              </div>
+            </div>
+          ) : (
+            (() => {
+              const filtered = (connData?.connected ?? []).filter((item) => {
+                if (!connSearch.trim()) return true;
+                const q = connSearch.toLowerCase();
+                return (
+                  item.user?.fullName?.toLowerCase().includes(q) ||
+                  item.user?.department?.toLowerCase().includes(q) ||
+                  item.user?.campus?.toLowerCase().includes(q) ||
+                  item.user?.skills?.some((s) => s.toLowerCase().includes(q))
+                );
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
+                    <Search className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <h3 className="text-sm font-bold text-foreground">No matching connections</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Try searching with a different name or department.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filtered.map(({ id, user, connectedAt }) => (
+                    <div
+                      key={id}
+                      className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <Avatar user={user} size="md" />
+                          <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
+                            {roleLabels[user.role] ?? user.role}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/people/${user.id}`}
+                          className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors"
+                        >
+                          {user.fullName}
+                        </Link>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                          {user.headline || `${user.department} · Amrita ${user.campus}`}
+                        </p>
+                        <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span>Connected {relative(connectedAt || '')}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/messages/${user.id}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm active:scale-95 transition-all"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" /> Message
+                          </Link>
+                          <Link
+                            href={`/people/${user.id}`}
+                            className="text-xs font-bold text-muted-foreground hover:text-foreground py-1.5 px-2"
+                          >
+                            Profile
+                          </Link>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remove connection with ${user.fullName}?`)) {
+                              removeConnectionMutation.mutate(id);
+                            }
+                          }}
+                          className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()
+          )}
+        </div>
+      )}
+
+      {/* My Posts & Saved Posts Tab Views */}
+      {(activeTab === 'my_posts' || activeTab === 'saved') && (
+        <div className="space-y-4 max-w-3xl">
+          {postsLoading ? (
+            <LoadingState rows={4} />
+          ) : postsError ? (
+            <ErrorState onRetry={() => refetchPosts()} />
+          ) : posts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
+                {activeTab === 'saved' ? <Bookmark className="h-7 w-7" /> : <Rss className="h-7 w-7" />}
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-foreground">
+                {activeTab === 'saved' ? 'No saved posts' : 'No posts published yet'}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {activeTab === 'saved'
+                  ? 'Posts you bookmark in the community feed will appear here for quick access.'
+                  : 'Share your blogs, project updates, achievements, or interview experiences in the Community Feed!'}
+              </p>
+              {activeTab === 'my_posts' && (
+                <Button onClick={() => setLocation('/feed')} className="mt-5 text-xs font-bold">
+                  Go to Feed & Post
+                </Button>
+              )}
+            </div>
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onEdit={(p) => setEditingPost(p)}
+                onRefresh={() => {
+                  queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+                  queryClient.invalidateQueries({ queryKey: ['posts'] });
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <EditPostDialog
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+            queryClient.invalidateQueries({ queryKey: ['posts'] });
+            setEditingPost(null);
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
 function AdminPage() {
   const { data: user, isLoading: userLoading } = useGetCurrentUser();
   const { data, isLoading, isError, refetch } = useGetAdminSummary({ query: { queryKey: getGetAdminSummaryQueryKey(), enabled: user?.role === 'admin' } });
   if (userLoading || isLoading) return <LoadingState rows={4} />;
-  if (!user || user.role !== 'admin') return <EmptyState icon={ShieldCheck} title="This workspace is restricted" detail="Admin console access is limited to platform administrators." action={<Link href="/dashboard" className="text-sm font-bold text-accent">Return to your dashboard</Link>} />;
+  if (!user || user.role !== 'admin') return <EmptyState icon={ShieldCheck} title="This workspace is restricted" detail="Admin console access is limited to platform administrators." action={<Link href="/feed" className="text-sm font-bold text-accent">Return to Feed</Link>} />;
   if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
 
   return <>
@@ -11522,7 +15361,7 @@ function AdminPage() {
     </div>
     <div className="mt-8 grid gap-6 lg:grid-cols-2">
       <section className="surface rounded-xl border border-border p-5 sm:p-6"><SectionHeader eyebrow="Next operational views" title="Keep building the trust layer" /><div className="mt-5 space-y-3">{[['Verification queue', 'Review official identity signals and keep member badges meaningful.'], ['Reports & moderation', 'Give members a clear, accountable path to report concerns.'], ['Engagement analytics', 'Understand which campuses, roles, and pathways are finding value.']].map(([title, detail]) => <div key={title} className="flex gap-3 rounded-lg border border-border bg-card p-4"><div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-accent"><ShieldCheck className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">{title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div></div>)}</div></section>
-      <section className="surface rounded-xl border border-border p-5 sm:p-6"><SectionHeader eyebrow="Quick access" title="Review the public network" /><div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">{[['People', '/people', Users], ['Opportunities', '/opportunities', BriefcaseBusiness], ['Events', '/events', CalendarDays]].map(([label, href, Icon]) => <Link key={label as string} href={href as string} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"><span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-accent"><Icon className="h-4 w-4" /></span><span className="text-sm font-bold text-foreground">{label as string}</span><ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" /></Link>)}</div></section>
+      <section className="surface rounded-xl border border-border p-5 sm:p-6"><SectionHeader eyebrow="Quick access" title="Review the public network" /><div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">{[['Feed', '/feed', Rss], ['Opportunities', '/opportunities', BriefcaseBusiness], ['Events', '/events', CalendarDays]].map(([label, href, Icon]) => <Link key={label as string} href={href as string} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"><span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-accent"><Icon className="h-4 w-4" /></span><span className="text-sm font-bold text-foreground">{label as string}</span><ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" /></Link>)}</div></section>
     </div>
   </>;
 }
@@ -11554,10 +15393,10 @@ function Router() {
         <Route path="/register" component={RegisterPage} />
         <Route path="/profile/:slug" component={SeniorProfilePage} />
         <Route path="/seniors/:slug" component={SeniorProfilePage} />
-        <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
-        <Route path="/feed"><ProtectedRoute><PeoplePage initialTab="feed" /></ProtectedRoute></Route>
-        <Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route>
-        <Route path="/messages"><ProtectedRoute><PeoplePage initialTab="messages" /></ProtectedRoute></Route>
+        <Route path="/dashboard"><ProtectedRoute><FeedPage /></ProtectedRoute></Route>
+        <Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route>
+        <Route path="/connections"><ProtectedRoute><ProfilePage initialTab="connections" /></ProtectedRoute></Route>
+        <Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route>
         <Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route>
         <Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route>
         <Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route>
@@ -11565,15 +15404,16 @@ function Router() {
         <Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route>
         <Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route>
         <Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route>
+        <Route path="/blogs"><ProtectedRoute><BlogsPage /></ProtectedRoute></Route>
         <Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route>
         <Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route>
-        <Route path="/people"><ProtectedRoute><PeoplePage initialTab="feed" /></ProtectedRoute></Route>
+        <Route path="/people"><ProtectedRoute><FeedPage initialTab="discover" /></ProtectedRoute></Route>
         <Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route>
         <Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route>
         <Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route>
         <Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route>
         <Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route>
-        <Route path="/notifications"><ProtectedRoute><PeoplePage initialTab="notifications" /></ProtectedRoute></Route>
+        <Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route>
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
