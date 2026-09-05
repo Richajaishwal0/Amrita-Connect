@@ -38,15 +38,54 @@ import {
   ResearchProjectModel,
   SavedOpportunityModel,
   UserModel,
+  connectDatabase,
 } from "@workspace/db";
-
-
-
-
 
 import { issueToken, requireAuth, requireRole } from "../middleware/auth";
 
 const router: IRouter = Router();
+
+// Auto-purge hardcoded dummy records so everything is fresh and only user-created content appears
+let hasPurgedDummyData = false;
+async function purgeDummyRecords() {
+  if (hasPurgedDummyData) return;
+  try {
+    await connectDatabase();
+      // Purge all previous user logins / test accounts except platform administrator
+      await UserModel.deleteMany({ email: { $ne: "admin@amrita.edu" } });
+      await Promise.all([
+        PostModel.deleteMany({}),
+        ProjectShowcaseModel.deleteMany({}),
+        ResearchProjectModel.deleteMany({}),
+        OpportunityModel.deleteMany({}),
+        EventModel.deleteMany({}),
+        CollaborationModel.deleteMany({}),
+        InterviewExperienceModel.deleteMany({}),
+        HelpRequestModel.deleteMany({}),
+        CampusBuddyHostModel.deleteMany({}),
+        CampusBuddyRequestModel.deleteMany({}),
+        MessageModel.deleteMany({}),
+        ConnectionModel.deleteMany({}),
+      ]);
+      hasPurgedDummyData = true;
+      console.log("Successfully purged all dummy posts, mock profiles, and initial sample records.");
+    } catch (err) {
+      console.error("Auto-purge error:", err);
+    }
+}
+
+router.use(async (_req, _res, next) => {
+  if (!hasPurgedDummyData) {
+    await purgeDummyRecords();
+  }
+  next();
+});
+
+router.all("/clean-database", async (_req, res) => {
+  hasPurgedDummyData = false;
+  await purgeDummyRecords();
+  res.json({ success: true, message: "All hardcoded profiles, research, showcase, and mock records have been deleted." });
+});
 
 function serializeUser(user: any, includeEmail = false) {
   if (!user) return null;
@@ -157,6 +196,36 @@ router.post("/auth/login", async (req, res, next) => {
   }
 });
 
+router.post("/auth/reset-password", async (req, res, next) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      res.status(400).json({ success: false, message: "Email and new password are required." });
+      return;
+    }
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      res.status(400).json({ success: false, message: "New password must be at least 8 characters long." });
+      return;
+    }
+    const user = await UserModel.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user) {
+      res.status(404).json({ success: false, message: "No account found with this email address. Please check and try again." });
+      return;
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password has been successfully reset.",
+      token: issueToken(user._id, user.role),
+      user: serializeUser(user, true),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/auth/me", requireAuth, async (req, res, next) => {
   try {
     const user = await UserModel.findById(getUserId(req));
@@ -184,10 +253,100 @@ router.patch("/users/me", requireAuth, async (req, res, next) => {
   }
 });
 
+// User Self-Account Deletion (Full Cascade Delete)
+router.delete(["/users/me", "/auth/me"], requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = new mongoose.Types.ObjectId(userId);
+
+    // 1. Delete user account
+    await UserModel.findByIdAndDelete(userId);
+
+    // 2. Cascade delete all user created resources and references
+    await Promise.all([
+      PostModel.deleteMany({ authorId: userObjId }),
+      PostModel.updateMany({}, {
+        $pull: {
+          comments: { userId: userObjId },
+          likes: userObjId,
+          upvotes: userObjId,
+          savedBy: userObjId,
+        },
+      }),
+      ResearchProjectModel.deleteMany({ leadResearcherId: userObjId }),
+      ResearchProjectModel.updateMany({}, {
+        $pull: {
+          applications: { applicantId: userObjId },
+          bookmarks: userObjId,
+        },
+      }),
+      ProjectShowcaseModel.deleteMany({ authorId: userObjId }),
+      ProjectShowcaseModel.updateMany({}, {
+        $pull: {
+          upvotes: userObjId,
+          bookmarks: userObjId,
+        },
+      }),
+      OpportunityModel.deleteMany({ postedBy: userObjId }),
+      SavedOpportunityModel.deleteMany({ userId: userObjId }),
+      EventModel.deleteMany({ createdBy: userObjId }),
+      EventRegistrationModel.deleteMany({ userId: userObjId }),
+      CollaborationModel.deleteMany({ creatorId: userObjId }),
+      CollaborationModel.updateMany({}, {
+        $pull: {
+          applications: { applicantId: userObjId },
+          bookmarks: userObjId,
+        },
+      }),
+      InterviewExperienceModel.deleteMany({ authorId: userObjId }),
+      InterviewExperienceModel.updateMany({}, {
+        $pull: {
+          upvotes: userObjId,
+          bookmarks: userObjId,
+        },
+      }),
+      HelpRequestModel.deleteMany({ authorId: userObjId }),
+      HelpRequestModel.updateMany({}, {
+        $pull: {
+          replies: { authorId: userObjId },
+          upvotes: userObjId,
+        },
+      }),
+      CampusBuddyHostModel.deleteMany({ userId: userObjId }),
+      CampusBuddyRequestModel.deleteMany({
+        $or: [{ requesterId: userObjId }, { hostId: userObjId }],
+      }),
+      MentorshipRequestModel.deleteMany({
+        $or: [{ requesterId: userObjId }, { mentorId: userObjId }],
+      }),
+      ConnectionModel.deleteMany({
+        $or: [{ requesterId: userObjId }, { recipientId: userObjId }],
+      }),
+      MessageModel.deleteMany({
+        $or: [{ senderId: userObjId }, { recipientId: userObjId }],
+      }),
+      NotificationModel.deleteMany({ userId: userObjId }),
+    ]);
+
+    res.json({
+      success: true,
+      message: "Your account and all associated data have been permanently deleted.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/users", requireAuth, async (req, res, next) => {
   try {
+    const currentUserId = getUserId(req);
+    const currentUserObjId = toObjectId(currentUserId);
     const query = parseListParams(ListUsersQueryParams, req.query);
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      _id: { $ne: currentUserObjId },
+      role: { $ne: "admin" },
+      email: { $ne: "admin@amrita.edu" },
+    };
 
     if (query.search) {
       const searchRegex = new RegExp(query.search, "i");
@@ -200,7 +359,7 @@ router.get("/users", requireAuth, async (req, res, next) => {
         { department: searchRegex },
       ];
     }
-    if (query.role) filter.role = query.role;
+    if (query.role && query.role !== "admin") filter.role = query.role;
     if (query.campus) filter.campus = query.campus;
     if (query.department) filter.department = query.department;
 
@@ -258,14 +417,14 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       connectionsCount,
       pendingConnectionRequests,
     ] = await Promise.all([
-      UserModel.countDocuments(),
+      UserModel.countDocuments({ _id: { $ne: userObjId }, role: { $ne: "admin" }, email: { $ne: "admin@amrita.edu" } }),
       MentorshipRequestModel.countDocuments({ requesterId: userObjId, status: "pending" }),
       EventModel.countDocuments(),
       OpportunityModel.countDocuments(),
       NotificationModel.countDocuments({ userId: userObjId, read: false }),
       SavedOpportunityModel.countDocuments({ userId: userObjId }),
       EventRegistrationModel.find({ userId: userObjId }).select("eventId").lean(),
-      UserModel.find({ verified: true }).sort({ createdAt: -1 }).limit(3).lean(),
+      UserModel.find({ verified: true, _id: { $ne: userObjId }, role: { $ne: "admin" }, email: { $ne: "admin@amrita.edu" } }).sort({ createdAt: -1 }).limit(3).lean(),
       EventModel.find().sort({ date: 1 }).limit(3).lean(),
       OpportunityModel.find().sort({ deadline: 1 }).limit(3).lean(),
       SavedOpportunityModel.find({ userId: userObjId }).select("opportunityId").lean(),
@@ -363,8 +522,8 @@ router.post("/mentorship/requests", requireAuth, async (req, res, next) => {
     await NotificationModel.create({
       userId: mentor._id,
       type: "mentorship_request",
-      title: "New mentorship request",
-      message: `${requester?.fullName ?? "A member"} would value your guidance.`,
+      title: "New Mentorship Request",
+      message: `${requester?.fullName ?? "A member"} requested your mentorship on "${input.topic || "General Guidance"}".`,
     });
 
     res.status(201).json({
@@ -399,12 +558,30 @@ router.patch("/mentorship/requests/:id/status", requireAuth, async (req, res, ne
       UserModel.findById(existing.requesterId),
     ]);
 
+    const isAccepted = status === "accepted";
+
     await NotificationModel.create({
       userId: existing.requesterId,
-      type: "mentorship_status",
-      title: `Mentorship request ${status}`,
-      message: `${mentor?.fullName ?? "Your mentor"} ${status} your request.`,
+      type: isAccepted ? "mentorship_accepted" : "mentorship_status",
+      title: isAccepted ? "🎉 Mentorship Request Accepted!" : "Mentorship Request Update",
+      message: isAccepted
+        ? `${mentor?.fullName ?? "Your mentor"} accepted your mentorship request on "${existing.topic || "Guidance"}"! Check your Direct Messages.`
+        : `${mentor?.fullName ?? "The mentor"} was unable to take on mentorship requests at this time.`,
     });
+
+    if (isAccepted && requester && mentor) {
+      // Automatically send a welcome Direct Message from mentor to mentee
+      try {
+        await MessageModel.create({
+          senderId: mentor._id,
+          recipientId: requester._id,
+          content: `🎉 Hi ${requester.fullName}! I have accepted your mentorship request on "${existing.topic || "Guidance"}". Feel free to share your current goals, resume, or any questions you would like to discuss!`,
+          read: false,
+        });
+      } catch {
+        // non-blocking
+      }
+    }
 
     res.json({
       id: String(existing._id),
@@ -459,13 +636,13 @@ router.get("/collaborations", requireAuth, async (req, res, next) => {
 
       const applications = isCreator
         ? (collab.applications || []).map((a: any) => ({
-            id: String(a._id),
-            user: serializeUser(a.userId),
-            role: a.role,
-            pitch: a.pitch,
-            status: a.status,
-            createdAt: a.createdAt,
-          }))
+          id: String(a._id),
+          user: serializeUser(a.userId),
+          role: a.role,
+          pitch: a.pitch,
+          status: a.status,
+          createdAt: a.createdAt,
+        }))
         : undefined;
 
       const isMember = isCreator || members.some((m: any) => String(m.user?.id) === userId);
@@ -487,12 +664,12 @@ router.get("/collaborations", requireAuth, async (req, res, next) => {
         isMember,
         myApplication: myApp
           ? {
-              id: String(myApp._id),
-              role: myApp.role,
-              pitch: myApp.pitch,
-              status: myApp.status,
-              createdAt: myApp.createdAt,
-            }
+            id: String(myApp._id),
+            role: myApp.role,
+            pitch: myApp.pitch,
+            status: myApp.status,
+            createdAt: myApp.createdAt,
+          }
           : null,
         applications,
         pendingApplicantsCount: (collab.applications || []).filter((a: any) => a.status === "pending").length,
@@ -538,13 +715,13 @@ router.get("/collaborations/:id", requireAuth, async (req, res, next) => {
 
     const applications = isCreator
       ? (collab.applications || []).map((a: any) => ({
-          id: String(a._id),
-          user: serializeUser(a.userId),
-          role: a.role,
-          pitch: a.pitch,
-          status: a.status,
-          createdAt: a.createdAt,
-        }))
+        id: String(a._id),
+        user: serializeUser(a.userId),
+        role: a.role,
+        pitch: a.pitch,
+        status: a.status,
+        createdAt: a.createdAt,
+      }))
       : undefined;
 
     const isMember = isCreator || members.some((m: any) => String(m.user?.id) === userId);
@@ -566,12 +743,12 @@ router.get("/collaborations/:id", requireAuth, async (req, res, next) => {
       isMember,
       myApplication: myApp
         ? {
-            id: String(myApp._id),
-            role: myApp.role,
-            pitch: myApp.pitch,
-            status: myApp.status,
-            createdAt: myApp.createdAt,
-          }
+          id: String(myApp._id),
+          role: myApp.role,
+          pitch: myApp.pitch,
+          status: myApp.status,
+          createdAt: myApp.createdAt,
+        }
         : null,
       applications,
       pendingApplicantsCount: (collab.applications || []).filter((a: any) => a.status === "pending").length,
@@ -591,8 +768,8 @@ router.post("/collaborations", requireAuth, async (req, res, next) => {
     const rolesNeeded = Array.isArray(req.body.rolesNeeded)
       ? req.body.rolesNeeded
       : typeof req.body.rolesNeeded === "string"
-      ? req.body.rolesNeeded.split(",").map((r: string) => r.trim()).filter(Boolean)
-      : [];
+        ? req.body.rolesNeeded.split(",").map((r: string) => r.trim()).filter(Boolean)
+        : [];
 
     const collaboration = await CollaborationModel.create({
       creatorId: userObjId,
@@ -872,6 +1049,33 @@ router.get("/opportunities", requireAuth, async (req, res, next) => {
   }
 });
 
+router.post("/opportunities", requireAuth, async (req, res, next) => {
+  try {
+    const { title, description, category, organization, requiredSkills, eligibility, deadline, applicationUrl } = req.body;
+    if (!title || !description || !category || !organization || !deadline) {
+      res.status(400).json({ success: false, message: "Missing required fields" });
+      return;
+    }
+    const created = await OpportunityModel.create({
+      title,
+      description,
+      category,
+      organization,
+      requiredSkills: Array.isArray(requiredSkills) ? requiredSkills : (requiredSkills ? String(requiredSkills).split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+      eligibility: eligibility || "Open to all Amrita students and alumni",
+      deadline,
+      applicationUrl: applicationUrl || "https://www.amrita.edu",
+    });
+    res.status(201).json({
+      ...created.toObject(),
+      id: String(created._id),
+      saved: false,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/opportunities/:id/save", requireAuth, async (req, res, next) => {
   try {
     const { id } = SaveOpportunityParams.parse(req.params);
@@ -898,6 +1102,34 @@ router.delete("/opportunities/:id/save", requireAuth, async (req, res, next) => 
     const userId = toObjectId(getUserId(req));
     await SavedOpportunityModel.deleteOne({ userId, opportunityId: toObjectId(id) });
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/events", requireAuth, async (req, res, next) => {
+  try {
+    const { title, description, date, campus, venue, organizer, registrationUrl, capacity } = req.body;
+    if (!title || !description || !date || !campus || !venue || !organizer) {
+      res.status(400).json({ success: false, message: "Missing required fields" });
+      return;
+    }
+    const created = await EventModel.create({
+      title,
+      description,
+      date: new Date(date),
+      campus,
+      venue,
+      organizer,
+      registrationUrl: registrationUrl || null,
+      capacity: capacity ? Number(capacity) : null,
+    });
+    res.status(201).json({
+      ...created.toObject(),
+      id: String(created._id),
+      date: new Date(created.date).toISOString(),
+      registered: false,
+    });
   } catch (error) {
     next(error);
   }
@@ -959,6 +1191,15 @@ router.post("/events/:id/register", requireAuth, async (req, res, next) => {
         return;
       }
     }
+    if (!existing) {
+      await NotificationModel.create({
+        userId,
+        type: "event_registered",
+        title: "🎟️ Event Registration Confirmed",
+        message: `You are confirmed for "${event.title}" on ${new Date(event.date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} at ${event.venue || event.campus}!`,
+      });
+    }
+
     await EventRegistrationModel.updateOne({ userId, eventId }, { userId, eventId }, { upsert: true });
     res.json({ eventId: String(id), registered: true });
   } catch (error) {
@@ -1050,8 +1291,10 @@ router.get("/posts", requireAuth, async (req, res, next) => {
       PostModel.countDocuments(filter),
     ]);
 
+    const validRows = rows.filter((post: any) => post.authorId);
+
     res.json({
-      items: rows.map((post) => serializePost(post, userId)),
+      items: validRows.map((post) => serializePost(post, userId)),
       page,
       pageSize,
       total,
@@ -1614,6 +1857,8 @@ router.get("/connections/suggestions", requireAuth, async (req, res, next) => {
 
     const candidates = await UserModel.find({
       _id: { $nin: Array.from(excludedUserIds).map((id) => toObjectId(id)) },
+      role: { $ne: "admin" },
+      email: { $ne: "admin@amrita.edu" },
       status: "active",
     })
       .limit(60)
@@ -1865,13 +2110,15 @@ router.get("/matchmaker/find", requireAuth, async (req, res, next) => {
 
     const requestedSkills = requestedSkillsQuery
       ? requestedSkillsQuery
-          .split(",")
-          .map((s) => s.trim().toLowerCase())
-          .filter(Boolean)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
       : [];
 
     const filter: Record<string, any> = {
       _id: { $ne: currentUser._id },
+      role: { $ne: "admin" },
+      email: { $ne: "admin@amrita.edu" },
       status: "active",
     };
 
@@ -2209,18 +2456,18 @@ router.post("/interviews", requireAuth, async (req, res, next) => {
 
     const formattedRounds = Array.isArray(rounds)
       ? rounds.map((r: any, idx: number) => ({
-          roundNumber: r.roundNumber || idx + 1,
-          roundName: r.roundName || `Round ${idx + 1}`,
-          description: r.description || "",
-          durationMinutes: Number(r.durationMinutes) || 45,
-        }))
+        roundNumber: r.roundNumber || idx + 1,
+        roundName: r.roundName || `Round ${idx + 1}`,
+        description: r.description || "",
+        durationMinutes: Number(r.durationMinutes) || 45,
+      }))
       : [];
 
     const formattedTopics = Array.isArray(keyTopics)
       ? keyTopics
       : typeof keyTopics === "string"
-      ? keyTopics.split(",").map((t: string) => t.trim()).filter(Boolean)
-      : [];
+        ? keyTopics.split(",").map((t: string) => t.trim()).filter(Boolean)
+        : [];
 
     const newInterview = await InterviewExperienceModel.create({
       authorId: userObjId,
@@ -2639,8 +2886,8 @@ router.post("/help-requests", requireAuth, async (req, res, next) => {
     const formattedTags = Array.isArray(tags)
       ? tags
       : typeof tags === "string"
-      ? tags.split(",").map((t: string) => t.trim()).filter(Boolean)
-      : [];
+        ? tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+        : [];
 
     const newRequest = await HelpRequestModel.create({
       authorId: userObjId,
@@ -3074,14 +3321,14 @@ router.post("/campus-buddies/register-host", requireAuth, async (req, res, next)
     const formattedServices = Array.isArray(servicesOffered)
       ? servicesOffered
       : typeof servicesOffered === "string"
-      ? (servicesOffered as string).split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
+        ? (servicesOffered as string).split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
 
     const formattedLanguages = Array.isArray(languages)
       ? languages
       : typeof languages === "string"
-      ? (languages as string).split(",").map((l) => l.trim()).filter(Boolean)
-      : ["English"];
+        ? (languages as string).split(",").map((l) => l.trim()).filter(Boolean)
+        : ["English"];
 
     const host = await CampusBuddyHostModel.findOneAndUpdate(
       { userId: userObjId },
@@ -3348,11 +3595,11 @@ router.get("/research-projects", requireAuth, async (req, res, next) => {
         applicationsCount: (p.applications || []).length,
         myApplication: myApp
           ? {
-              id: String(myApp._id),
-              roleAppliedFor: myApp.roleAppliedFor,
-              status: myApp.status,
-              appliedAt: myApp.appliedAt,
-            }
+            id: String(myApp._id),
+            roleAppliedFor: myApp.roleAppliedFor,
+            status: myApp.status,
+            appliedAt: myApp.appliedAt,
+          }
           : null,
         isBookmarked: bookmarks.includes(userId),
         isPI,
@@ -3458,8 +3705,8 @@ router.post("/research-projects", requireAuth, async (req, res, next) => {
     const formattedObjectives = Array.isArray(objectives)
       ? objectives
       : typeof objectives === "string"
-      ? (objectives as string).split("\n").map((o) => o.trim()).filter(Boolean)
-      : [];
+        ? (objectives as string).split("\n").map((o) => o.trim()).filter(Boolean)
+        : [];
 
     const project = await ResearchProjectModel.create({
       principalInvestigatorId: userObjId,
@@ -3542,8 +3789,8 @@ router.post("/research-projects/:id/apply", requireAuth, async (req, res, next) 
     const formattedSkills = Array.isArray(relevantSkills)
       ? relevantSkills
       : typeof relevantSkills === "string"
-      ? (relevantSkills as string).split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
+        ? (relevantSkills as string).split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
 
     project.applications.push({
       applicantId: userObjId,
@@ -3906,8 +4153,8 @@ router.post("/showcase", requireAuth, async (req, res, next) => {
     const formattedTech = Array.isArray(techStack)
       ? techStack
       : typeof techStack === "string"
-      ? (techStack as string).split(",").map((t) => t.trim()).filter(Boolean)
-      : [];
+        ? (techStack as string).split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
 
     const memberObjectIds = Array.isArray(teamMemberIds)
       ? teamMemberIds.map((id) => toObjectId(id))

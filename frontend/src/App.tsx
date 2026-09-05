@@ -145,8 +145,34 @@ const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
 
 const roleLabels: Record<string, string> = { student: 'Student', alumni: 'Alumni', faculty: 'Faculty', researcher: 'Researcher', admin: 'Staff' };
-const campuses = ['Amaravati', 'Bengaluru', 'Chennai', 'Coimbatore', 'Kochi', 'Mysuru'];
-const departments = ['Computer Science & Engineering', 'Electronics & Communication', 'Biotechnology', 'Management', 'Medicine', 'Research'];
+const campuses = ['Amaravati', 'Amritapuri', 'Bengaluru', 'Chennai', 'Coimbatore', 'Faridabad (NCR)', 'Kochi', 'Mysuru'];
+const departments = [
+  'Computer Science & Engineering',
+  'Computer Science & Engineering (Artificial Intelligence)',
+  'Computer Science & Engineering (Cyber Security)',
+  'Artificial Intelligence & Data Science',
+  'Artificial Intelligence & Robotics',
+  'Electronics & Communication Engineering',
+  'Electrical & Computer Engineering',
+  'Electrical & Electronics Engineering',
+  'Mechanical Engineering',
+  'Aerospace Engineering',
+  'Automation & Robotics Engineering',
+  'Civil Engineering',
+  'Chemical Engineering',
+  'Biotechnology & Biomedical Engineering',
+  'Data Science & Computing',
+  'School of Business / Management',
+  'School of Medicine & Health Sciences',
+  'School of Pharmacy',
+  'School of Dentistry',
+  'School of Nursing',
+  'Mass Communication & Media',
+  'Sciences & Humanities',
+  'Center for Cyber Security (bi0s)',
+  'Wireless Networks & Applications (AWNA)',
+  'Interdisciplinary Research & Ph.D.',
+];
 const dashboardCopy: Record<string, { eyebrow: string; title: string; detail: string; action: string; actionHref: string }> = {
   student: { eyebrow: 'Student workspace', title: 'Your campus, in motion.', detail: 'A quick read on the people and possibilities worth your attention.', action: 'Explore people', actionHref: '/people' },
   alumni: { eyebrow: 'Alumni workspace', title: 'Keep the next chapter connected.', detail: 'Reconnect with your university and make your experience useful to the people coming after you.', action: 'Meet the community', actionHref: '/people' },
@@ -800,7 +826,7 @@ function UniversityLiveMesh() {
 
         {/* Clean Interactive Map Visualization Container */}
         <div className="mt-6 relative rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 shadow-xl backdrop-blur-xl overflow-hidden min-h-[620px] sm:min-h-[720px] p-6 sm:p-12 flex items-center justify-center">
-          
+
           {/* Detailed India Map Silhouette with Regions & Coastlines */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
             <svg viewBox="0 0 1000 900" className="h-[96%] w-auto max-w-none text-indigo-500/20 dark:text-indigo-400/15">
@@ -1012,8 +1038,8 @@ function UniversityLiveMesh() {
                       isSelected
                         ? 'ring-2 ring-orange-500 shadow-orange-500/25 scale-105'
                         : isNeighbor
-                        ? 'ring-1 ring-orange-400/50 hover:border-accent'
-                        : 'hover:border-accent'
+                          ? 'ring-1 ring-orange-400/50 hover:border-accent'
+                          : 'hover:border-accent'
                     )}
                   >
                     {/* Colored Teardrop / Circle Icon Badge */}
@@ -1095,446 +1121,7 @@ function UniversityLiveMesh() {
   );
 }
 
-/* 3. Interactive Split-Screen Capability Explorer: Enhanced Dual-Theme & Concentric Icons */
-function InteractiveFeatureExplorer() {
-  const [activeTab, setActiveTab] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const features = [
-    {
-      id: 'directory',
-      num: '01',
-      title: 'Multi-Campus Directory',
-      summary: 'Search by skills, publications, batch year, and campus centers in seconds.',
-      icon: Users,
-      color: 'amber',
-      accentColor: '#f97316',
-      activeBorder: 'border-amber-500 dark:border-amber-500/80 bg-gradient-to-r from-amber-50/90 via-amber-50/40 to-white/80 dark:from-amber-500/15 dark:via-amber-500/5 dark:to-transparent ring-1 ring-amber-500/30 dark:ring-amber-500/40',
-      iconOuterActive: 'bg-amber-500/15 ring-2 ring-amber-500/50 dark:ring-amber-400/60 shadow-md shadow-amber-500/10',
-      iconInnerActive: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40',
-      searchPlaceholder: 'e.g. PyTorch, Biomedical Imaging, Class of 2023',
-      popular: ['Machine Learning', '2023 Batch', 'Amrita Bengaluru', 'Researcher'],
-      eyebrow: 'FIND PEOPLE, SKILLS, OPPORTUNITIES',
-      cardsTitle: 'Quick Connections',
-      items: [
-        {
-          name: 'Dr. Deepthi K. S.',
-          role: 'AI in Healthcare',
-          subrole: 'Lab Lead',
-          campus: 'Amrita Kochi',
-          type: 'Faculty',
-          tag: 'AI • Healthcare',
-          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/faculty/deepthi-ks',
-        },
-        {
-          name: 'Meera Nair',
-          role: 'Biotech & Robotics',
-          subrole: 'Researcher',
-          campus: 'Amrita Kochi',
-          type: 'Researcher',
-          tag: 'Robotics • Biotech',
-          avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/people',
-        },
-        {
-          name: 'Sneha Iyer',
-          role: 'AI Research Scientist',
-          subrole: '@ Microsoft',
-          campus: 'Amrita Bengaluru',
-          type: 'Alumni',
-          tag: 'AI • Computer Vision',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/people',
-        },
-      ],
-    },
-    {
-      id: 'mentorship',
-      num: '02',
-      title: '1-on-1 Guidance',
-      summary: 'Request office hours and mock interviews with verified alumni.',
-      icon: MessageSquare,
-      color: 'purple',
-      accentColor: '#a855f7',
-      activeBorder: 'border-purple-500 dark:border-purple-500/80 bg-gradient-to-r from-purple-50/90 via-purple-50/40 to-white/80 dark:from-purple-500/15 dark:via-purple-500/5 dark:to-transparent ring-1 ring-purple-500/30 dark:ring-purple-500/40',
-      iconOuterActive: 'bg-purple-500/15 ring-2 ring-purple-500/50 dark:ring-purple-400/60 shadow-md shadow-purple-500/10',
-      iconInnerActive: 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/40',
-      searchPlaceholder: 'e.g. Mock Interview, Resume Review, LLD System Design',
-      popular: ['Google SWE', 'Amazon AWS', 'Research MS/PhD', 'bi0s CTF'],
-      eyebrow: 'BOOK DIRECT 1-ON-1 SESSIONS',
-      cardsTitle: 'Featured Mentors',
-      items: [
-        {
-          name: 'Nitesh Kumar',
-          role: 'Software Engineer',
-          subrole: '@ Amazon / Infosys',
-          campus: 'Amrita Bengaluru',
-          type: 'Batch of 2023',
-          tag: 'Amazon • DSA',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/profile/nitesh',
-        },
-        {
-          name: 'Richa Jaishwal',
-          role: 'Systems Engineer',
-          subrole: '@ Infosys',
-          campus: 'Amrita Bengaluru',
-          type: 'Batch of 2023',
-          tag: 'Cloud • Java',
-          avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/profile/richa',
-        },
-        {
-          name: 'Kavya R',
-          role: 'Hardware / SWE',
-          subrole: '@ Lam / ServiceNow',
-          campus: 'Amrita Coimbatore',
-          type: 'Batch of 2023',
-          tag: 'VLSI • Enterprise',
-          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/profile/kavya',
-        },
-      ],
-    },
-    {
-      id: 'projects',
-      num: '03',
-      title: 'Project Match',
-      summary: 'Find the right teammates across disciplines and build impactful projects.',
-      icon: Code,
-      color: 'blue',
-      accentColor: '#3b82f6',
-      activeBorder: 'border-blue-500 dark:border-blue-500/80 bg-gradient-to-r from-blue-50/90 via-blue-50/40 to-white/80 dark:from-blue-500/15 dark:via-blue-500/5 dark:to-transparent ring-1 ring-blue-500/30 dark:ring-blue-500/40',
-      iconOuterActive: 'bg-blue-500/15 ring-2 ring-blue-500/50 dark:ring-blue-400/60 shadow-md shadow-blue-500/10',
-      iconInnerActive: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40',
-      searchPlaceholder: 'e.g. Autonomous Drones, Robotics ROS2, Quantum ML',
-      popular: ['SIH 2024', 'IEEE Paper', 'Defense Swarms', 'Fintech'],
-      eyebrow: 'COLLABORATE ACROSS 7 CAMPUSES',
-      cardsTitle: 'Active Teams & Inquiries',
-      items: [
-        {
-          name: 'Autonomous Swarm',
-          role: 'Robotics & Vision',
-          subrole: 'Lead: Rahul V.',
-          campus: 'Amrita Coimbatore',
-          type: '3/4 Filled',
-          tag: 'ROS2 • OpenCV',
-          avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/projects',
-        },
-        {
-          name: 'Genome Classifier',
-          role: 'Healthcare AI',
-          subrole: 'Lead: Ananya S.',
-          campus: 'Amrita Kochi',
-          type: '2/3 Filled',
-          tag: 'PyTorch • Genomics',
-          avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/projects',
-        },
-        {
-          name: 'Microgrid IoT',
-          role: 'Clean Energy',
-          subrole: 'Lead: Vinay P.',
-          campus: 'Amrita Amritapuri',
-          type: '1/3 Filled',
-          tag: 'Smart Grid • IoT',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/projects',
-        },
-      ],
-    },
-    {
-      id: 'opportunities',
-      num: '04',
-      title: 'Opportunities & Grants',
-      summary: 'Discover exclusive labs, research grants, and hiring opportunities.',
-      icon: BriefcaseBusiness,
-      color: 'emerald',
-      accentColor: '#10b981',
-      activeBorder: 'border-emerald-500 dark:border-emerald-500/80 bg-gradient-to-r from-emerald-50/90 via-emerald-50/40 to-white/80 dark:from-emerald-500/15 dark:via-emerald-500/5 dark:to-transparent ring-1 ring-emerald-500/30 dark:ring-emerald-500/40',
-      iconOuterActive: 'bg-emerald-500/15 ring-2 ring-emerald-500/50 dark:ring-emerald-400/60 shadow-md shadow-emerald-500/10',
-      iconInnerActive: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40',
-      searchPlaceholder: 'e.g. DRDO Fellowship, ISRO Lab, Microsoft Research',
-      popular: ['Research Fellow', 'DRDO Lab', 'Seed Grant', 'Internships'],
-      eyebrow: 'EXCLUSIVE NOTICEBOARD & GRANTS',
-      cardsTitle: 'Verified Openings',
-      items: [
-        {
-          name: 'Coatings Fellow',
-          role: 'DRDO Composite Lab',
-          subrole: 'Stipend: ₹35k/mo',
-          campus: 'Amrita Coimbatore',
-          type: 'Apply Now',
-          tag: 'Materials • DRDO',
-          avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/opportunities',
-        },
-        {
-          name: 'Landslide IoT Grant',
-          role: 'UN Sasakawa Lab',
-          subrole: 'Funded Research Call',
-          campus: 'Amrita Amritapuri',
-          type: 'Open Call',
-          tag: 'IoT • Sensors',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/opportunities',
-        },
-        {
-          name: 'AI Diagnostics R&D',
-          role: 'AIMS Medical AI',
-          subrole: 'Fellowship Position',
-          campus: 'Amrita Kochi',
-          type: 'Open Call',
-          tag: 'Bioinformatics',
-          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          link: '/opportunities',
-        },
-      ],
-    },
-  ];
-
-  const current = features[activeTab];
-
-  return (
-    <section className="relative overflow-hidden py-20 sm:py-28 bg-slate-50/80 dark:bg-[#070b14] text-foreground dark:text-white border-t border-border/80 transition-colors">
-      {/* Ambient Lighting Orbs */}
-      <div className="absolute top-1/4 left-10 h-72 w-72 rounded-full bg-amber-500/10 dark:bg-amber-500/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-purple-500/10 dark:bg-purple-500/10 blur-[120px] pointer-events-none" />
-
-      <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
-        {/* Section Header */}
-        <div className="max-w-2xl mb-12">
-          <div className="mono inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.25em] text-[#f97316]">
-            <Sparkles className="h-4 w-4" /> PLATFORM CAPABILITIES
-          </div>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-            A Purpose-Built Engine for <span className="text-[#f97316]">Academic</span> <span className="text-[#8b5cf6]">Excellence.</span>
-          </h2>
-          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-            Powerful features to help you discover people, opportunities, and grow together.
-          </p>
-        </div>
-
-        {/* Split-Screen Main Grid */}
-        <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] items-start">
-          
-          {/* Left Vertical Timeline Selector */}
-          <div className="relative space-y-4">
-            {/* Timeline Vertical Track Line that cuts through all nodes */}
-            <div className="absolute left-[37px] top-7 bottom-7 w-[2px] bg-slate-200 dark:bg-slate-800 pointer-events-none" />
-
-            {features.map((feat, idx) => {
-              const isActive = activeTab === idx;
-              const Icon = feat.icon;
-
-              return (
-                <button
-                  key={feat.id}
-                  type="button"
-                  onClick={() => setActiveTab(idx)}
-                  className={cx(
-                    'group relative w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 text-left transition-all duration-300 active:scale-[0.99] cursor-pointer',
-                    isActive
-                      ? feat.activeBorder + ' shadow-lg'
-                      : 'border-slate-200/80 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c101c]/70 hover:bg-white dark:hover:bg-[#0c101c] hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 shadow-xs'
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Concentric Dual-Ring Icon Container */}
-                    <div
-                      className={cx(
-                        'relative z-10 grid h-14 w-14 shrink-0 place-items-center rounded-full transition-all duration-300',
-                        isActive
-                          ? feat.iconOuterActive
-                          : 'bg-slate-100 dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 group-hover:border-slate-400 dark:group-hover:border-slate-600'
-                      )}
-                    >
-                      <div
-                        className={cx(
-                          'grid h-10 w-10 place-items-center rounded-full transition-all',
-                          isActive
-                            ? feat.iconInnerActive
-                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
-                        )}
-                      >
-                        <Icon className="h-5 w-5 stroke-[1.8]" />
-                      </div>
-                    </div>
-
-                    {/* Text Details */}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="mono text-xs font-extrabold text-slate-400">{feat.num}</span>
-                        <h3 className={cx('text-base sm:text-lg font-bold transition-colors', isActive ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white')}>
-                          {feat.title}
-                        </h3>
-                      </div>
-                      <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        {feat.summary}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right Chevron Indicator */}
-                  <div
-                    style={{
-                      backgroundColor: isActive ? feat.accentColor : undefined,
-                    }}
-                    className={cx(
-                      'hidden sm:grid h-7 w-7 shrink-0 place-items-center rounded-full transition-all group-hover:translate-x-1',
-                      isActive
-                        ? 'text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-[#1e293b] text-slate-400 dark:text-slate-500'
-                    )}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right Interactive Live Engine Preview Glass Canvas: Compact & Minimal */}
-          <div className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#090d16] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_15px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl">
-            
-            {/* Top Bar Header */}
-            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
-              <span className="mono text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                <Search className="h-3 w-3" />
-                <span>{current.eyebrow}</span>
-              </span>
-              <span className="rounded-full bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/50 px-2.5 py-0.5 text-[10px] font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Engine
-              </span>
-            </div>
-
-            {/* Compact Search Bar Input */}
-            <div className="mt-3.5 flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-[#121829] p-1 shadow-inner">
-              <div className="flex items-center gap-2 flex-1 pl-2.5 text-xs text-slate-400">
-                <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                <input
-                  type="text"
-                  placeholder={current.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
-                />
-              </div>
-              <button
-                type="button"
-                className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-              >
-                Search
-              </button>
-            </div>
-
-            {/* Compact Popular Tags */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="font-semibold text-slate-400 text-[10px]">Popular:</span>
-              {current.popular.slice(0, 3).map((term, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setSearchQuery(term)}
-                  className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-600 dark:text-slate-300 hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-white transition-colors"
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
-
-            {/* Quick Connections Header */}
-            <div className="mt-4 flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                {current.cardsTitle}
-              </h4>
-              <Link href="/people" className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline">
-                View all
-              </Link>
-            </div>
-
-            {/* Compact Minimal Cards Grid */}
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {current.items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="group relative flex flex-col justify-between rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#0e1424]/90 p-3 shadow-2xs transition-all duration-200 hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 text-center"
-                >
-                  {/* Photo with Verified Pin */}
-                  <div className="relative mx-auto h-11 w-11 mb-1.5">
-                    <img
-                      src={item.avatar}
-                      alt={item.name}
-                      className="h-full w-full rounded-full object-cover ring-2 ring-purple-500/30"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        if (e.currentTarget.nextElementSibling) {
-                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
-                        }
-                      }}
-                    />
-                    <div
-                      style={{ display: 'none' }}
-                      className="h-full w-full place-items-center rounded-full bg-purple-950 text-white font-bold text-xs"
-                    >
-                      {initials(item.name)}
-                    </div>
-                    {item.verified && (
-                      <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 text-blue-500 fill-blue-500 text-white shadow-sm" />
-                    )}
-                  </div>
-
-                  {/* Name & Concise Role */}
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors truncate">
-                      {item.name}
-                    </h5>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                      {item.role}
-                    </p>
-                  </div>
-
-                  {/* Single Clean Tag Pill */}
-                  <div className="mt-1.5">
-                    <span className="inline-block rounded bg-slate-200/60 dark:bg-slate-800/80 border border-slate-300/60 dark:border-slate-700/60 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-300">
-                      {item.tag}
-                    </span>
-                  </div>
-
-                  {/* Compact Connect Action Button */}
-                  <div className="mt-2.5 pt-1.5 border-t border-slate-200/80 dark:border-slate-800/60">
-                    <Link
-                      href={item.link}
-                      className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 py-1 text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white hover:border-purple-600 shadow-2xs active:scale-95 transition-all"
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      <span>Connect</span>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /* 4. Structured 4-Step Trajectory Roadmap: Exact Reference Match */
 function TrajectoryRoadmap() {
@@ -1555,12 +1142,12 @@ function TrajectoryRoadmap() {
         <div className="relative mx-auto h-28 w-28 flex items-center justify-center my-3 group-hover:scale-105 transition-transform duration-300">
           {/* Continuous Orbiting Dashed Ring */}
           <div className="absolute inset-0 rounded-full border border-dashed border-orange-400/40 dark:border-orange-500/30 animate-spin-slow" />
-          
+
           {/* Orbiting Shimmer Sparkles */}
           <div className="absolute -top-1 right-2 h-2.5 w-2.5 rounded-full bg-orange-400/80 shadow-sm animate-pulse" />
           <div className="absolute bottom-2 left-1 h-2 w-2 rounded-full bg-amber-400/70" />
           <div className="absolute top-1/2 -left-1 h-1.5 w-1.5 rounded-full bg-orange-300" />
-          
+
           {/* 3D Glossy Shield with Smooth Floating Motion */}
           <div className="relative z-10 filter drop-shadow-[0_12px_18px_rgba(249,115,22,0.3)] animate-float">
             <svg viewBox="0 0 100 110" className="h-20 w-20 transition-transform duration-300 group-hover:scale-105">
@@ -1619,7 +1206,7 @@ function TrajectoryRoadmap() {
           <div className="absolute inset-0 rounded-full border border-dashed border-blue-400/40 dark:border-blue-500/30 animate-spin-slow-reverse" />
           <div className="absolute top-1 left-2 h-2.5 w-2.5 rounded-full bg-blue-400/80 shadow-sm animate-pulse" />
           <div className="absolute -bottom-1 left-4 h-2 w-2 rounded-full bg-sky-300/70" />
-          
+
           {/* 3D Floating Globe */}
           <div className="relative z-10 filter drop-shadow-[0_12px_18px_rgba(37,99,235,0.3)] animate-float">
             <svg viewBox="0 0 100 100" className="h-20 w-20 transition-transform duration-300 group-hover:scale-105">
@@ -1802,7 +1389,7 @@ function TrajectoryRoadmap() {
         <div className="relative mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, idx) => (
             <div key={step.num} className="relative group">
-              
+
               {/* Connector Arrow Nodes Between Cards on Desktop */}
               {idx < steps.length - 1 && (
                 <div className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 items-center justify-center">
@@ -1991,13 +1578,13 @@ function FacultySpotlight() {
       <div className="absolute top-1/3 right-1/4 h-80 w-80 rounded-full bg-orange-500/10 dark:bg-orange-500/10 blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
-        
+
         {/* Section Header Matching Exact Reference */}
         <div className="text-center max-w-3xl mx-auto">
           <div className="mono inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.25em] text-[#8b5cf6]">
             <span>✦</span> WORLD-CLASS RESEARCH & FACULTY <span>✦</span>
           </div>
-          
+
           {/* Header Accent Bar */}
           <div className="mx-auto mt-2 h-0.5 w-14 rounded-full bg-gradient-to-r from-purple-500 to-orange-400" />
 
@@ -2012,7 +1599,7 @@ function FacultySpotlight() {
 
         {/* 4 Faculty Profiles on Connected Wave Line */}
         <div className="relative mt-20">
-          
+
           {/* Desktop Connecting Curving Wave Line with Colored Nodes */}
           <div className="hidden lg:block absolute top-[76px] left-[10%] right-[10%] h-16 pointer-events-none z-0">
             <svg viewBox="0 0 1000 100" fill="none" className="w-full h-full preserve-3d" preserveAspectRatio="none">
@@ -2043,7 +1630,7 @@ function FacultySpotlight() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 relative z-10 text-center">
             {researchers.map((res) => (
               <div key={res.num} className="group relative flex flex-col items-center">
-                
+
                 {/* Number Eyebrow */}
                 <div className={cx('mono text-sm font-extrabold mb-3', res.numColor)}>
                   {res.num}
@@ -2097,7 +1684,7 @@ function FacultySpotlight() {
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white group-hover:text-[#8b5cf6] transition-colors leading-snug">
                   {res.name}
                 </h3>
-                
+
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {res.domain}
                 </p>
@@ -2124,77 +1711,91 @@ function CampusConstellationHero() {
     {
       id: 'coimbatore',
       name: 'Coimbatore',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=260&q=80',
-      initials: 'CB',
+      code: 'CBE',
+      focus: 'Aerospace, Robotics & HuT Labs',
+      icon: Rocket,
+      gradient: 'from-violet-600 via-indigo-600 to-purple-700 text-white',
       color: '#8b5cf6', // purple
-      ringClass: 'ring-purple-400/40 bg-purple-500/10',
-      badgeClass: 'text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
+      ringClass: 'ring-purple-400/50 bg-purple-500/15 shadow-purple-500/25',
+      badgeClass: 'text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 260, y2: 65, color: '#a78bfa' },
       className: 'top-1 left-1/2 -translate-x-1/2',
     },
     {
       id: 'bengaluru',
       name: 'Bengaluru',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=260&q=80',
-      initials: 'BL',
+      code: 'BLR',
+      focus: 'AI, Cloud & Startup Hub',
+      icon: Zap,
+      gradient: 'from-orange-500 via-amber-500 to-orange-600 text-white',
       color: '#f97316', // orange/yellow
-      ringClass: 'ring-orange-400/40 bg-orange-500/10',
-      badgeClass: 'text-orange-600 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
+      ringClass: 'ring-orange-400/50 bg-orange-500/15 shadow-orange-500/25',
+      badgeClass: 'text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 135, y2: 130, color: '#fb923c' },
       className: 'top-12 left-4 sm:left-8',
     },
     {
       id: 'amaravati',
       name: 'Amaravati',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=260&q=80',
-      initials: 'AM',
+      code: 'AMR',
+      focus: 'Sustainable Tech & Smart IoT',
+      icon: Lightbulb,
+      gradient: 'from-emerald-500 via-teal-600 to-emerald-700 text-white',
       color: '#10b981', // teal/green
-      ringClass: 'ring-emerald-400/40 bg-emerald-500/10',
-      badgeClass: 'text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
+      ringClass: 'ring-emerald-400/50 bg-emerald-500/15 shadow-emerald-500/25',
+      badgeClass: 'text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 105, y2: 245, color: '#34d399' },
       className: 'top-[42%] -left-2 sm:left-2',
     },
     {
       id: 'mysuru',
       name: 'Mysuru',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=260&q=80',
-      initials: 'MY',
+      code: 'MYS',
+      focus: 'Pure Sciences & Digital Media',
+      icon: BookOpen,
+      gradient: 'from-amber-500 via-orange-500 to-amber-600 text-white',
       color: '#f97316', // orange
-      ringClass: 'ring-orange-400/40 bg-orange-500/10',
-      badgeClass: 'text-orange-600 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
+      ringClass: 'ring-orange-400/50 bg-orange-500/15 shadow-orange-500/25',
+      badgeClass: 'text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 175, y2: 375, color: '#fb923c' },
       className: 'bottom-4 left-14 sm:left-18',
     },
     {
       id: 'kochi',
       name: 'Kochi',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=260&q=80',
-      initials: 'KC',
+      code: 'KOC',
+      focus: 'Health Sciences, AIMS & Biotech',
+      icon: HeartHandshake,
+      gradient: 'from-blue-600 via-cyan-600 to-sky-700 text-white',
       color: '#3b82f6', // blue
-      ringClass: 'ring-blue-400/40 bg-blue-500/10',
-      badgeClass: 'text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800 bg-card/95',
+      ringClass: 'ring-blue-400/50 bg-blue-500/15 shadow-blue-500/25',
+      badgeClass: 'text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 340, y2: 380, color: '#60a5fa' },
       className: 'bottom-1 right-24 sm:right-28',
     },
     {
       id: 'amritapuri',
       name: 'Amritapuri',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=260&q=80',
-      initials: 'AP',
+      code: 'AMP',
+      focus: 'Cybersecurity (bi0s) & FOSS',
+      icon: ShieldCheck,
+      gradient: 'from-purple-600 via-indigo-600 to-fuchsia-700 text-white',
       color: '#8b5cf6', // indigo/purple
-      ringClass: 'ring-purple-400/40 bg-purple-500/10',
-      badgeClass: 'text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
+      ringClass: 'ring-purple-400/50 bg-purple-500/15 shadow-purple-500/25',
+      badgeClass: 'text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 415, y2: 275, color: '#c084fc' },
       className: 'top-[54%] -right-1 sm:right-3',
     },
     {
       id: 'chennai',
       name: 'Chennai',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=260&q=80',
-      initials: 'CH',
+      code: 'CHN',
+      focus: 'Embedded Systems & Computing',
+      icon: Layers,
+      gradient: 'from-teal-600 via-emerald-600 to-teal-700 text-white',
       color: '#10b981', // green
-      ringClass: 'ring-emerald-400/40 bg-emerald-500/10',
-      badgeClass: 'text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
+      ringClass: 'ring-emerald-400/50 bg-emerald-500/15 shadow-emerald-500/25',
+      badgeClass: 'text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-card/95',
       line: { x1: 260, y1: 245, x2: 405, y2: 145, color: '#4ade80' },
       className: 'top-20 -right-1 sm:right-4',
     },
@@ -2217,7 +1818,7 @@ function CampusConstellationHero() {
               y2={node.line.y2}
               stroke={node.line.color}
               strokeWidth="4"
-              strokeOpacity="0.25"
+              strokeOpacity="0.3"
               strokeLinecap="round"
             />
             {/* Crisp core line */}
@@ -2228,14 +1829,14 @@ function CampusConstellationHero() {
               y2={node.line.y2}
               stroke={node.line.color}
               strokeWidth="1.8"
-              strokeOpacity="0.75"
+              strokeOpacity="0.85"
               strokeLinecap="round"
             />
             {/* Animated traveling data pulse */}
-            <circle r="3.5" fill={node.line.color} className="animate-pulse">
+            <circle r="4" fill={node.line.color} className="animate-pulse drop-shadow-[0_0_6px_currentColor]">
               <animateMotion
                 path={`M ${node.line.x1} ${node.line.y1} L ${node.line.x2} ${node.line.y2}`}
-                dur={`${2.5 + (node.id.charCodeAt(0) % 3) * 0.7}s`}
+                dur={`${2.4 + (node.id.charCodeAt(0) % 3) * 0.6}s`}
                 repeatCount="indefinite"
               />
             </circle>
@@ -2246,7 +1847,7 @@ function CampusConstellationHero() {
       {/* Center White Glowing Circular Hub */}
       <div className="relative z-10 grid place-items-center h-32 w-32 sm:h-36 sm:w-36 rounded-full bg-card border-2 border-border/90 shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-4 text-center">
         {/* Subtle pulsing background aura */}
-        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-orange-400/20 via-amber-400/20 to-orange-400/20 animate-pulse-slow -z-10" />
+        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-orange-400/25 via-amber-400/25 to-orange-400/25 animate-pulse-slow -z-10" />
 
         <div className="flex flex-col items-center justify-center">
           <svg className="h-7 w-7 sm:h-8 sm:w-8 mb-1" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2266,65 +1867,32 @@ function CampusConstellationHero() {
         </div>
       </div>
 
-      {/* 7 Radial 3D Character Avatar Nodes */}
-      {campusNodes.map((node) => (
-        <div
-          key={node.id}
-          className={cx('absolute z-10 flex flex-col items-center group transition-transform duration-300 hover:scale-105', node.className)}
-        >
-          {/* Avatar Ring */}
-          <div className={cx('relative h-14 w-14 sm:h-16 sm:w-16 rounded-full p-1 ring-2 shadow-lg transition-all', node.ringClass)}>
-            <img
-              src={node.avatar}
-              alt={node.name}
-              className="h-full w-full rounded-full object-cover shadow-inner"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                if (e.currentTarget.nextElementSibling) {
-                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'grid';
-                }
-              }}
-            />
-            <div
-              style={{ display: 'none' }}
-              className="h-full w-full place-items-center rounded-full bg-secondary text-primary font-bold text-xs"
-            >
-              {node.initials}
+      {/* 7 Campus Hub Emblems & Monogram Nodes */}
+      {campusNodes.map((node) => {
+        const Icon = node.icon;
+        return (
+          <div
+            key={node.id}
+            className={cx('absolute z-10 flex flex-col items-center group transition-transform duration-300 hover:scale-110 cursor-default', node.className)}
+          >
+            {/* Stylized Campus Emblem Disc */}
+            <div className={cx('relative h-13 w-13 sm:h-15 sm:w-15 rounded-2xl p-0.5 ring-2 shadow-xl transition-all flex items-center justify-center', node.ringClass)}>
+              <div className={cx('h-full w-full rounded-xl bg-gradient-to-br flex flex-col items-center justify-center shadow-inner relative overflow-hidden', node.gradient)}>
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Icon className="h-5 w-5 drop-shadow-sm mb-0.5" />
+                <span className="text-[9px] font-black tracking-wider uppercase opacity-95">
+                  {node.code}
+                </span>
+              </div>
             </div>
+
+            {/* Clean White Pill Campus Label */}
+            <span className={cx('mt-1.5 rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold shadow-md backdrop-blur-md whitespace-nowrap', node.badgeClass)}>
+              {node.name}
+            </span>
           </div>
-
-          {/* Clean White Pill Campus Label */}
-          <span className={cx('mt-1.5 rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold shadow-md backdrop-blur-md whitespace-nowrap', node.badgeClass)}>
-            {node.name}
-          </span>
-        </div>
-      ))}
-
-      {/* Top-Right Floating Notification Card */}
-      <div className="absolute top-1 -right-2 sm:-right-6 rounded-2xl border border-border/80 bg-card/95 p-3 sm:p-3.5 shadow-xl backdrop-blur-md flex items-center gap-3 animate-float max-w-[210px] sm:max-w-[245px] z-20">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-500 font-bold">
-          <Users className="h-4 w-4" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold text-foreground">New Connection</p>
-          <p className="text-[10px] text-muted-foreground truncate leading-snug">
-            <span className="font-semibold text-foreground">Rahul</span> (<span className="text-blue-500 font-bold">CBE</span>) & <span className="font-semibold text-foreground">Ananya</span> (<span className="text-blue-500 font-bold">BLR</span>)
-          </p>
-        </div>
-      </div>
-
-      {/* Bottom-Right Floating Notification Card */}
-      <div className="absolute -bottom-2 -right-2 sm:right-2 rounded-2xl border border-border/80 bg-card/95 p-3 sm:p-3.5 shadow-xl backdrop-blur-md flex items-center gap-3 animate-float-reverse max-w-[200px] sm:max-w-[230px] z-20">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-purple-500/15 text-purple-500 font-bold">
-          <Rocket className="h-4 w-4" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold text-foreground">Project Match</p>
-          <p className="text-[10px] text-muted-foreground truncate leading-snug">
-            <span className="text-purple-500 font-bold">AI Drone Team</span> matched!
-          </p>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -2335,7 +1903,7 @@ function LandingAmbientBackground() {
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
       {/* Subtle Micro-Dot Grid with Radial Edge Fade */}
       <div className="absolute inset-0 bg-dot-pattern opacity-60 dark:opacity-20 [mask-image:radial-gradient(ellipse_at_center,black_35%,transparent_85%)]" />
-      
+
       {/* Subtle Linear Grid */}
       <div className="absolute inset-0 bg-grid-subtle opacity-40 dark:opacity-15 [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_90%)]" />
 
@@ -2384,9 +1952,8 @@ function Landing() {
               Home
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
             </Link>
-            <Link href={getNavHref('/blogs')} className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <span>Blogs & Prep</span>
-              <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.2 text-[9px] font-bold">New</span>
+            <Link href={getNavHref('/blogs')} className="text-muted-foreground hover:text-foreground transition-colors">
+              Blogs
             </Link>
             <Link href={getNavHref('/people')} className="text-muted-foreground hover:text-foreground transition-colors">
               People
@@ -2462,10 +2029,9 @@ function Landing() {
               <Link
                 href={getNavHref('/blogs')}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-muted-foreground hover:text-foreground py-1.5 flex items-center justify-between"
+                className="text-muted-foreground hover:text-foreground py-1.5"
               >
-                <span>Blogs & Interview Prep</span>
-                <span className="rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.2 text-[9px] font-bold">New</span>
+                Blogs
               </Link>
               <Link
                 href={getNavHref('/people')}
@@ -2622,13 +2188,10 @@ function Landing() {
         {/* Section 2: University Live Mesh & Cross-Campus Radar */}
         <UniversityLiveMesh />
 
-        {/* Section 3: Interactive Split-Screen Capability Explorer */}
-        <InteractiveFeatureExplorer />
-
-        {/* Section 4: 4-Step Trajectory Roadmap */}
+        {/* Section 3: 4-Step Trajectory Roadmap */}
         <TrajectoryRoadmap />
 
-        {/* Section 5: Renowned Faculty & Research Labs */}
+        {/* Section 4: Renowned Faculty & Research Labs */}
         <FacultySpotlight />
 
         {/* Big Call to Action Banner with Rich Ambient Gradient */}
@@ -2661,9 +2224,9 @@ function Landing() {
       {/* Minimal & Elegant Modern University Footer */}
       <footer className="border-t border-border/70 bg-card/60 dark:bg-background/60 py-14 text-xs text-muted-foreground">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          
+
           <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
-            
+
             {/* Left Brand & Mission Info */}
             <div className="max-w-sm">
               <Brand light={false} />
@@ -2680,7 +2243,7 @@ function Landing() {
 
             {/* Right Clean Spaced Navigation Links */}
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-14">
-              
+
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-3">
                   Platform
@@ -2798,16 +2361,132 @@ function AuthLayout({ children, title, detail, mode }: { children: React.ReactNo
     </div>
   </div>;
 }
+function ResetPasswordDialog({
+  initialEmail,
+  onClose,
+  onSuccess,
+}: {
+  initialEmail?: string;
+  onClose: () => void;
+  onSuccess: (token: string) => void;
+}) {
+  const [email, setEmail] = useState(initialEmail || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!email.trim()) {
+      setError('Please enter your registered email address.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setIsPending(true);
+    try {
+      const res = await apiFetch<{ success: boolean; token: string; message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email.trim(),
+          newPassword,
+        }),
+      });
+      if (res.token) {
+        onSuccess(res.token);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to reset password. Please verify your email.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Reset Your Password</h3>
+            <p className="text-xs text-muted-foreground">Enter your registered email and choose a new password.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field
+            id="reset-email"
+            label="Registered email address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.name@amrita.edu"
+            required
+          />
+
+          <Field
+            id="reset-new-password"
+            label="New password (min 8 characters)"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Choose a strong password"
+            minLength={8}
+            required
+          />
+
+          <Field
+            id="reset-confirm-password"
+            label="Confirm new password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-type your new password"
+            minLength={8}
+            required
+          />
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Update Password & Sign In
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function LoginPage() {
   const login = useLogin();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     login.mutate(
       { data: { email, password } },
       {
@@ -2822,22 +2501,53 @@ function LoginPage() {
       }
     );
   };
+
+  const handleResetSuccess = (token: string) => {
+    setShowResetDialog(false);
+    setAuthSession(token);
+    queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+    setSuccessMsg('Password updated successfully! Signing you in...');
+    setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect') || '/feed';
+      setLocation(redirect);
+    }, 1200);
+  };
+
   return (
     <AuthLayout mode="login" title="Good to see you." detail="Sign in to pick up where you left off.">
       <form onSubmit={submit} className="mt-8 space-y-5">
         <Field id="email" label="University or personal email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <Field id="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <div className="flex justify-end">
-          <button data-testid="button-forgot-password" type="button" className="text-xs font-semibold text-muted-foreground hover:text-foreground" onClick={() => setError('Please contact your campus administrator to reset your password.')}>
-            Forgot password?
+          <button
+            data-testid="button-forgot-password"
+            type="button"
+            className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+            onClick={() => setShowResetDialog(true)}
+          >
+            Forgot password? Reset here
           </button>
         </div>
+        {successMsg && (
+          <p className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2">
+            <Check className="h-4 w-4" /> {successMsg}
+          </p>
+        )}
         {error && <p data-testid="status-auth-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
         <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5" disabled={login.isPending}>
           {login.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
           Sign in
         </Button>
       </form>
+
+      {showResetDialog && (
+        <ResetPasswordDialog
+          initialEmail={email}
+          onClose={() => setShowResetDialog(false)}
+          onSuccess={handleResetSuccess}
+        />
+      )}
     </AuthLayout>
   );
 }
@@ -2902,7 +2612,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
   const socialNavItems: NavItem[] = [
     { href: '/feed', label: 'Feed & Stories', icon: Rss },
     { href: '/people', label: 'Discover Members', icon: Users },
-    { href: '/blogs', label: 'Articles & Experiences', icon: FileText },
+    { href: '/blogs', label: 'Blogs', icon: FileText },
     { href: '/mentorship', label: 'Mentorship Hub', icon: HeartHandshake },
     { href: '/showcase', label: 'Project Showcase', icon: Trophy },
     { href: '/research', label: 'Research & Labs', icon: BookOpen },
@@ -2938,17 +2648,14 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
         {/* Top Header of Sidebar */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/60 px-5">
           <Brand />
-          <div className="flex items-center gap-1">
-            <ThemeToggle className="text-muted-foreground hover:bg-muted hover:text-foreground" />
-            <button
-              data-testid="button-close-menu"
-              aria-label="Close navigation menu"
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
-              onClick={() => setOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            data-testid="button-close-menu"
+            aria-label="Close navigation menu"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+            onClick={() => setOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Social Mini Profile Card */}
@@ -3334,7 +3041,7 @@ function Dashboard() {
 
 
 
-<div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-primary-foreground/45">A small nudge</div><h2 className="mt-2 text-2xl font-bold tracking-[-.04em]">Your next connection may start with a question.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/60">Look for someone whose experience meets the edge of your curiosity.</p></div><Link data-testid="link-dashboard-mentorship" href="/mentorship" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-primary hover:brightness-95">Find a mentor <HeartHandshake className="h-4 w-4" /></Link></div></section>
+      <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-primary-foreground/45">A small nudge</div><h2 className="mt-2 text-2xl font-bold tracking-[-.04em]">Your next connection may start with a question.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/60">Look for someone whose experience meets the edge of your curiosity.</p></div><Link data-testid="link-dashboard-mentorship" href="/mentorship" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-primary hover:brightness-95">Find a mentor <HeartHandshake className="h-4 w-4" /></Link></div></section>
   </>;
 }
 function Metric({ label, value, detail, progress, accent }: { label: string; value: string; detail: string; progress?: number; accent?: boolean }) { return <div className={cx('surface rounded-xl border border-border p-5', accent && 'bg-secondary/40')}><div className="flex items-start justify-between"><span className="text-xs font-semibold text-muted-foreground">{label}</span>{accent && <Sparkles className="h-4 w-4 text-accent" />}</div><div data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`} className="mt-4 text-3xl font-bold tracking-[-.06em] text-foreground">{value}</div>{progress !== undefined ? <div className="mt-3 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-accent" style={{ width: `${progress}%` }} /></div> : <p className="mt-3 text-xs text-muted-foreground">{detail}</p>} {progress !== undefined && <p className="mt-2 text-xs text-muted-foreground">{detail}</p>}</div>; }
@@ -5407,8 +5114,8 @@ function InterviewDetailModal({
                     interview.outcome === 'Offered'
                       ? 'bg-emerald-500/15 text-emerald-500'
                       : interview.outcome === 'In Progress'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-destructive/15 text-destructive'
+                        ? 'bg-accent/20 text-accent'
+                        : 'bg-destructive/15 text-destructive'
                   )}
                 >
                   {interview.outcome}
@@ -5779,8 +5486,8 @@ function InterviewCard({
                     item.outcome === 'Offered'
                       ? 'bg-emerald-500/15 text-emerald-500'
                       : item.outcome === 'In Progress'
-                      ? 'bg-accent/20 text-accent'
-                      : 'bg-destructive/15 text-destructive'
+                        ? 'bg-accent/20 text-accent'
+                        : 'bg-destructive/15 text-destructive'
                   )}
                 >
                   {item.outcome}
@@ -6203,8 +5910,8 @@ function HelpDetailModal({
                       item.urgency === 'Urgent'
                         ? 'bg-rose-500/20 text-rose-500 font-bold'
                         : item.urgency === 'High'
-                        ? 'bg-amber-500/20 text-amber-500'
-                        : 'bg-secondary text-muted-foreground'
+                          ? 'bg-amber-500/20 text-amber-500'
+                          : 'bg-secondary text-muted-foreground'
                     )}
                   >
                     {item.urgency}
@@ -6549,8 +6256,8 @@ function HelpCard({
                 item.urgency === 'Urgent'
                   ? 'bg-rose-500/20 text-rose-500 font-bold'
                   : item.urgency === 'High'
-                  ? 'bg-amber-500/20 text-amber-500'
-                  : 'bg-secondary text-muted-foreground'
+                    ? 'bg-amber-500/20 text-amber-500'
+                    : 'bg-secondary text-muted-foreground'
               )}
             >
               {item.urgency}
@@ -7210,8 +6917,8 @@ function MyBuddyRequestsModal({ onClose }: { onClose: () => void }) {
                             req.status === 'accepted'
                               ? 'bg-emerald-500/20 text-emerald-500'
                               : req.status === 'declined'
-                              ? 'bg-rose-500/20 text-rose-500'
-                              : 'bg-amber-500/20 text-amber-500'
+                                ? 'bg-rose-500/20 text-rose-500'
+                                : 'bg-amber-500/20 text-amber-500'
                           )}
                         >
                           {req.status}
@@ -7278,8 +6985,8 @@ function MyBuddyRequestsModal({ onClose }: { onClose: () => void }) {
                             req.status === 'accepted'
                               ? 'bg-emerald-500/20 text-emerald-500'
                               : req.status === 'declined'
-                              ? 'bg-rose-500/20 text-rose-500'
-                              : 'bg-amber-500/20 text-amber-500'
+                                ? 'bg-rose-500/20 text-rose-500'
+                                : 'bg-amber-500/20 text-amber-500'
                           )}
                         >
                           {req.status}
@@ -7426,8 +7133,8 @@ function CampusBuddyPage() {
                       host.availability === 'Available'
                         ? 'bg-emerald-500/15 text-emerald-500'
                         : host.availability === 'Busy'
-                        ? 'bg-amber-500/15 text-amber-500'
-                        : 'bg-muted text-muted-foreground'
+                          ? 'bg-amber-500/15 text-amber-500'
+                          : 'bg-muted text-muted-foreground'
                     )}
                   >
                     {host.availability}
@@ -7741,21 +7448,21 @@ function CreateResearchModal({
     mutationFn: () => {
       const openPositions = form.openRoleTitle.trim()
         ? [
-            {
-              roleTitle: form.openRoleTitle.trim(),
-              spots: Number(form.openRoleSpots) || 1,
-              prerequisites: form.openRoleSkills.split(',').map((s) => s.trim()).filter(Boolean),
-            },
-          ]
+          {
+            roleTitle: form.openRoleTitle.trim(),
+            spots: Number(form.openRoleSpots) || 1,
+            prerequisites: form.openRoleSkills.split(',').map((s) => s.trim()).filter(Boolean),
+          },
+        ]
         : [];
 
       const publications = form.pubTitle.trim()
         ? [
-            {
-              title: form.pubTitle.trim(),
-              venue: form.pubVenue.trim() || 'IEEE / ACM Conference',
-            },
-          ]
+          {
+            title: form.pubTitle.trim(),
+            venue: form.pubVenue.trim() || 'IEEE / ACM Conference',
+          },
+        ]
         : [];
 
       return apiFetch<{ success: boolean; id: string }>(`/research-projects`, {
@@ -8139,8 +7846,8 @@ function ResearchDetailModal({
                           app.status === 'accepted'
                             ? 'bg-emerald-500/20 text-emerald-500'
                             : app.status === 'declined'
-                            ? 'bg-rose-500/20 text-rose-500'
-                            : 'bg-amber-500/20 text-amber-500'
+                              ? 'bg-rose-500/20 text-rose-500'
+                              : 'bg-amber-500/20 text-amber-500'
                         )}
                       >
                         {app.status}
@@ -9727,7 +9434,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     query: { queryKey: getListUsersQueryKey(userParams), enabled: activeView === 'discover' }
   });
 
-  const memberItems = usersData?.items ?? [];
+  const memberItems = (usersData?.items ?? []).filter((u) => u.id !== currentUser?.id && u.role !== 'admin');
 
   // Posts query for social feed
   const postsQueryKey = useMemo(() => [
@@ -9852,10 +9559,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
       {/* VIEW 1: COMMUNITY FEED */}
       {activeView === 'feed' && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] xl:grid-cols-[1fr_330px] gap-6 items-start">
-          
+
           {/* Main Feed Column */}
           <div className="space-y-5 min-w-0">
-            
+
             {/* Social Post Creator Box */}
             <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs hover:border-border transition-colors">
               <div className="flex items-center gap-3">
@@ -10072,7 +9779,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
           {/* Right Sidebar (Desktop only) */}
           <div className="hidden lg:flex flex-col gap-5 sticky top-6">
-            
+
             {/* 1. Search & Trending Topics Card */}
             <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3.5">
               <div className="relative">
@@ -10130,7 +9837,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                 </h4>
                 <span className="text-[10px] text-muted-foreground font-medium">7 Campuses</span>
               </div>
-              
+
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Find alumni mentors, student peers, and faculty across departments.
               </p>
@@ -10353,12 +10060,12 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     createCategory === 'Blog' || createCategory === 'Article'
                       ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
                       : createCategory === 'Achievement'
-                      ? 'Share your achievement, hackathon win, publication, or placement story...'
-                      : createCategory === 'Job' || createCategory === 'Internship' || createCategory === 'Placement'
-                      ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
-                      : createCategory === 'Question'
-                      ? 'Ask a question to students, professors, or alumni across campuses...'
-                      : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
+                        ? 'Share your achievement, hackathon win, publication, or placement story...'
+                        : createCategory === 'Job' || createCategory === 'Internship' || createCategory === 'Placement'
+                          ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
+                          : createCategory === 'Question'
+                            ? 'Ask a question to students, professors, or alumni across campuses...'
+                            : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
                   }
                   rows={5}
                   className="w-full resize-none rounded-xl border border-transparent bg-transparent p-1 text-sm sm:text-base outline-none focus:ring-0 leading-relaxed placeholder:text-muted-foreground/70"
@@ -10651,11 +10358,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                       if (!createImageUrl) imageInputRef.current?.click();
                       else setActiveAttachmentTab('photo');
                     }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                      createImageUrl || activeAttachmentTab === 'photo'
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createImageUrl || activeAttachmentTab === 'photo'
                         ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
+                      }`}
                     title="Attach Photo"
                   >
                     <Image className="h-4 w-4 text-blue-500" />
@@ -10668,11 +10374,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                       if (!createDocumentUrl) docInputRef.current?.click();
                       else setActiveAttachmentTab('document');
                     }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                      createDocumentUrl || activeAttachmentTab === 'document'
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createDocumentUrl || activeAttachmentTab === 'document'
                         ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
+                      }`}
                     title="Attach PDF or Document"
                   >
                     <FileText className="h-4 w-4 text-red-500" />
@@ -10684,11 +10389,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     onClick={() =>
                       setActiveAttachmentTab((prev) => (prev === 'link' ? 'none' : 'link'))
                     }
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                      createLinkUrl || activeAttachmentTab === 'link'
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createLinkUrl || activeAttachmentTab === 'link'
                         ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
+                      }`}
                     title="Add Web Link"
                   >
                     <Link2 className="h-4 w-4 text-indigo-500" />
@@ -10700,11 +10404,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     onClick={() =>
                       setActiveAttachmentTab((prev) => (prev === 'milestone' ? 'none' : 'milestone'))
                     }
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                      activeAttachmentTab === 'milestone'
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${activeAttachmentTab === 'milestone'
                         ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
+                      }`}
                     title="Celebrate Milestone"
                   >
                     <PartyPopper className="h-4 w-4 text-amber-500" />
@@ -10861,7 +10564,7 @@ function SpotlightPersonCard({ user, isSpotlight = false }: { user: PublicUser; 
             >
               {user.fullName}
             </Link>
-            
+
             {user.verified && (
               <div title="Verified Amrita Member" className="grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white">
                 <Check className="h-2.5 w-2.5 stroke-[3]" />
@@ -10994,7 +10697,8 @@ function ProfileAside({ title, items = [] }: { title: string; items?: string[] }
 function MentorshipDialog({ mentor, onClose }: { mentor: PublicUser; onClose: () => void }) { const create = useCreateMentorshipRequest(); const [form, setForm] = useState({ topic: '', reason: '', message: '' }); const queryClient = useQueryClient(); const submit = (e: React.FormEvent) => { e.preventDefault(); create.mutate({ data: { mentorId: mentor.id, ...form } }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }); onClose(); } }); }; return <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl"><div className="flex items-start justify-between"><div><div className="mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">A thoughtful ask</div><h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Ask {mentor.fullName.split(' ')[0]} to mentor you</h2></div><button data-testid="button-close-mentorship-dialog" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button></div><form onSubmit={submit} className="mt-6 space-y-4"><Field id="mentorship-topic" label="What would you like to learn?" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required /><Field id="mentorship-reason" label="Why this person?" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required /><label className="block"><span className="mb-1.5 block text-xs font-bold text-foreground">Your note</span><textarea data-testid="textarea-mentorship-message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required rows={4} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-accent-foreground" placeholder="Introduce yourself and share what a useful first conversation looks like." /></label><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="quiet" onClick={onClose}>Cancel</Button><Button data-testid="button-submit-mentorship" type="submit" disabled={create.isPending}>{create.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send request</Button></div></form></div></div>; }
 
 function MentorshipPage() {
-  const { data, isLoading, isError, refetch } = useListMentorshipRequests(); const status = useUpdateMentorshipRequestStatus(); const queryClient = useQueryClient(); const [filter, setFilter] = useState('all'); const items = data?.filter((item) => filter === 'all' || item.status === filter) ?? []; const update = (id: string, value: 'accepted' | 'rejected') => status.mutate({ id, data: { status: value } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }) }); return <><PageTitle eyebrow="Mentorship" title="Make room for guidance." detail="Keep track of the conversations you have started and the ones waiting on you." action={<div className="flex rounded-lg border border-border bg-card p-1">{['all', 'pending', 'accepted'].map((value) => <button data-testid={`button-filter-mentorship-${value}`} key={value} onClick={() => setFilter(value)} className={cx('rounded-md px-3 py-1.5 text-xs font-bold capitalize', filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{value}</button>)}</div>} />{isLoading ? <LoadingState rows={3} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={HeartHandshake} title={filter === 'all' ? 'No mentorship requests yet' : `No ${filter} requests`} detail="When you find the right person, a clear and considered note is a good place to start." action={<Link href="/people" className="text-sm font-bold text-accent">Explore the directory</Link>} /> : <div className="space-y-4">{items.map((item) => <MentorshipCard key={item.id} item={item} onUpdate={update} pending={status.isPending} />)}</div>}</>; }
+  const { data, isLoading, isError, refetch } = useListMentorshipRequests(); const status = useUpdateMentorshipRequestStatus(); const queryClient = useQueryClient(); const [filter, setFilter] = useState('all'); const items = data?.filter((item) => filter === 'all' || item.status === filter) ?? []; const update = (id: string, value: 'accepted' | 'rejected') => status.mutate({ id, data: { status: value } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }) }); return <><PageTitle eyebrow="Mentorship" title="Make room for guidance." detail="Keep track of the conversations you have started and the ones waiting on you." action={<div className="flex rounded-lg border border-border bg-card p-1">{['all', 'pending', 'accepted'].map((value) => <button data-testid={`button-filter-mentorship-${value}`} key={value} onClick={() => setFilter(value)} className={cx('rounded-md px-3 py-1.5 text-xs font-bold capitalize', filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{value}</button>)}</div>} />{isLoading ? <LoadingState rows={3} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={HeartHandshake} title={filter === 'all' ? 'No mentorship requests yet' : `No ${filter} requests`} detail="When you find the right person, a clear and considered note is a good place to start." action={<Link href="/people" className="text-sm font-bold text-accent">Explore the directory</Link>} /> : <div className="space-y-4">{items.map((item) => <MentorshipCard key={item.id} item={item} onUpdate={update} pending={status.isPending} />)}</div>}</>;
+}
 function MentorshipCard({ item, onUpdate, pending }: { item: MentorshipRequest; onUpdate: (id: string, status: 'accepted' | 'rejected') => void; pending: boolean }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-start"><Avatar user={item.requester} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold text-foreground">{item.requester.fullName}</h2><Status status={item.status} /></div><p className="mt-1 text-xs text-muted-foreground">Requesting mentorship · {relative(item.createdAt)}</p><p className="mt-4 text-sm leading-6 text-foreground">{item.message}</p><div className="mt-4 flex flex-wrap gap-2"><Tag warm>{item.topic}</Tag><Tag>{item.reason}</Tag></div></div>{item.status === 'pending' && <div className="flex shrink-0 gap-2 sm:flex-col"><Button data-testid={`button-accept-mentorship-${item.id}`} className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'accepted')}><Check className="h-4 w-4" />Accept</Button><Button data-testid={`button-reject-mentorship-${item.id}`} variant="quiet" className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'rejected')}>Decline</Button></div>}</div></div>; }
 function Status({ status }: { status: string }) { return <span data-testid={`status-${status}`} className={cx('rounded-full px-2.5 py-1 text-[10px] font-bold capitalize', status === 'accepted' ? 'bg-emerald-500/15 text-emerald-500' : status === 'rejected' ? 'bg-destructive/15 text-destructive' : 'bg-accent/20 text-accent')}>{status}</span>; }
 
@@ -11126,8 +10830,8 @@ function CollaborationDetailModal({
                   item.status === 'open'
                     ? 'bg-emerald-500/15 text-emerald-500'
                     : item.status === 'closed'
-                    ? 'bg-amber-500/15 text-amber-500'
-                    : 'bg-muted text-muted-foreground'
+                      ? 'bg-amber-500/15 text-amber-500'
+                      : 'bg-muted text-muted-foreground'
                 )}
               >
                 {item.status === 'open' ? 'Recruiting' : item.status === 'closed' ? 'Team Full' : 'Completed'}
@@ -11614,8 +11318,8 @@ function CollaborationCard({
                 item.status === 'open'
                   ? 'bg-emerald-500/15 text-emerald-500'
                   : item.status === 'closed'
-                  ? 'bg-amber-500/15 text-amber-500'
-                  : 'bg-muted text-muted-foreground'
+                    ? 'bg-amber-500/15 text-amber-500'
+                    : 'bg-muted text-muted-foreground'
               )}
             >
               {item.status === 'open' ? 'Recruiting' : item.status === 'closed' ? 'Team Full' : 'Completed'}
@@ -11694,8 +11398,8 @@ function CollaborationCard({
             {item.isCreator
               ? 'Manage Team & Applications'
               : item.isMember
-              ? 'View Team Roster'
-              : 'View Details & Apply'}{' '}
+                ? 'View Team Roster'
+                : 'View Details & Apply'}{' '}
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -11833,11 +11537,326 @@ function CreateCollaborationDialog({ onClose }: { onClose: () => void }) {
 }
 
 
+function CreateOpportunityDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: '',
+    category: 'Internship',
+    organization: '',
+    description: '',
+    requiredSkills: '',
+    eligibility: 'Open to all Amrita students and alumni',
+    deadline: '',
+    applicationUrl: 'https://www.amrita.edu',
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await apiFetch('/opportunities', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          requiredSkills: form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean),
+        }),
+      });
+      onCreated();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to post opportunity. Please check all fields.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Post New Opportunity</h3>
+            <p className="text-xs text-muted-foreground">Share internships, jobs, hackathons, research roles, or grants with Amrita members.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field
+            id="opp-title"
+            label="Opportunity Title *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. AI Research Intern / Full Stack Developer"
+            required
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-foreground">Category *</span>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-xs font-medium text-foreground outline-none focus:border-orange-500"
+              >
+                <option value="Internship">Internship</option>
+                <option value="Job">Job / Full-Time</option>
+                <option value="Hackathon">Hackathon & Sprint</option>
+                <option value="Research">Research Fellowship</option>
+                <option value="Scholarship">Scholarship & Grant</option>
+                <option value="Mentorship">Mentorship Program</option>
+              </select>
+            </label>
+
+            <Field
+              id="opp-org"
+              label="Organization / Lab / Company *"
+              value={form.organization}
+              onChange={(e) => setForm({ ...form, organization: e.target.value })}
+              placeholder="e.g. Amrita Innovation Hub or Google"
+              required
+            />
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">Description *</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500"
+              placeholder="Provide a detailed overview of the role, team, and responsibilities..."
+              required
+            />
+          </label>
+
+          <Field
+            id="opp-skills"
+            label="Required Skills (comma separated)"
+            value={form.requiredSkills}
+            onChange={(e) => setForm({ ...form, requiredSkills: e.target.value })}
+            placeholder="e.g. React, Python, Machine Learning, Problem Solving"
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="opp-eligibility"
+              label="Eligibility Criteria"
+              value={form.eligibility}
+              onChange={(e) => setForm({ ...form, eligibility: e.target.value })}
+              placeholder="e.g. Pre-final & Final year B.Tech"
+            />
+
+            <Field
+              id="opp-deadline"
+              label="Application Deadline *"
+              type="date"
+              value={form.deadline}
+              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              required
+            />
+          </div>
+
+          <Field
+            id="opp-url"
+            label="Application URL"
+            type="url"
+            value={form.applicationUrl}
+            onChange={(e) => setForm({ ...form, applicationUrl: e.target.value })}
+            placeholder="https://example.com/apply"
+          />
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Publish Opportunity
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CreateEventDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: '',
+    campus: 'Coimbatore',
+    venue: 'Main Auditorium / Online',
+    organizer: 'Amrita Student Council',
+    date: '',
+    description: '',
+    capacity: '100',
+    registrationUrl: 'https://www.amrita.edu',
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await apiFetch('/events', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          capacity: form.capacity ? Number(form.capacity) : null,
+        }),
+      });
+      onCreated();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create event. Please check all fields.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Host a Campus Event</h3>
+            <p className="text-xs text-muted-foreground">List workshops, tech symposiums, hackathons, guest lectures, or club meetups.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field
+            id="event-title"
+            label="Event Title *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. Anokha 2026 Tech Symposium / AI Workshop"
+            required
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-foreground">Campus *</span>
+              <select
+                value={form.campus}
+                onChange={(e) => setForm({ ...form, campus: e.target.value })}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-xs font-medium text-foreground outline-none focus:border-orange-500"
+              >
+                {campuses.map((c) => (
+                  <option key={c} value={c}>
+                    Amrita {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <Field
+              id="event-venue"
+              label="Venue / Platform *"
+              value={form.venue}
+              onChange={(e) => setForm({ ...form, venue: e.target.value })}
+              placeholder="e.g. AUMS Hall 3 or MS Teams"
+              required
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="event-organizer"
+              label="Organizer / Club *"
+              value={form.organizer}
+              onChange={(e) => setForm({ ...form, organizer: e.target.value })}
+              placeholder="e.g. bi0s Cybersecurity Club"
+              required
+            />
+
+            <Field
+              id="event-date"
+              label="Event Date & Time *"
+              type="datetime-local"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              required
+            />
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">Event Details *</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500"
+              placeholder="Schedule, speakers, agenda, and participation perks..."
+              required
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="event-capacity"
+              label="Attendee Capacity (Optional)"
+              type="number"
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+              placeholder="e.g. 150"
+            />
+
+            <Field
+              id="event-url"
+              label="Registration URL (Optional)"
+              type="url"
+              value={form.registrationUrl}
+              onChange={(e) => setForm({ ...form, registrationUrl: e.target.value })}
+              placeholder="https://example.com/register"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
+              Publish Event
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function EventsAndOpportunitiesPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'events' | 'jobs' | 'hackathons' | 'scholarships'>('all');
   const [search, setSearch] = useState('');
   const [selectedCampus, setSelectedCampus] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showCreateOpportunity, setShowCreateOpportunity] = useState(false);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch opportunities
@@ -11980,7 +11999,26 @@ function EventsAndOpportunitiesPage() {
       <PageTitle
         eyebrow="Campus Happenings & Career Hub"
         title="Events & Opportunities."
-        detail="Discover upcoming campus fests, guest lectures, hackathons, internship drives, and fellowships across all 7 Amrita campuses."
+        detail="Discover and post campus fests, guest lectures, hackathons, internship drives, and fellowships across all 7 Amrita campuses."
+        action={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => setShowCreateOpportunity(true)}
+              className="rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+            >
+              <Plus className="h-4 w-4" /> Post Opportunity
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCreateEvent(true)}
+              className="rounded-xl px-4 py-2 text-xs font-bold shadow-xs"
+            >
+              <CalendarDays className="h-4 w-4 text-orange-500" /> Host Event
+            </Button>
+          </div>
+        }
       />
 
       {/* Tabs Row */}
@@ -12101,11 +12139,25 @@ function EventsAndOpportunitiesPage() {
           }}
         />
       ) : totalItemsCount === 0 ? (
-        <EmptyState
-          icon={CalendarDays}
-          title="No events or opportunities found"
-          detail="Try adjusting your search query or campus filter to see upcoming activities."
-        />
+        <div className="rounded-3xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
+            <CalendarDays className="h-7 w-7" />
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-foreground">
+            No events or opportunities posted yet
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Be the first to share an upcoming campus hackathon, internship opportunity, or workshop!
+          </p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <Button onClick={() => setShowCreateOpportunity(true)} className="text-xs font-bold">
+              <Plus className="h-3.5 w-3.5" /> Post Opportunity
+            </Button>
+            <Button variant="outline" onClick={() => setShowCreateEvent(true)} className="text-xs font-bold">
+              <CalendarDays className="h-3.5 w-3.5" /> Host Event
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
           {/* Render Event Cards */}
@@ -12131,6 +12183,27 @@ function EventsAndOpportunitiesPage() {
               />
             ))}
         </div>
+      )}
+
+      {/* Create Modals */}
+      {showCreateOpportunity && (
+        <CreateOpportunityDialog
+          onClose={() => setShowCreateOpportunity(false)}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: getListOpportunitiesQueryKey() });
+            setShowCreateOpportunity(false);
+          }}
+        />
+      )}
+
+      {showCreateEvent && (
+        <CreateEventDialog
+          onClose={() => setShowCreateEvent(false)}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: getListEventsQueryKey() });
+            setShowCreateEvent(false);
+          }}
+        />
       )}
     </>
   );
@@ -12355,409 +12428,18 @@ interface BlogPostItem {
 }
 
 function getInitialBlogs(): BlogPostItem[] {
-  const defaultBlogs: BlogPostItem[] = [
-    {
-      id: 'amazon-sde-roadmap',
-      postType: 'interview',
-      title: 'Amazon SDE-1 Recruitment: Interview Process and Preparation Strategy',
-      date: 'Aug 2024',
-      readTime: '6 min read',
-      tags: ['Amazon SDE', 'Campus Placements', 'DSA', 'Interview Prep', 'Super Dream'],
-      summary: 'A structured breakdown of the assessment rounds, algorithmic problem categories, system design fundamentals, and STAR responses for Amazon Leadership Principles.',
-      company: 'Amazon',
-      roleOffer: 'Software Development Engineer (SDE-1)',
-      difficulty: 'Super Dream',
-      category: 'Interview Experiences',
-      authorName: 'Nitesh Kumar',
-      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'nitesh')?.avatar,
-      authorRole: 'Software Development Engineer (SDE)',
-      authorCampus: 'Bengaluru',
-      authorCompany: 'Amazon',
-      authorSlug: 'nitesh',
-      likes: 84,
-      isLiked: false,
-      rounds: [
-        {
-          roundName: 'Round 1: Online Assessment (OA)',
-          focus: '2 Algorithmic Coding Problems + Work Simulation / Leadership Assessment',
-          questionsAsked: '1. Optimal Substring Partitioning using Greedy / Two-pointer. 2. Critical Network Connections (Tarjan Algorithm for Bridges).',
-          tips: 'Ensure all edge cases are handled. The work simulation section evaluates Amazon Leadership Principles—prioritize customer-first decisions.'
-        },
-        {
-          roundName: 'Round 2: Technical Interview 1 (DSA & Problem Solving)',
-          focus: 'Data Structures, Binary Trees & Dynamic Programming with Live Dry-Run',
-          questionsAsked: 'Lowest Common Ancestor in Binary Tree, followed by a follow-up with parent pointers. Then a dynamic programming problem on coin change with min coins.',
-          tips: 'State time and space complexity upfront before writing code. Explain trade-offs between recursive and iterative approaches.'
-        },
-        {
-          roundName: 'Round 3: Low-Level Design (LLD) & Clean Architecture',
-          focus: 'Object-Oriented Design, SOLID Principles & Extensibility',
-          questionsAsked: 'Design a scalable Parking Lot Management System with multi-tier parking, dynamic pricing, and concurrent ticket validation.',
-          tips: 'Apply Strategy and Factory design patterns. Structure modular classes with clear interfaces and thread-safety considerations.'
-        },
-        {
-          roundName: 'Round 4: Bar Raiser & Leadership Principles (LP)',
-          focus: 'Behavioral Evaluation & Algorithmic Problem Solving',
-          questionsAsked: 'STAR responses on "Bias for Action" and "Customer Obsession", followed by a Graph BFS/Dijkstra optimization scenario.',
-          tips: 'Quantify impact in STAR responses (e.g. reduced latency by 35%).'
-        }
-      ],
-      resources: [
-        {
-          title: "Striver's SDE Sheet (180 Core Interview Problems)",
-          url: 'https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/',
-          type: 'sheet'
-        },
-        {
-          title: 'System Design Primer (GitHub Repository)',
-          url: 'https://github.com/donnemartin/system-design-primer',
-          type: 'repo'
-        },
-        {
-          title: 'Amazon Leadership Principles Official Guide',
-          url: 'https://www.amazon.jobs/content/en/how-we-hire/principles-and-practices',
-          type: 'docs'
-        },
-        {
-          title: 'NeetCode 150 Categorized Practice Map',
-          url: 'https://neetcode.io/practice',
-          type: 'sheet'
-        }
-      ],
-      keyTakeaways: [
-        'Master core graph, tree, and dynamic programming patterns.',
-        'Always communicate time and space complexities before implementing solutions.',
-        'Prepare quantifiable STAR responses for behavioral leadership evaluations.'
-      ],
-      content: `Preparing for Amazon on-campus and off-campus recruitment requires a structured framework.
-
-1. Data Structures & Algorithmic Focus:
-- Graphs: BFS/DFS traversals, Dijkstra, Topological Sort, Disjoint Set Union.
-- Dynamic Programming: 0/1 Knapsack, Longest Common Subsequence, Grid-based DP.
-- Trees & Heaps: Lowest Common Ancestor, Trie prefix lookups, Median in a stream.
-
-2. Low-Level Design (LLD):
-- SOLID design principles applied to real-world architectures.
-- Structural & behavioral design patterns: Strategy, Observer, Factory, Singleton.
-- Modular code organization with clear exception handling.
-
-3. Leadership Principles (LP):
-Prepare concrete Situation, Task, Action, Result (STAR) stories for key principles including Customer Obsession, Ownership, Bias for Action, and Deliver Results.`
-    },
-    {
-      id: 'rust-cli-tech-discovery',
-      postType: 'tech_discovery',
-      title: 'Building High-Performance Command-Line Tools with Rust',
-      date: 'Sep 2024',
-      readTime: '5 min read',
-      tags: ['Rust', 'Technical Discovery', 'CLI Tools', 'Systems Programming', 'Open Source'],
-      summary: 'An evaluation of memory safety, zero-cost abstractions, and sub-10ms startup benchmarks achieved by migrating campus utilities to Rust.',
-      category: 'Tech Discoveries & Tools',
-      authorName: 'Karthik Menon',
-      authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=280&q=80',
-      authorRole: '3rd Year CSE Student',
-      authorCampus: 'Coimbatore',
-      likes: 62,
-      isLiked: false,
-      resources: [
-        {
-          title: 'Clap (Command Line Argument Parser for Rust)',
-          url: 'https://docs.rs/clap/latest/clap/',
-          type: 'docs'
-        },
-        {
-          title: 'Rust By Example (Official Guide)',
-          url: 'https://doc.rust-lang.org/rust-by-example/',
-          type: 'book'
-        },
-        {
-          title: 'Hyperfine: CLI Benchmarking Tool (GitHub)',
-          url: 'https://github.com/sharkdp/hyperfine',
-          type: 'repo'
-        }
-      ],
-      keyTakeaways: [
-        'Single static binary distribution eliminates runtime dependency requirements.',
-        'Pattern matching and Result/Option types prevent unhandled null pointer exceptions.',
-        'Cold startup execution latency decreased from 240ms to 6ms.'
-      ],
-      content: `Our student engineering team migrated our campus data parser and log analyzer to Rust. Here is a summary of findings:
-
-1. Zero-Cost Abstractions:
-Rust provides functional iterator syntax that compiles directly to optimized assembly without runtime overhead.
-
-2. CLI Ecosystem:
-Using 'clap' with derive macros provides structured command line interfaces with automated help documentation and shell completions.
-
-3. Cross-Compilation:
-Using standard toolchains, standalone binaries can be compiled targeting Linux, macOS, Windows, and ARM architectures.`
-    },
-    {
-      id: 'gate-cse-os-cheat-sheet',
-      postType: 'study_guide',
-      title: 'GATE CSE 2025: Operating Systems and Deadlock Resolution Revision Guide',
-      date: 'Aug 2024',
-      readTime: '7 min read',
-      tags: ['GATE CSE', 'Study Notes', 'Operating Systems', 'Deadlocks', 'Semaphores'],
-      summary: 'Comprehensive formula summary covering process synchronization, Peterson algorithm proofs, Banker algorithm safety checks, and virtual memory page replacement.',
-      category: 'Study Notes & Guides',
-      authorName: 'Aditya Verma',
-      authorAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=280&q=80',
-      authorRole: 'GATE AIR 42 Scholar',
-      authorCampus: 'Amritapuri',
-      likes: 95,
-      isLiked: false,
-      resources: [
-        {
-          title: 'GATE Overflow: Operating Systems Question Bank',
-          url: 'https://gateoverflow.in/questions/operating-system',
-          type: 'notes'
-        },
-        {
-          title: 'Operating Systems: Three Easy Pieces (Reference Text)',
-          url: 'https://pages.cs.wisc.edu/~remzi/OSTEP/',
-          type: 'book'
-        },
-        {
-          title: 'Galvin OS Concepts Exercise Solutions',
-          url: 'https://github.com',
-          type: 'repo'
-        }
-      ],
-      keyTakeaways: [
-        'Review the 4 necessary conditions for Deadlock: Mutual Exclusion, Hold & Wait, No Preemption, Circular Wait.',
-        'For Banker Algorithm, verify Work >= Need iteratively to confirm system safety.',
-        'Understand concurrency distinctions between counting and binary semaphores.'
-      ],
-      content: `Consolidated Operating Systems revision notes for GATE CSE and university examinations:
-
-1. Process Synchronization:
-- Critical Section Requirements: Mutual Exclusion (Mandatory), Progress (Mandatory), Bounded Waiting (Desirable).
-- Peterson Algorithm: Ensures mutual exclusion and progress for two concurrent processes using shared variables.
-- Classical Problems: Producer-Consumer (bounded buffer), Readers-Writers, Dining Philosophers.
-
-2. Deadlock Detection & Avoidance:
-- Resource Allocation Graph (RAG): Cycle indicates deadlock under single-instance resource constraints.
-- Banker Algorithm: Simulates safe allocation sequence before granting resource requests.
-
-3. Virtual Memory & Paging:
-- Page Replacement Algorithms: FIFO, Optimal (Belady anomaly-free), LRU (Stack-based, Belady anomaly-free).`
-    },
-    {
-      id: 'lam-servicenow-strategy',
-      postType: 'interview',
-      title: 'Dual Super Dream Recruitment: Lam Research and ServiceNow Technical Strategy',
-      date: 'Aug 2024',
-      readTime: '7 min read',
-      tags: ['Lam Research', 'ServiceNow', 'Super Dream', 'Core CS', 'Operating Systems'],
-      summary: 'In-depth guide covering OS memory management, multithreading, advanced DSA, and enterprise SaaS system design.',
-      company: 'Lam Research · ServiceNow',
-      roleOffer: 'Software Engineer (Super Dream)',
-      difficulty: 'Super Dream',
-      category: 'Interview Experiences',
-      authorName: 'Kavya R',
-      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'kavya')?.avatar,
-      authorRole: 'Software Engineer / Cloud Specialist',
-      authorCampus: 'Amritapuri',
-      authorCompany: 'Lam Research · ServiceNow',
-      authorSlug: 'kavya',
-      likes: 71,
-      isLiked: false,
-      rounds: [
-        {
-          roundName: 'Round 1: Online Technical Assessment',
-          focus: 'C++ Systems, Memory Pointers, Advanced DSA & Aptitude',
-          questionsAsked: 'Graph cycle detection with weights, and bitwise manipulation for cache line alignment.',
-          tips: 'Lam Research emphasizes low-level memory and C++; ServiceNow evaluates rapid graph and tree operations.'
-        },
-        {
-          roundName: 'Round 2: Systems & Core CS Interview',
-          focus: 'Operating Systems, Concurrency, Virtual Memory, Semaphores & Mutexes',
-          questionsAsked: 'Explain page tables, TLB miss penalty, and implement a thread-safe circular buffer.',
-          tips: 'Demonstrate clear understanding of race conditions and synchronization primitives.'
-        },
-        {
-          roundName: 'Round 3: High-Level Architecture & SaaS Workflow',
-          focus: 'Enterprise SaaS Design & Database Schema Normalization',
-          questionsAsked: 'Design an event-driven workflow engine with webhook retries and idempotent processing.',
-          tips: 'Explain B+ Tree indexing in relational databases and connection pool optimization.'
-        }
-      ],
-      resources: [
-        {
-          title: 'Operating Systems: Three Easy Pieces',
-          url: 'https://pages.cs.wisc.edu/~remzi/OSTEP/',
-          type: 'book'
-        },
-        {
-          title: 'Computer Networks: Systems Approach Summary',
-          url: 'https://github.com',
-          type: 'notes'
-        },
-        {
-          title: 'Java Concurrency Reference Guide',
-          url: 'https://github.com',
-          type: 'sheet'
-        }
-      ],
-      keyTakeaways: [
-        'Core computer science fundamentals carry equal weight to DSA in tier-1 product evaluations.',
-        'Be prepared to write thread synchronization and race condition demonstrations.',
-        'Structured technical communication is a primary scoring metric in advanced rounds.'
-      ],
-      content: `A technical guide on securing offers across semiconductor systems engineering (Lam Research) and enterprise cloud infrastructure (ServiceNow).
-
-1. Systems Engineering Focus (Lam Research):
-- Low-level C++ & memory management: Virtual functions, vtable mechanics, memory allocation, smart pointers.
-- Operating Systems: Process scheduling, semaphores vs mutexes, Banker Algorithm, virtual memory and paging.
-- Concurrency: Cache locality, memory alignment, thread safety.
-
-2. Enterprise Architecture Focus (ServiceNow):
-- Data Structures: Graph traversals, binary search variations, hash table collision handling.
-- Object-Oriented Design: Modular workflows, finite state machines.
-- Database concepts: Indexing structures (B+ Trees), transaction isolation levels, normalization.`
-    },
-    {
-      id: 'local-ollama-deepseek-guide',
-      postType: 'tech_discovery',
-      title: 'Deploying Local Language Models with Ollama for Academic Research',
-      date: 'Sep 2024',
-      readTime: '6 min read',
-      tags: ['AI & LLMs', 'DeepSeek', 'Ollama', 'Local AI', 'Technical Discovery'],
-      summary: 'A guide on deploying quantized open-weights models locally without internet or GPU cloud API costs for capstone and lab research.',
-      category: 'Tech Discoveries & Tools',
-      authorName: 'Sneha Nair',
-      authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=280&q=80',
-      authorRole: 'Final Year AI & Data Science',
-      authorCampus: 'Kochi',
-      likes: 79,
-      isLiked: false,
-      resources: [
-        {
-          title: 'Ollama Framework Documentation',
-          url: 'https://ollama.com/',
-          type: 'docs'
-        },
-        {
-          title: 'HuggingFace GGUF Quantization Reference',
-          url: 'https://huggingface.co/docs',
-          type: 'docs'
-        },
-        {
-          title: 'Open WebUI Self-Hosted Interface',
-          url: 'https://github.com/open-webui/open-webui',
-          type: 'repo'
-        }
-      ],
-      keyTakeaways: [
-        '4-bit quantized GGUF models allow executing 7B-14B parameter models on workstations with 16GB RAM.',
-        'Ollama exposes a local HTTP REST endpoint compatible with standard OpenAI SDK formats.',
-        'Ensures complete data confidentiality for academic research datasets.'
-      ],
-      content: `A workflow for running open-source large language models locally for research capstones:
-
-1. Installation and Model Execution:
-- Install Ollama on Linux, macOS, or Windows.
-- Execute 'ollama run deepseek-r1:8b' or 'ollama run mistral:7b'.
-- The model runs locally via llama.cpp backend.
-
-2. Application Integration:
-Ollama operates a local HTTP server at http://localhost:11434, allowing direct integration with Python via langchain or official client libraries.
-
-3. Local Retrieval Augmented Generation (RAG):
-Pairing Ollama with local vector stores (ChromaDB, FAISS) allows building localized question-answering systems on course materials without transmitting data externally.`
-    },
-    {
-      id: 'mathco-analytics-guide',
-      postType: 'interview',
-      title: 'Data Science and Analytics Interviews: The Math Company Technical Breakdown',
-      date: 'Aug 2024',
-      readTime: '6 min read',
-      tags: ['MathCo', 'Data Science', 'Analytics', 'SQL Puzzles', 'Consulting'],
-      summary: 'Preparation guidelines for business case interviews, complex SQL window queries, machine learning metrics, and market estimation.',
-      company: 'The Math Company (MathCo)',
-      roleOffer: 'Associate Consultant / Data Scientist',
-      difficulty: 'Dream',
-      category: 'Interview Experiences',
-      authorName: 'Shudarsan S',
-      authorAvatar: PLACED_SENIORS.find((s) => s.slug === 'shudarsan')?.avatar,
-      authorRole: 'Data Scientist / ML Engineer',
-      authorCampus: 'Coimbatore',
-      authorCompany: 'The Math Company',
-      authorSlug: 'shudarsan',
-      likes: 64,
-      isLiked: false,
-      rounds: [
-        {
-          roundName: 'Round 1: SQL & Data Manipulation Assessment',
-          focus: 'Complex Joins, Window Functions & CTEs',
-          questionsAsked: 'Find the 2nd highest salary by department using DENSE_RANK(), and calculate 7-day rolling revenue averages with ROWS BETWEEN.',
-          tips: 'Practice SQL window functions on DataLemur. Master ROW_NUMBER vs RANK vs DENSE_RANK.'
-        },
-        {
-          roundName: 'Round 2: Machine Learning & Statistical Intuition',
-          focus: 'Model Evaluation Metrics, Overfitting & Feature Engineering',
-          questionsAsked: 'Evaluation metrics for imbalanced datasets, Bias-Variance tradeoff, and L1 vs L2 regularization.',
-          tips: 'Tie machine learning metrics (Precision-Recall, AUC-ROC) to business cost implications.'
-        },
-        {
-          roundName: 'Round 3: Business Case Study & Estimation',
-          focus: 'Problem Structuring & Root Cause Analysis',
-          questionsAsked: 'Estimate the logistics capacity required in an urban metro area during peak hours.',
-          tips: 'Apply MECE (Mutually Exclusive, Collectively Exhaustive) structuring and document assumptions explicitly.'
-        }
-      ],
-      resources: [
-        {
-          title: 'DataLemur: SQL Interview Practice Bank',
-          url: 'https://datalemur.com/',
-          type: 'sheet'
-        },
-        {
-          title: 'StatQuest: Machine Learning Fundamentals',
-          url: 'https://statquest.org/',
-          type: 'video'
-        },
-        {
-          title: 'Case Interview and Estimation Frameworks',
-          url: 'https://github.com',
-          type: 'notes'
-        }
-      ],
-      keyTakeaways: [
-        'Master SQL window functions and aggregation queries.',
-        'Explain the business rationale behind algorithmic selections.',
-        'Structure case studies and estimation problems logically with explicit assumptions.'
-      ],
-      content: `An overview of technical and case interview expectations for data science and analytics consulting roles:
-
-1. SQL Assessment:
-Expect tasks requiring window functions (ROW_NUMBER, RANK, DENSE_RANK, LEAD/LAG), Common Table Expressions (CTEs), and cumulative calculations.
-
-2. Statistical and Machine Learning Evaluation:
-- Precision, Recall, and ROC-AUC curves for imbalanced datasets.
-- Bias-Variance tradeoff and regularization techniques (Ridge vs Lasso).
-- Missing data imputation and feature scaling.
-
-3. Business Case Studies:
-- Structured problem solving using the MECE framework.
-- Translating quantitative predictions into business insights.`
-    }
-  ];
-
   if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem('amrita_custom_blogs');
       if (stored) {
         const custom: BlogPostItem[] = JSON.parse(stored);
-        return [...custom, ...defaultBlogs];
+        return custom;
       }
     } catch {
       // fallback
     }
   }
-
-  return defaultBlogs;
+  return [];
 }
 
 function BlogsPage() {
@@ -12772,9 +12454,10 @@ function BlogsPage() {
   const categories = [
     { id: 'all', label: 'All Articles', icon: FileText },
     { id: 'Interview Experiences', label: 'Interview Experiences', icon: Briefcase },
-    { id: 'Tech Discoveries & Tools', label: 'Technical Discoveries', icon: Terminal },
-    { id: 'Study Notes & Guides', label: 'Study Notes & Coursework', icon: BookOpen },
+    { id: 'Tech Discoveries & Tools', label: 'Tech & Engineering', icon: Terminal },
+    { id: 'Study Notes & Guides', label: 'Study Notes & Prep', icon: BookOpen },
     { id: 'Tutorials & Systems', label: 'Tutorials & Systems', icon: Code },
+    { id: 'Campus Life & Stories', label: 'Campus Life & Stories', icon: Sparkles },
   ];
 
   const handleLikeToggle = (blogId: string) => {
@@ -12811,8 +12494,7 @@ function BlogsPage() {
     setBlogs((prev) => {
       const updated = [newBlog, ...prev];
       if (typeof window !== 'undefined') {
-        const customOnly = updated.filter((b) => !b.authorSlug);
-        localStorage.setItem('amrita_custom_blogs', JSON.stringify(customOnly));
+        localStorage.setItem('amrita_custom_blogs', JSON.stringify(updated));
       }
       return updated;
     });
@@ -12832,6 +12514,9 @@ function BlogsPage() {
           return false;
         }
         if (activeCategory === 'Tutorials & Systems' && b.category !== 'Tutorials & Systems' && b.postType !== 'tutorial') {
+          return false;
+        }
+        if (activeCategory === 'Campus Life & Stories' && b.category !== 'Campus Life & Stories') {
           return false;
         }
       }
@@ -13375,10 +13060,70 @@ function BlogDetailModal({
         )}
 
         {/* Full Article Content */}
-        <div className="mt-6">
-          <div className="whitespace-pre-line text-sm leading-relaxed text-foreground font-normal space-y-4">
-            {blog.content}
-          </div>
+        <div className="mt-6 space-y-3">
+          {blog.content.split('\n\n').map((block, idx) => {
+            const trimmed = block.trim();
+            if (!trimmed) return null;
+
+            // Code block
+            if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
+              const codeLines = trimmed.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
+              return (
+                <pre key={idx} className="rounded-2xl bg-slate-950 text-emerald-400 p-4 font-mono text-xs overflow-x-auto my-3 border border-slate-800/80 shadow-inner">
+                  <code>{codeLines}</code>
+                </pre>
+              );
+            }
+
+            // Heading 2
+            if (trimmed.startsWith('## ')) {
+              return (
+                <h2 key={idx} className="text-lg sm:text-xl font-bold text-foreground pt-3 pb-1 tracking-tight">
+                  {trimmed.replace(/^##\s+/, '')}
+                </h2>
+              );
+            }
+
+            // Heading 3
+            if (trimmed.startsWith('### ')) {
+              return (
+                <h3 key={idx} className="text-base font-semibold text-foreground pt-2 pb-0.5 tracking-tight">
+                  {trimmed.replace(/^###\s+/, '')}
+                </h3>
+              );
+            }
+
+            // Blockquote
+            if (trimmed.startsWith('> ')) {
+              return (
+                <blockquote key={idx} className="border-l-4 border-orange-500 bg-secondary/30 px-4 py-3 my-2 rounded-r-2xl italic text-foreground/90 font-serif text-sm">
+                  {trimmed.replace(/^>\s+/, '')}
+                </blockquote>
+              );
+            }
+
+            // Bullet List
+            if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+              const items = trimmed.split('\n').filter((l) => l.trim().startsWith('- ') || l.trim().startsWith('* '));
+              return (
+                <ul key={idx} className="space-y-1.5 my-2 pl-1">
+                  {items.map((item, itemIdx) => (
+                    <li key={itemIdx} className="flex items-start gap-2.5 text-sm text-foreground/90 leading-relaxed">
+                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
+                      <span>{item.replace(/^[-*]\s+/, '')}</span>
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+
+            // Standard Paragraph
+            return (
+              <p key={idx} className="text-sm leading-relaxed text-foreground/90 font-normal">
+                {trimmed}
+              </p>
+            );
+          })}
         </div>
 
         {/* Tags */}
@@ -13429,89 +13174,80 @@ function CreateBlogModal({
   onClose: () => void;
   onPublish: (blog: BlogPostItem) => void;
 }) {
-  const [postMode, setPostMode] = useState<'interview' | 'discovery'>('interview');
-  
-  // Common fields
+  const [category, setCategory] = useState('Interview Experiences');
   const [title, setTitle] = useState('');
-  const [readTime, setReadTime] = useState('5 min read');
-  const [tags, setTags] = useState('Interview, Placement, SDE');
   const [summary, setSummary] = useState('');
-  const [takeaways, setTakeaways] = useState('');
   const [content, setContent] = useState('');
-
-  // Interview specific fields
+  const [tags, setTags] = useState('Placement, SDE, Amrita');
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
   const [company, setCompany] = useState('');
   const [roleOffer, setRoleOffer] = useState('');
-  const [difficulty, setDifficulty] = useState<'Super Dream' | 'Dream' | 'Enterprise' | 'Moderate'>('Super Dream');
-  
-  // Interactive rounds list
-  const [rounds, setRounds] = useState<InterviewRound[]>([
-    { roundName: 'Round 1: Online Assessment (OA)', focus: 'DSA & Coding logic', questionsAsked: '', tips: '' },
-    { roundName: 'Round 2: Technical Interview', focus: 'Data structures & Algorithms', questionsAsked: '', tips: '' }
-  ]);
+  const [resourceTitle, setResourceTitle] = useState('');
+  const [resourceUrl, setResourceUrl] = useState('');
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
-  // Discovery specific subcategory
-  const [discoveryCategory, setDiscoveryCategory] = useState('Tech Discoveries & Tools');
+  const DOMAIN_OPTIONS = [
+    { id: 'Interview Experiences', label: 'Interview Experiences', icon: Briefcase, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    { id: 'Tech Discoveries & Tools', label: 'Tech & Engineering', icon: Terminal, color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30' },
+    { id: 'Study Notes & Guides', label: 'Study Notes & Prep', icon: BookOpen, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    { id: 'Tutorials & Systems', label: 'Tutorials & Systems', icon: Code, color: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30' },
+    { id: 'Campus Life & Stories', label: 'Campus Life & Stories', icon: Sparkles, color: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' },
+  ];
 
-  // Curated Resources list
-  const [resources, setResources] = useState<BlogPostResource[]>([
-    { title: "Striver's SDE Sheet", url: 'https://takeuforward.org', type: 'sheet' }
-  ]);
+  // Auto calculate estimated reading time based on word count
+  const estimatedReadTime = useMemo(() => {
+    const wordCount = (content.trim().split(/\s+/).filter(Boolean).length) + (summary.trim().split(/\s+/).filter(Boolean).length);
+    const minutes = Math.max(1, Math.ceil(wordCount / 180));
+    return `${minutes} min read`;
+  }, [content, summary]);
 
-  const addRound = () => {
-    setRounds((prev) => [
-      ...prev,
-      { roundName: `Round ${prev.length + 1}: Technical Interview`, focus: '', questionsAsked: '', tips: '' }
-    ]);
-  };
-
-  const removeRound = (index: number) => {
-    setRounds((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateRound = (index: number, field: keyof InterviewRound, value: string) => {
-    setRounds((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
-    );
-  };
-
-  const addResource = () => {
-    setResources((prev) => [...prev, { title: '', url: '', type: 'link' }]);
-  };
-
-  const removeResource = (index: number) => {
-    setResources((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateResource = (index: number, field: keyof BlogPostResource, value: string) => {
-    setResources((prev) =>
-      prev.map((res, i) => (i === index ? { ...res, [field]: value } : res))
-    );
+  // Medium-style toolbar format insert helper
+  const insertFormat = (prefix: string, suffix: string = '', placeholder: string = 'text') => {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selected = currentText.substring(start, end) || placeholder;
+    const replacement = `${prefix}${selected}${suffix}`;
+    const updated = currentText.substring(0, start) + replacement + currentText.substring(end);
+    setContent(updated);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+    }, 10);
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !summary.trim()) return;
+    if (!title.trim() || !content.trim()) return;
+
+    const resourcesList: BlogPostResource[] = [];
+    if (resourceTitle.trim() && resourceUrl.trim()) {
+      resourcesList.push({
+        title: resourceTitle.trim(),
+        url: resourceUrl.trim(),
+        type: 'link',
+      });
+    }
 
     const newBlog: BlogPostItem = {
-      id: `custom-blog-${Date.now()}`,
-      postType: postMode === 'interview' ? 'interview' : discoveryCategory.includes('Study') ? 'study_guide' : 'tech_discovery',
+      id: `blog-${Date.now()}`,
+      postType: category === 'Interview Experiences' ? 'interview' : category.includes('Study') ? 'study_guide' : 'tech_discovery',
       title: title.trim(),
       date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-      readTime: readTime.trim() || '4 min read',
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-      summary: summary.trim(),
+      readTime: estimatedReadTime,
+      tags: tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean),
+      summary: summary.trim() || title.trim(),
       content: content.trim(),
-      keyTakeaways: takeaways.split('\n').map((t) => t.trim()).filter(Boolean),
-      authorName: user?.fullName || 'Amrita Contributor',
-      authorRole: user?.role === 'alumni' ? 'Alumni' : user?.role === 'faculty' ? 'Faculty' : 'Student',
+      authorName: user?.fullName || 'Amrita Member',
+      authorRole: user?.role === 'alumni' ? 'Alumni' : user?.role === 'faculty' ? 'Faculty' : user?.role === 'researcher' ? 'Researcher' : 'Student',
       authorCampus: user?.campus || 'Coimbatore',
-      category: postMode === 'interview' ? 'Interview Experiences' : discoveryCategory,
-      company: postMode === 'interview' ? company.trim() : undefined,
-      roleOffer: postMode === 'interview' ? roleOffer.trim() : undefined,
-      difficulty: postMode === 'interview' ? difficulty : undefined,
-      rounds: postMode === 'interview' ? rounds.filter((r) => r.roundName.trim() && r.focus.trim()) : undefined,
-      resources: resources.filter((res) => res.title.trim() && res.url.trim()),
+      authorCompany: company.trim() || undefined,
+      category,
+      company: company.trim() || undefined,
+      roleOffer: roleOffer.trim() || undefined,
+      resources: resourcesList.length ? resourcesList : undefined,
       likes: 1,
       isLiked: true,
     };
@@ -13521,17 +13257,25 @@ function CreateBlogModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-6 sm:pt-10 pb-8 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 pt-4 sm:pt-8 pb-8 px-3 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border/90 bg-card p-6 sm:p-7 shadow-2xl animate-rise relative"
+        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-border/90 bg-card p-5 sm:p-8 shadow-2xl animate-rise relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Publication Editor</span>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Write & Share Publication</h2>
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between border-b border-border/70 pb-4 mb-5">
+          <div className="flex items-center gap-3">
+            <Avatar user={user} size="sm" />
+            <div>
+              <div className="text-xs font-bold text-foreground">
+                {user?.fullName || 'Amrita Member'}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                Publishing to Amrita Connect · {estimatedReadTime}
+              </div>
+            </div>
           </div>
           <button
             type="button"
@@ -13542,264 +13286,232 @@ function CreateBlogModal({
           </button>
         </div>
 
-        {/* Mode Selector */}
-        <div className="mt-4 flex rounded-2xl border border-border/80 bg-secondary/40 p-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setPostMode('interview');
-              setTags('Interview, Placement, SDE');
-            }}
-            className={cx(
-              'flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold transition-colors',
-              postMode === 'interview'
-                ? 'bg-card text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Briefcase className="h-4 w-4" />
-            <span>Interview Experience & Resources</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setPostMode('discovery');
-              setTags('Technical Article, Study Notes, Guide');
-            }}
-            className={cx(
-              'flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold transition-colors',
-              postMode === 'discovery'
-                ? 'bg-card text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <FileText className="h-4 w-4" />
-            <span>Technical Article / Study Notes</span>
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="mt-5 space-y-4">
-          <Field
-            id="blog-title"
-            label="Article Title"
-            placeholder={
-              postMode === 'interview'
-                ? 'e.g. Amazon SDE-1: Interview Breakdown and Preparation Strategy'
-                : 'e.g. GATE CSE 2025: Operating Systems High-Yield Summary'
-            }
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-
-          {postMode === 'interview' ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field
-                id="interview-company"
-                label="Company Name"
-                placeholder="e.g. Amazon, Cisco, TCS"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                required
-              />
-              <Field
-                id="interview-role"
-                label="Role / Offer"
-                placeholder="e.g. SDE-1, Cloud Engineer"
-                value={roleOffer}
-                onChange={(e) => setRoleOffer(e.target.value)}
-                required
-              />
-              <SelectField
-                id="interview-tier"
-                label="Offer Tier"
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as any)}
-                options={[
-                  { value: 'Super Dream', label: 'Super Dream (15+ LPA)' },
-                  { value: 'Dream', label: 'Dream (8-15 LPA)' },
-                  { value: 'Enterprise', label: 'Enterprise Core' },
-                  { value: 'Moderate', label: 'Standard Recruitment' },
-                ]}
-              />
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SelectField
-                id="discovery-cat"
-                label="Category"
-                value={discoveryCategory}
-                onChange={(e) => setDiscoveryCategory(e.target.value)}
-                options={[
-                  { value: 'Tech Discoveries & Tools', label: 'Technical Discoveries & Tools' },
-                  { value: 'Study Notes & Guides', label: 'Study Notes & Guides' },
-                  { value: 'Tutorials & Systems', label: 'Tutorials & Systems' },
-                ]}
-              />
-              <Field
-                id="blog-readtime"
-                label="Estimated Read Time"
-                placeholder="e.g. 5 min read"
-                value={readTime}
-                onChange={(e) => setReadTime(e.target.value)}
-              />
-            </div>
-          )}
-
-          {/* Interactive Interview Rounds Breakdown (If in Interview Mode) */}
-          {postMode === 'interview' && (
-            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" /> Round-by-Round Breakdown ({rounds.length})
-                </label>
-                <button
-                  type="button"
-                  onClick={addRound}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground hover:underline"
-                >
-                  <Plus className="h-3 w-3" /> Add Round
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {rounds.map((round, idx) => (
-                  <div key={idx} className="rounded-xl border border-border/80 bg-card p-3 space-y-2 relative">
-                    <div className="flex items-center justify-between gap-2">
-                      <input
-                        value={round.roundName}
-                        onChange={(e) => updateRound(idx, 'roundName', e.target.value)}
-                        placeholder={`Round ${idx + 1} Title`}
-                        className="w-full rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-1 text-xs font-semibold text-foreground outline-none"
-                      />
-                      {rounds.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeRound(idx)}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      value={round.focus}
-                      onChange={(e) => updateRound(idx, 'focus', e.target.value)}
-                      placeholder="Focus area (e.g. DSA, Dynamic Programming, System Design)"
-                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-2.5 py-1 text-xs text-foreground outline-none"
-                    />
-                    <input
-                      value={round.questionsAsked || ''}
-                      onChange={(e) => updateRound(idx, 'questionsAsked', e.target.value)}
-                      placeholder="Specific questions or challenges asked in this round"
-                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-2.5 py-1 text-xs text-foreground outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Interactive Preparation Resources Builder */}
-          <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Link2 className="h-3.5 w-3.5 text-muted-foreground" /> Attached Resources & Reference Links ({resources.length})
-              </label>
-              <button
-                type="button"
-                onClick={addResource}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground hover:underline"
-              >
-                <Plus className="h-3 w-3" /> Add Link
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {resources.map((res, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    value={res.title}
-                    onChange={(e) => updateResource(idx, 'title', e.target.value)}
-                    placeholder="Resource Name (e.g. Striver SDE Sheet, GitHub Repo)"
-                    className="flex-1 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs text-foreground outline-none focus:border-border"
-                  />
-                  <input
-                    value={res.url}
-                    onChange={(e) => updateResource(idx, 'url', e.target.value)}
-                    placeholder="URL Link (https://...)"
-                    className="flex-1 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-xs text-foreground outline-none focus:border-border"
-                  />
-                  {resources.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeResource(idx)}
-                      className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+        <form onSubmit={submit} className="space-y-5">
+          {/* 1. Domain / Category Selection */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+              Select Article Domain
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {DOMAIN_OPTIONS.map((opt) => {
+                const isSelected = category === opt.id;
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setCategory(opt.id)}
+                    className={cx(
+                      'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all border shadow-2xs cursor-pointer',
+                      isSelected
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent scale-[1.02] shadow-sm ring-2 ring-orange-500/40'
+                        : 'bg-card border-border/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <Field
-            id="blog-tags"
-            label="Tags (comma separated)"
-            placeholder="e.g. SDE, Amazon, DSA, System Design, Rust, OS"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-          />
-
+          {/* 2. Article Title (Medium-style Large Input) */}
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Executive Summary / Abstract</label>
-            <textarea
-              rows={2}
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title..."
+              className="w-full rounded-xl border border-border/60 bg-secondary/20 px-4 py-3 text-xl sm:text-2xl font-extrabold text-foreground outline-none placeholder:text-muted-foreground/40 focus:border-orange-500/60 focus:bg-background transition-all"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* 3. Subtitle / Summary (Hook) */}
+          <div>
+            <input
+              type="text"
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="A concise summary of what readers will learn from your article..."
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
-              required
+              placeholder="Add a short subtitle or summary (e.g. My technical preparation strategy and key insights from the process)..."
+              className="w-full rounded-xl border border-border/60 bg-secondary/20 px-4 py-2.5 text-xs sm:text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/40 focus:border-orange-500/60 focus:bg-background transition-all"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Key Takeaways (one per line)</label>
-            <textarea
-              rows={3}
-              value={takeaways}
-              onChange={(e) => setTakeaways(e.target.value)}
-              placeholder="Master core algorithm and data structure patterns&#10;Prepare quantifiable STAR responses for behavioral rounds&#10;Conduct mock interviews with peers"
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
-            />
+          {/* 4. Medium-Style Formatting Toolbar */}
+          <div className="rounded-2xl border border-border/80 bg-secondary/30 p-2 flex flex-wrap items-center gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+              Format:
+            </span>
+            <button
+              type="button"
+              onClick={() => insertFormat('## ', '', 'Section Heading')}
+              className="rounded-lg px-2.5 py-1 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Heading 2"
+            >
+              H2
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('### ', '', 'Subheading')}
+              className="rounded-lg px-2.5 py-1 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Heading 3"
+            >
+              H3
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('**', '**', 'bold text')}
+              className="rounded-lg px-2.5 py-1 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Bold"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('*', '*', 'italic text')}
+              className="rounded-lg px-2.5 py-1 text-xs italic font-serif text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Italic"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('\n- ', '', 'Bullet item')}
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Bullet List"
+            >
+              • List
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('\n```\n', '\n```\n', '// Paste code here')}
+              className="rounded-lg px-2.5 py-1 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Code Block"
+            >
+              &lt;/&gt; Code
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormat('\n> ', '', 'Quote or key takeaway')}
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card transition-colors border border-transparent hover:border-border"
+              title="Blockquote"
+            >
+              “ Quote
+            </button>
           </div>
 
+          {/* 5. Free-form Story Writing Canvas */}
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Full Article / Experience Content</label>
             <textarea
-              rows={8}
+              ref={contentRef}
+              rows={12}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Write the full content. Detail preparation timelines, reference materials, technical questions, and recommendations..."
-              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-border transition-colors"
+              placeholder="Tell your story freely...
+
+Share your interview experiences, question breakdowns, coding solutions, study notes, or career takeaways without rigid forms. Format with headings, bullet points, and code blocks as needed."
+              className="w-full rounded-2xl border border-input/80 bg-card p-4 text-sm leading-relaxed text-foreground outline-none focus:border-orange-500 font-normal placeholder:text-muted-foreground/40 shadow-inner transition-colors"
               required
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-border/80">
-            <Button type="button" variant="quiet" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={!title.trim() || !content.trim() || !summary.trim()}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
+          {/* 6. Tags / Topics Input */}
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">
+              Topics / Tags
+            </label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g. Amazon, SDE, DSA, Python, Cloud, Placements (comma separated)"
+              className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500"
+            />
+          </div>
+
+          {/* 7. Collapsible Optional Details (Company / Reference Link) */}
+          <div className="rounded-2xl border border-border/80 bg-secondary/20 p-3.5 space-y-3">
+            <button
+              type="button"
+              onClick={() => setShowOptionalDetails(!showOptionalDetails)}
+              className="flex w-full items-center justify-between text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
             >
-              <PenLine className="h-4 w-4" />
-              <span>Publish Article</span>
-            </Button>
+              <span className="flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5 text-orange-500" />
+                <span>Add Company Name or Resource Link (Optional)</span>
+              </span>
+              <ChevronDown className={cx('h-4 w-4 transition-transform', showOptionalDetails && 'rotate-180')} />
+            </button>
+
+            {showOptionalDetails && (
+              <div className="grid gap-3 pt-2 sm:grid-cols-2 border-t border-border/60 animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Company / Organization</label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="e.g. Amazon, Google, Microsoft, HuT Labs"
+                    className="w-full rounded-xl border border-input bg-card px-3 py-1.5 text-xs outline-none focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Role / Domain Title</label>
+                  <input
+                    type="text"
+                    value={roleOffer}
+                    onChange={(e) => setRoleOffer(e.target.value)}
+                    placeholder="e.g. SDE-1, Research Intern"
+                    className="w-full rounded-xl border border-input bg-card px-3 py-1.5 text-xs outline-none focus:border-orange-500"
+                  />
+                </div>
+                <div className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Attached Resource Title</label>
+                    <input
+                      type="text"
+                      value={resourceTitle}
+                      onChange={(e) => setResourceTitle(e.target.value)}
+                      placeholder="e.g. GitHub Repository, DSA Cheat Sheet"
+                      className="w-full rounded-xl border border-input bg-card px-3 py-1.5 text-xs outline-none focus:border-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Resource URL Link</label>
+                    <input
+                      type="url"
+                      value={resourceUrl}
+                      onChange={(e) => setResourceUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full rounded-xl border border-input bg-card px-3 py-1.5 text-xs outline-none focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Action Buttons */}
+          <div className="flex items-center justify-between pt-3 border-t border-border/80">
+            <span className="text-xs text-muted-foreground">
+              {estimatedReadTime}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="quiet" onClick={onClose} className="rounded-xl text-xs">
+                Cancel
+              </Button>
+              <button
+                type="submit"
+                disabled={!title.trim() || !content.trim()}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <PenLine className="h-4 w-4" />
+                <span>Publish Article</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -13930,26 +13642,70 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !items.length && incomingList.length === 0 ? (
-        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, invitations, and platform updates will land here." />
+        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, mentorship responses, and campus event updates will land here." />
       ) : (
-        <div className="w-full divide-y divide-border rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-          {items.map((item) => (
-            <button
-              data-testid={`button-notification-${item.id}`}
-              onClick={() => read(item)}
-              key={item.id}
-              className={cx('flex w-full gap-4 p-5 text-left hover:bg-muted transition-colors', !item.read && 'bg-secondary/40')}
-            >
-              <div className={cx('mt-1 h-2 w-2 shrink-0 rounded-full', item.read ? 'bg-border' : 'bg-orange-500')} />
-              <div className="min-w-0 flex-1">
-                <div className="flex justify-between gap-4">
-                  <h2 className="text-sm font-bold text-foreground">{item.title}</h2>
-                  <span className="shrink-0 text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+        <div className="w-full divide-y divide-border/80 rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
+          {items.map((item) => {
+            const isUnread = !item.read;
+            const t = item.type || '';
+            const isMentorship = t.includes('mentorship');
+            const isConnection = t.includes('connection');
+            const isEvent = t.includes('event');
+            const isCollab = t.includes('collaboration');
+            const isResearch = t.includes('research');
+            const isHelp = t.includes('solution') || t.includes('help');
+            const isBuddy = t.includes('campus_buddy');
+            const isLike = t.includes('like');
+
+            return (
+              <button
+                data-testid={`button-notification-${item.id}`}
+                onClick={() => read(item)}
+                key={item.id}
+                className={cx(
+                  'flex w-full items-start gap-4 p-4 sm:p-5 text-left transition-colors cursor-pointer',
+                  isUnread ? 'bg-secondary/40 hover:bg-secondary/60' : 'hover:bg-muted/40'
+                )}
+              >
+                {/* Visual Type Icon Indicator */}
+                <div className={cx(
+                  'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs shadow-2xs border',
+                  isMentorship ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                  isConnection ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                  isEvent ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
+                  isCollab ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
+                  isResearch ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
+                  isHelp ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                  isBuddy ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                  isLike ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
+                  'bg-secondary text-muted-foreground border-border/80'
+                )}>
+                  {isMentorship ? <GraduationCap className="h-4 w-4" /> :
+                   isConnection ? <UserCheck className="h-4 w-4" /> :
+                   isEvent ? <CalendarDays className="h-4 w-4" /> :
+                   isCollab ? <Users className="h-4 w-4" /> :
+                   isResearch ? <Sparkles className="h-4 w-4" /> :
+                   isHelp ? <CheckCircle2 className="h-4 w-4" /> :
+                   isBuddy ? <Compass className="h-4 w-4" /> :
+                   isLike ? <ThumbsUp className="h-4 w-4" /> :
+                   <Bell className="h-4 w-4" />}
                 </div>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.message}</p>
-              </div>
-            </button>
-          ))}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xs sm:text-sm font-bold text-foreground">{item.title}</h2>
+                      {isUnread && (
+                        <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
+                      )}
+                    </div>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.message}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -14434,6 +14190,106 @@ function EditProfileModal({
   );
 }
 
+function DeleteAccountDialog({
+  user,
+  onClose,
+}: {
+  user: User;
+  onClose: () => void;
+}) {
+  const [, setLocation] = useLocation();
+  const [confirmText, setConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (confirmText.trim().toUpperCase() !== 'DELETE') return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await apiFetch('/users/me', { method: 'DELETE' });
+      clearAuthSession();
+      setLocation('/register');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to delete account. Please try again.');
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/15 text-destructive font-bold">
+              <Trash2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Delete Account</h2>
+              <p className="text-xs text-muted-foreground">Permanent and irreversible</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3.5 text-xs text-destructive space-y-1.5">
+          <p className="font-bold">Warning: This action cannot be undone.</p>
+          <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+            <li>Your profile ({user.fullName}) and login credentials will be permanently erased.</li>
+            <li>All your posts, comments, research projects, showcases, and opportunities will be deleted.</li>
+            <li>Your active chats, messages, and peer connections will be removed.</li>
+          </ul>
+        </div>
+
+        <form onSubmit={handleDelete} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              To confirm, type <span className="font-mono font-bold text-destructive">DELETE</span> below:
+            </label>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm text-foreground outline-none focus:border-destructive font-mono"
+              autoFocus
+            />
+          </div>
+
+          {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="quiet"
+              onClick={onClose}
+              disabled={isDeleting}
+              className="rounded-xl text-xs font-bold"
+            >
+              Cancel
+            </Button>
+            <button
+              type="submit"
+              disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-destructive-foreground hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all active:scale-95"
+            >
+              {isDeleting ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              <span>Permanently Delete</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'connections' | 'my_posts' | 'saved' } = {}) {
   const { data: user, isLoading, isError, refetch } = useGetCurrentUser();
   const update = useUpdateMyProfile();
@@ -14446,6 +14302,7 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
   const [showCoverModal, setShowCoverModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -15102,14 +14959,24 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
 
             {/* Account & Security */}
             <div className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Account & Security</h3>
               <button
                 type="button"
                 data-testid="button-profile-logout"
                 onClick={handleLogout}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 px-4 py-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors active:scale-95"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-xs font-bold text-foreground hover:bg-secondary transition-colors active:scale-95 cursor-pointer"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 text-muted-foreground" />
                 <span>Sign out of account</span>
+              </button>
+              <button
+                type="button"
+                data-testid="button-profile-delete-account"
+                onClick={() => setShowDeleteAccountModal(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-xs font-bold text-destructive hover:bg-destructive/15 transition-colors active:scale-95 cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete account permanently</span>
               </button>
             </div>
           </div>
@@ -15140,6 +15007,13 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
           onClose={() => setShowEditProfileModal(false)}
           onSave={handleSaveProfileForm}
           isPending={update.isPending}
+        />
+      )}
+
+      {showDeleteAccountModal && (
+        <DeleteAccountDialog
+          user={user}
+          onClose={() => setShowDeleteAccountModal(false)}
         />
       )}
 
