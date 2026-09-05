@@ -1074,10 +1074,13 @@ router.post("/posts", requireAuth, async (req, res, next) => {
 
     const validCategories = [
       "General",
+      "Blog",
+      "Article",
       "Achievement",
       "Project",
       "Opportunity",
       "Interview Experience",
+      "Research",
       "Resource",
       "Question",
       "Help Needed",
@@ -1130,10 +1133,13 @@ router.patch("/posts/:id", requireAuth, async (req, res, next) => {
     if (category !== undefined) {
       const validCategories = [
         "General",
+        "Blog",
+        "Article",
         "Achievement",
         "Project",
         "Opportunity",
         "Interview Experience",
+        "Research",
         "Resource",
         "Question",
         "Help Needed",

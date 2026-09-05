@@ -109,18 +109,8 @@ const NAV_GROUPS: NavGroup[] = [
     group: 'Main Workspace',
     items: [
       { href: '/dashboard', label: 'Overview', icon: House },
-      { href: '/feed', label: 'Community Feed', icon: Sparkles },
-      { href: '/messages', label: 'Messages', icon: MessageSquare },
-      { href: '/notifications', label: 'Notifications', icon: Bell },
-    ],
-  },
-  {
-    group: 'People & Network',
-    items: [
-      { href: '/people', label: 'People Directory', icon: Users },
+      { href: '/people', label: 'People & Feed', icon: Users },
       { href: '/connections', label: 'My Network', icon: Users2 },
-      { href: '/matchmaker', label: 'Smart Matchmaker', icon: Compass },
-      { href: '/campus-buddy', label: 'Campus Buddy', icon: MapPin },
     ],
   },
   {
@@ -3307,12 +3297,14 @@ function SectionHeader({ eyebrow, title, link }: { eyebrow: string; title: strin
 function PersonRow({ user }: { user: PublicUser }) { return <Link data-testid={`link-person-${user.id}`} href={`/people/${user.id}`} className="flex items-center gap-3 py-3.5 group"><Avatar user={user} size="sm" /><div className="min-w-0 flex-1"><div className="flex items-center gap-1.5 text-sm font-bold text-foreground group-hover:text-accent">{user.fullName}{user.verified && <Check className="h-3 w-3 text-accent" />}</div><p className="truncate text-xs text-muted-foreground">{user.headline || `${roleLabels[user.role]} · ${user.department}`}</p></div><span className="hidden text-xs text-muted-foreground sm:block">{user.campus}</span><ChevronRight className="h-4 w-4 text-border group-hover:text-foreground" /></Link>; }
 function EventRow({ event }: { event: Event }) { return <Link data-testid={`link-event-${event.id}`} href="/events" className="flex gap-3 rounded-lg border border-border p-3 hover:bg-muted"><div className="min-w-11 rounded-md bg-secondary px-2 py-1 text-center"><div className="mono text-[9px] font-bold uppercase text-muted-foreground">{new Date(event.date).toLocaleDateString('en-IN', { month: 'short' })}</div><div className="text-lg font-bold leading-5 text-foreground">{new Date(event.date).getDate()}</div></div><div className="min-w-0"><div className="truncate text-sm font-bold text-foreground">{event.title}</div><div className="mt-1 truncate text-xs text-muted-foreground">{event.campus} · {event.venue}</div></div></Link>; }
 const POST_CATEGORIES = [
-
   'General',
+  'Blog',
+  'Article',
   'Achievement',
   'Project',
   'Opportunity',
   'Interview Experience',
+  'Research',
   'Resource',
   'Question',
   'Help Needed',
@@ -3322,10 +3314,13 @@ type PostCategory = (typeof POST_CATEGORIES)[number];
 
 const categoryBadgeStyles: Record<string, string> = {
   General: 'bg-muted text-muted-foreground border-border',
+  Blog: 'bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/30',
+  Article: 'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
   Achievement: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
   Project: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
   Opportunity: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  'Interview Experience': 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20',
+  'Interview Experience': 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+  Research: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/20',
   Resource: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20',
   Question: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/20',
   'Help Needed': 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20',
@@ -4909,7 +4904,7 @@ function NewChatModal({
   );
 }
 
-function MessagesPage() {
+function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const params = useParams<{ recipientId?: string }>();
   const [activeRecipientId, setActiveRecipientId] = useState<string | undefined>(params.recipientId);
   const [, setLocation] = useLocation();
@@ -4966,11 +4961,13 @@ function MessagesPage() {
 
   return (
     <>
-      <PageTitle
-        eyebrow="Direct Messages"
-        title="Amrita Community Chat."
-        detail="Collaborate in real time with batchmates, mentors, and faculty across all Amrita campuses."
-      />
+      {!embedded && (
+        <PageTitle
+          eyebrow="Direct Messages"
+          title="Amrita Community Chat."
+          detail="Collaborate in real time with batchmates, mentors, and faculty across all Amrita campuses."
+        />
+      )}
 
       <div className="mt-4 grid h-[calc(100vh-220px)] min-h-[550px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-[320px_1fr] lg:grid-cols-[360px_1fr]">
         {/* Left Sidebar: Conversations */}
@@ -9608,61 +9605,91 @@ function ShowcasePage() {
 
 
 /* =========================================================================
-   PEOPLE OF AMRITA — EXACT REFERENCE DESIGN & SOCIAL PLATFORM
+   PEOPLE & SOCIAL FEED OF AMRITA — LINKEDIN-STYLE COMMUNITY PLATFORM
    ========================================================================= */
 
-function PeoplePage() {
+function PeoplePage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'members' | 'messages' | 'notifications' | 'saved' | 'my_posts' } = {}) {
   const { data: currentUser } = useGetCurrentUser();
+  const [activeTab, setActiveTab] = useState<'feed' | 'members' | 'messages' | 'notifications' | 'saved' | 'my_posts'>(initialTab);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCampus, setSelectedCampus] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createCategory, setCreateCategory] = useState<PostCategory>('General');
+  const [createContent, setCreateContent] = useState('');
+  const [createImageUrl, setCreateImageUrl] = useState('');
+  const [editingPost, setEditingPost] = useState<PostItem | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
-  const storiesScrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  const params = useMemo(() => ({
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const { data: notificationsData } = useListNotifications();
+  const unreadNotificationsCount = notificationsData?.filter((n) => !n.read).length || 0;
+
+  const { data: convData } = useConversations();
+  const unreadMessagesCount = convData?.items?.reduce((acc, c) => acc + (c.unreadCount || 0), 0) || 0;
+
+  // Users query for member discovery
+  const userParams = useMemo(() => ({
     search: search || undefined,
     role: selectedRole ? (selectedRole as 'student' | 'alumni' | 'faculty' | 'researcher' | 'admin') : undefined,
     page: 1,
     pageSize: 30,
   }), [search, selectedRole]);
 
-  const { data, isLoading, isError, refetch } = useListUsers(params, {
-    query: { queryKey: getListUsersQueryKey(params) }
+  const { data: usersData, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useListUsers(userParams, {
+    query: { queryKey: getListUsersQueryKey(userParams) }
   });
 
-  const { data: suggestionsData } = useConnectionSuggestions();
-  const suggestedPeople = suggestionsData?.items?.map((item) => item.user) ?? [];
+  const memberItems = usersData?.items ?? [];
 
-  const items = data?.items ?? [];
-
-  // Curated story avatars
-  const storiesList = useMemo(() => {
-    const combined = [...suggestedPeople, ...items];
-    const uniqueMap = new Map();
-    combined.forEach((u) => {
-      if (u && !uniqueMap.has(u.id)) {
-        uniqueMap.set(u.id, u);
-      }
-    });
-    return Array.from(uniqueMap.values()).slice(0, 10);
-  }, [items, suggestedPeople]);
-
-  // Sidebar widgets: Trending & Suggested
-  const trendingPeople = useMemo(() => {
-    return items.filter((u) => u.id !== currentUser?.id).slice(0, 3);
-  }, [items, currentUser?.id]);
-
-  const sidebarSuggestions = useMemo(() => {
-    return suggestedPeople.length > 0
-      ? suggestedPeople.slice(0, 3)
-      : items.filter((u) => u.id !== currentUser?.id && !trendingPeople.some((t) => t.id === u.id)).slice(0, 3);
-  }, [suggestedPeople, items, currentUser?.id, trendingPeople]);
-
-  const scrollStoriesRight = () => {
-    if (storiesScrollRef.current) {
-      storiesScrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+  // Posts query for social feed
+  const postsQueryKey = useMemo(() => [
+    'posts',
+    {
+      view: activeTab === 'saved' ? 'saved' : activeTab === 'my_posts' ? 'my_posts' : 'all',
+      category: selectedCategory || undefined,
+      campus: selectedCampus || undefined,
+      search: search || undefined,
     }
-  };
+  ], [activeTab, selectedCategory, selectedCampus, search]);
+
+  const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
+    queryKey: postsQueryKey,
+    queryFn: async () => {
+      const q = new URLSearchParams();
+      if (selectedCategory) q.set('category', selectedCategory);
+      if (selectedCampus) q.set('campus', selectedCampus);
+      if (search) q.set('search', search);
+      if (activeTab === 'saved') q.set('filter', 'saved');
+      if (activeTab === 'my_posts') q.set('filter', 'my_posts');
+      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
+    },
+  });
+
+  const posts = postsData?.items ?? [];
+
+  // Create post mutation
+  const createPostMutation = useMutation({
+    mutationFn: (data: { content: string; category: PostCategory; imageUrl?: string | null }) =>
+      apiFetch<PostItem>('/posts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      setCreateContent('');
+      setCreateImageUrl('');
+      setShowCreateModal(false);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
 
   const handleCopyInvite = () => {
     if (typeof window !== 'undefined') {
@@ -9672,141 +9699,177 @@ function PeoplePage() {
     }
   };
 
-  const STORY_RINGS = [
-    'from-purple-500 via-pink-500 to-indigo-500',
-    'from-blue-500 via-teal-400 to-emerald-500',
-    'from-orange-500 via-amber-400 to-rose-500',
-    'from-pink-500 via-rose-400 to-purple-600',
-    'from-indigo-500 via-purple-500 to-pink-500',
-    'from-cyan-500 via-blue-500 to-indigo-500',
-    'from-emerald-500 via-teal-400 to-cyan-500',
-  ];
+  const handleOpenCreateWithCategory = (cat: PostCategory) => {
+    setCreateCategory(cat);
+    setShowCreateModal(true);
+  };
+
+  const isFeedTab = activeTab === 'feed' || activeTab === 'saved' || activeTab === 'my_posts';
 
   return (
     <div className="space-y-6 animate-rise pb-16">
-      {/* 1. Header with Breadcrumb, Title & Invite Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header with Breadcrumbs, Title, Search & Quick Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
             <span>Amrita Connect</span>
             <span>›</span>
-            <span className="text-foreground font-semibold">People Directory</span>
+            <span className="text-foreground font-semibold">
+              {activeTab === 'messages'
+                ? 'Messages'
+                : activeTab === 'notifications'
+                ? 'Notifications'
+                : activeTab === 'members'
+                ? 'Explore Members'
+                : 'Feed & Network'}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-            People of Amrita
+            {activeTab === 'messages'
+              ? 'Direct Messages & Chat'
+              : activeTab === 'notifications'
+              ? 'Notifications'
+              : activeTab === 'members'
+              ? 'Explore People & Network'
+              : 'Amrita Social Feed & People'}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Discover the people building, learning, and creating across our 7 campuses.
+            {activeTab === 'messages'
+              ? 'Real-time peer discussions, mentor advisories, and faculty conversations.'
+              : activeTab === 'notifications'
+              ? 'A quiet inbox for connection requests, mentorship invites, and updates.'
+              : 'Discover recent posts, blogs, achievements, research updates, and connect with peers across 7 campuses.'}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-xs font-bold text-foreground hover:bg-muted hover:border-slate-400 dark:hover:border-slate-600 shadow-sm transition-all self-start sm:self-center"
-        >
-          <UserPlus className="h-4 w-4 text-muted-foreground" />
-          <span>Invite People</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start md:self-center">
+          <button
+            type="button"
+            onClick={() => handleOpenCreateWithCategory('General')}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95 active:scale-95 transition-all"
+          >
+            <Pencil className="h-4 w-4" />
+            <span>Create Post / Blog</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2.5 text-xs font-bold text-foreground hover:bg-muted shadow-sm transition-all"
+          >
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+            <span className="hidden sm:inline">Invite People</span>
+          </button>
+        </div>
       </div>
 
-      {/* 2. Main Layout: 2 Columns (Main Feed on Left, Discovery Widgets on Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Column (8 cols): Stories + Filters + Feed */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* 2a. "EXPLORE BY PEOPLE" Avatar Stories Row */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="mono inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-purple-400">
-                <Users className="h-3.5 w-3.5" /> EXPLORE BY PEOPLE
-              </span>
-            </div>
+      {/* 2. Top Tabs Switcher (Emoji-Free, with Unread Counts) */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-sm gap-0.5">
+          {[
+            { id: 'feed', label: 'Community Feed' },
+            { id: 'members', label: 'Explore Members', count: memberItems.length },
+            { id: 'messages', label: 'Messages', badge: unreadMessagesCount },
+            { id: 'notifications', label: 'Notifications', badge: unreadNotificationsCount },
+            { id: 'saved', label: 'Saved' },
+            { id: 'my_posts', label: 'My Posts' },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(t.id as any);
+              }}
+              className={cx(
+                'relative rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5',
+                activeTab === t.id
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              )}
+            >
+              <span>{t.label}</span>
+              {t.badge && t.badge > 0 ? (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold text-white">
+                  {t.badge > 9 ? '9+' : t.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
 
-            <div className="relative flex items-center">
-              <div
-                ref={storiesScrollRef}
-                className="flex items-center gap-4 sm:gap-5 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x w-full"
-              >
-                {/* User's own "You" avatar item with blue plus */}
-                <div className="flex flex-col items-center gap-1.5 shrink-0 snap-start">
-                  <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 shadow-md">
-                    <div className="rounded-full bg-card p-0.5">
-                      <div className="h-14 w-14 rounded-full bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-bold text-sm">
-                        {currentUser?.fullName ? initials(currentUser.fullName) : 'AM'}
-                      </div>
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 grid h-4.5 w-4.5 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-sm text-[10px] font-black">
-                      +
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-medium text-muted-foreground">You</span>
-                </div>
+        {/* Campus filter dropdown (for feed/members views) */}
+        {(isFeedTab || activeTab === 'members') && (
+          <select
+            value={selectedCampus}
+            onChange={(e) => setSelectedCampus(e.target.value)}
+            className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none shadow-sm"
+          >
+            <option value="">All Campuses</option>
+            {campuses.map((c) => (
+              <option key={c} value={c}>
+                Amrita {c}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
-                {/* Other members in avatar stories */}
-                {storiesList.map((person, idx) => {
-                  const ringGrad = STORY_RINGS[idx % STORY_RINGS.length];
-                  return (
-                    <Link
-                      key={`story-${person.id}`}
-                      href={`/people/${person.id}`}
-                      className="group flex flex-col items-center gap-1.5 shrink-0 snap-start transition-transform active:scale-95"
-                    >
-                      <div className={cx('relative p-0.5 rounded-full bg-gradient-to-tr shadow-md group-hover:scale-105 transition-transform', ringGrad)}>
-                        <div className="rounded-full bg-card p-0.5">
-                          {person.avatarUrl ? (
-                            <img src={person.avatarUrl} alt={person.fullName} className="h-14 w-14 rounded-full object-cover" />
-                          ) : (
-                            <div className="h-14 w-14 rounded-full bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-bold text-sm">
-                              {initials(person.fullName)}
-                            </div>
-                          )}
-                        </div>
-                        {person.verified && (
-                          <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-sm">
-                            <Check className="h-2.5 w-2.5 stroke-[3]" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-medium text-foreground group-hover:text-orange-500 transition-colors max-w-[64px] truncate text-center">
-                        {person.fullName.split(' ')[0]}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
+      {/* 3. Render Messages Tab */}
+      {activeTab === 'messages' && (
+        <div className="pt-1">
+          <MessagesPage embedded />
+        </div>
+      )}
 
-              {/* Scroll Right Button */}
+      {/* 4. Render Notifications Tab */}
+      {activeTab === 'notifications' && (
+        <div className="pt-1">
+          <NotificationsPage embedded />
+        </div>
+      )}
+
+      {/* 5. Render Members Tab */}
+      {activeTab === 'members' && (
+        <div className="space-y-3.5 pt-1">
+          {/* Keyword Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search members by name, skill, department..."
+              className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-sm"
+            />
+            {search && (
               <button
                 type="button"
-                aria-label="Scroll right"
-                onClick={scrollStoriesRight}
-                className="hidden sm:grid shrink-0 ml-2 h-9 w-9 place-items-center rounded-full border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:bg-muted shadow-sm transition-all active:scale-95"
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
               >
-                <ChevronRight className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </button>
-            </div>
+            )}
           </div>
 
-          {/* 2b. Role Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-2">
+          {/* Role filter pills (Emoji-Free) */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
             {[
-              { id: '', label: '✦ All Community' },
-              { id: 'student', label: '🎓 Students' },
-              { id: 'alumni', label: '💼 Alumni Mentors' },
-              { id: 'researcher', label: '🔬 Researchers' },
-              { id: 'faculty', label: '🏛️ Faculty' },
+              { id: '', label: 'All Roles' },
+              { id: 'student', label: 'Students' },
+              { id: 'alumni', label: 'Alumni Mentors' },
+              { id: 'researcher', label: 'Researchers' },
+              { id: 'faculty', label: 'Faculty' },
             ].map((r) => (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => setSelectedRole(r.id)}
                 className={cx(
-                  'rounded-full px-4 py-2 text-xs font-bold transition-all border shadow-sm',
+                  'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs',
                   selectedRole === r.id
-                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white border-transparent shadow-md scale-[1.02]'
-                    : 'bg-card/90 border-border/80 text-muted-foreground hover:text-foreground hover:border-slate-400 dark:hover:border-slate-700'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-transparent shadow-sm'
+                    : 'bg-card border-border text-muted-foreground hover:text-foreground'
                 )}
               >
                 {r.label}
@@ -9814,25 +9877,25 @@ function PeoplePage() {
             ))}
           </div>
 
-          {/* 2c. Community Spotlight & Member Feed */}
-          <div className="space-y-4 pt-1">
-            {isLoading ? (
+          {/* Members Directory View */}
+          <div className="space-y-4 pt-2">
+            {usersLoading ? (
               <LoadingState rows={4} />
-            ) : isError ? (
-              <ErrorState onRetry={() => refetch()} />
-            ) : items.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
+            ) : usersError ? (
+              <ErrorState onRetry={() => refetchUsers()} />
+            ) : memberItems.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
                 <Search className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-                <h3 className="text-base font-bold text-foreground">No people found</h3>
-                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Try clearing your search query or switching to another filter.
+                <h3 className="text-base font-bold text-foreground">No members found</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Try adjusting your search keywords or role filters.
                 </p>
                 <Button onClick={() => { setSearch(''); setSelectedRole(''); }} className="mt-4" variant="outline">
                   Reset filters
                 </Button>
               </div>
             ) : (
-              items.map((person, idx) => (
+              memberItems.map((person, idx) => (
                 <SpotlightPersonCard
                   key={person.id}
                   user={person}
@@ -9842,119 +9905,304 @@ function PeoplePage() {
             )}
           </div>
         </div>
+      )}
 
-        {/* Right Sidebar Column (4 cols): Trending + Suggestions + Banner */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Widget 1: TRENDING PEOPLE */}
-          <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-500">
-                <Flame className="h-3.5 w-3.5 fill-orange-500" /> TRENDING PEOPLE
-              </span>
+      {/* 6. Render Feed / Saved / My Posts Tabs */}
+      {isFeedTab && (
+        <div className="space-y-6">
+          {/* Create Post Trigger Card */}
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-3.5 animate-rise">
+            <div className="flex items-center gap-3">
+              <Avatar user={currentUser} size="md" />
               <button
                 type="button"
-                onClick={() => setSelectedRole('')}
-                className="text-xs font-semibold text-blue-500 hover:underline"
+                onClick={() => handleOpenCreateWithCategory('General')}
+                className="flex-1 rounded-full border border-input bg-secondary/40 hover:bg-secondary/70 px-4 py-2.5 text-left text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-all"
               >
-                View All
+                Start a post, write a blog, or share an achievement...
               </button>
             </div>
 
-            <div className="space-y-3.5">
-              {trendingPeople.map((person) => (
-                <div key={`trend-${person.id}`} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar user={person} size="md" />
-                    <div className="min-w-0">
-                      <Link
-                        href={`/people/${person.id}`}
-                        className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors block truncate"
-                      >
-                        {person.fullName}
-                      </Link>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {roleLabels[person.role] ?? person.role} • {person.department?.split(' ')[0] || person.campus}
-                      </p>
-                    </div>
-                  </div>
-
-                  <ConnectActionButton targetUser={person} size="sm" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Widget 2: SUGGESTED CONNECTIONS */}
-          <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                SUGGESTED CONNECTIONS
-              </span>
-              <Link href="/matchmaker" className="text-xs font-semibold text-blue-500 hover:underline">
-                See All
-              </Link>
-            </div>
-
-            <div className="space-y-3.5">
-              {sidebarSuggestions.map((person) => (
-                <div key={`sug-${person.id}`} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar user={person} size="md" />
-                    <div className="min-w-0">
-                      <Link
-                        href={`/people/${person.id}`}
-                        className="text-xs font-bold text-foreground hover:text-orange-500 transition-colors block truncate"
-                      >
-                        {person.fullName}
-                      </Link>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {roleLabels[person.role] ?? person.role} • {person.department?.split(' ')[0] || person.campus}
-                      </p>
-                    </div>
-                  </div>
-
-                  <ConnectActionButton targetUser={person} size="sm" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Widget 3: "Build your network" Banner Card */}
-          <div className="relative rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/80 via-purple-950/50 to-slate-900 p-5 shadow-lg overflow-hidden">
-            <div className="absolute top-0 right-0 h-32 w-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-            
-            <h3 className="text-sm font-extrabold text-white">
-              Build your network
-            </h3>
-            <p className="mt-1 text-xs text-slate-300 max-w-[200px] leading-relaxed">
-              Connect with amazing people across Amrita.
-            </p>
-
-            <div className="mt-4 flex items-center justify-between">
-              <Link
-                href="/connections"
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:opacity-90 active:scale-95 transition-all"
+            {/* Quick Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-1 pt-2 border-t border-border/60">
+              <button
+                type="button"
+                onClick={() => handleOpenCreateWithCategory('General')}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-sky-500 hover:bg-sky-500/10 transition-colors"
               >
-                Explore Network
-              </Link>
+                <Image className="h-4 w-4" />
+                <span>Photo</span>
+              </button>
 
-              {/* Overlapping Connected Avatar Art */}
-              <div className="flex -space-x-2">
-                <div className="h-7 w-7 rounded-full bg-purple-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
-                  AP
-                </div>
-                <div className="h-7 w-7 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
-                  BL
-                </div>
-                <div className="h-7 w-7 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-indigo-950">
-                  CH
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenCreateWithCategory('Blog')}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-purple-500 hover:bg-purple-500/10 transition-colors"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Write Blog</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenCreateWithCategory('Project')}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+              >
+                <Rocket className="h-4 w-4" />
+                <span>Project</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenCreateWithCategory('Opportunity')}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-amber-500 hover:bg-amber-500/10 transition-colors"
+              >
+                <BriefcaseBusiness className="h-4 w-4" />
+                <span>Opportunity</span>
+              </button>
             </div>
+          </div>
+
+          {/* Search & Category Filters (Emoji-Free) */}
+          <div className="space-y-3.5">
+            {/* Keyword Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search posts, blogs, achievements, hashtags (#SIH2026)..."
+                className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-sm"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter Pills (Emoji-Free) */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {[
+                { id: '', label: 'All Feed' },
+                { id: 'Blog', label: 'Blogs & Articles' },
+                { id: 'Project', label: 'Project Updates' },
+                { id: 'Achievement', label: 'Achievements' },
+                { id: 'Opportunity', label: 'Opportunities' },
+                { id: 'Interview Experience', label: 'Interview Prep' },
+                { id: 'Research', label: 'Research Calls' },
+                { id: 'Help Needed', label: 'Q&A & Help' },
+              ].map((cat) => {
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id || 'all'}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={cx(
+                      'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all border shadow-xs',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground font-bold border-transparent shadow-sm'
+                        : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Social Feed Stream */}
+          <div className="space-y-4 pt-1">
+            {postsLoading ? (
+              <LoadingState rows={4} />
+            ) : postsError ? (
+              <ErrorState onRetry={() => refetchPosts()} />
+            ) : posts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center animate-rise">
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
+                  <Sparkles className="h-7 w-7" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">
+                  {activeTab === 'saved'
+                    ? 'No saved posts yet'
+                    : activeTab === 'my_posts'
+                    ? 'You have not shared any posts yet'
+                    : 'No posts found in this feed'}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  {activeTab === 'saved'
+                    ? 'Click the bookmark icon on any post to save it for quick reading later.'
+                    : 'Be the first to share an achievement, blog, hackathon victory, or ask a question to the Amrita community!'}
+                </p>
+                <Button
+                  onClick={() => handleOpenCreateWithCategory('General')}
+                  className="mt-5 text-xs font-bold"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Start First Post
+                </Button>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onEdit={(p) => setEditingPost(p)}
+                  onRefresh={() => queryClient.invalidateQueries({ queryKey: ['posts'] })}
+                />
+              ))
+            )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Create Post Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-3">
+                <Avatar user={currentUser} size="md" />
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    {currentUser?.fullName ?? 'You'}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground">Publish as:</span>
+                    <select
+                      value={createCategory}
+                      onChange={(e) => setCreateCategory(e.target.value as PostCategory)}
+                      className="rounded-lg border border-input bg-secondary/50 px-2 py-0.5 text-xs font-bold text-foreground outline-none"
+                    >
+                      {POST_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!createContent.trim()) return;
+                createPostMutation.mutate({
+                  content: createContent.trim(),
+                  category: createCategory,
+                  imageUrl: createImageUrl.trim() || null,
+                });
+              }}
+              className="space-y-3.5"
+            >
+              <textarea
+                value={createContent}
+                onChange={(e) => setCreateContent(e.target.value)}
+                placeholder={
+                  createCategory === 'Blog' || createCategory === 'Article'
+                    ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
+                    : createCategory === 'Achievement'
+                    ? 'Share your achievement, hackathon win, publication, or placement story...'
+                    : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
+                }
+                rows={6}
+                className="w-full rounded-xl border border-input bg-card p-3.5 text-xs sm:text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 leading-relaxed"
+                autoFocus
+                required
+              />
+
+              {/* Optional image input */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  Attach Image URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={createImageUrl}
+                  onChange={(e) => setCreateImageUrl(e.target.value)}
+                  placeholder="https://.../photo.png"
+                  className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500"
+                />
+                {createImageUrl.trim() && (
+                  <div className="relative max-h-36 overflow-hidden rounded-xl border border-border mt-2">
+                    <img
+                      src={createImageUrl.trim()}
+                      alt="Preview"
+                      className="max-h-36 w-full object-cover"
+                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Hashtags insertion */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-semibold text-muted-foreground">Add Tag:</span>
+                {['#SIH2026', '#Research', '#Placements', '#HuTLabs', '#WebDev'].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setCreateContent((prev) => `${prev} ${tag}`)}
+                    className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="quiet"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createPostMutation.isPending || !createContent.trim()}
+                  className="px-5 py-2 font-bold"
+                >
+                  {createPostMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span>Publish Post</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <EditPostDialog
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ['posts'] });
+            setEditingPost(null);
+          }}
+        />
+      )}
 
       {/* Invite People Modal */}
       {showInviteModal && (
@@ -11081,8 +11329,57 @@ function EventsPage() {
 }
 function EventCard({ event, registered, onRegister, registering }: { event: Event; registered: boolean; onRegister: () => void; registering: boolean }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex gap-4"><div className="w-14 shrink-0 rounded-lg bg-secondary border border-border p-2 text-center text-foreground"><div className="mono text-[9px] font-bold uppercase tracking-wider text-accent">{new Date(event.date).toLocaleDateString('en-IN', { month: 'short' })}</div><div className="text-2xl font-bold">{new Date(event.date).getDate()}</div><div className="text-[9px] uppercase text-muted-foreground">{new Date(event.date).toLocaleDateString('en-IN', { weekday: 'short' })}</div></div><div className="min-w-0"><h2 className="text-lg font-bold tracking-[-.03em] text-foreground">{event.title}</h2><p className="mt-1 text-xs text-muted-foreground">{event.campus} · {event.venue}</p></div></div><p className="mt-5 line-clamp-3 text-sm leading-6 text-muted-foreground">{event.description}</p><div className="mt-5 flex items-center justify-between border-t border-border pt-4"><span className="text-xs text-muted-foreground">By {event.organizer}</span><Button aria-label={registered ? `Cancel registration for ${event.title}` : `Register for ${event.title}`} data-testid={`button-register-event-${event.id}`} variant={registered ? 'quiet' : 'outline'} className="px-3 py-2" disabled={registering} onClick={onRegister}>{registered ? <><Check className="h-3.5 w-3.5" />Registered</> : 'Register'}</Button></div></div>; }
 
-function NotificationsPage() {
-  const { data, isLoading, isError, refetch } = useListNotifications(); const mark = useMarkNotificationRead(); const queryClient = useQueryClient(); const items = data ?? []; const read = (notification: Notification) => { if (!notification.read) mark.mutate({ id: notification.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() }) }); }; return <><PageTitle eyebrow="Notifications" title="Keep in the loop." detail="A quiet inbox for the things that need your attention." action={<Link data-testid="link-notifications-people" href="/people" className="text-sm font-semibold text-accent">Find people <ArrowRight className="inline h-4 w-4" /></Link>} />{isLoading ? <LoadingState rows={4} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={Bell} title="You are all caught up" detail="New requests, invitations, and updates will land here." /> : <div className="max-w-3xl divide-y divide-border rounded-xl border border-border bg-card">{items.map((item) => <button data-testid={`button-notification-${item.id}`} onClick={() => read(item)} key={item.id} className={cx('flex w-full gap-4 p-5 text-left hover:bg-muted', !item.read && 'bg-secondary/40')}><div className={cx('mt-1 h-2 w-2 shrink-0 rounded-full', item.read ? 'bg-border' : 'bg-accent')} /><div className="min-w-0 flex-1"><div className="flex justify-between gap-4"><h2 className="text-sm font-bold text-foreground">{item.title}</h2><span className="shrink-0 text-[10px] text-muted-foreground">{relative(item.createdAt)}</span></div><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.message}</p></div></button>)}</div>}</>;
+function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
+  const { data, isLoading, isError, refetch } = useListNotifications();
+  const mark = useMarkNotificationRead();
+  const queryClient = useQueryClient();
+  const items = data ?? [];
+  const read = (notification: Notification) => {
+    if (!notification.read) {
+      mark.mutate({ id: notification.id }, {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() })
+      });
+    }
+  };
+  return (
+    <>
+      {!embedded && (
+        <PageTitle
+          eyebrow="Notifications"
+          title="Keep in the loop."
+          detail="A quiet inbox for the things that need your attention."
+          action={<Link data-testid="link-notifications-people" href="/people" className="text-sm font-semibold text-accent">Find people <ArrowRight className="inline h-4 w-4" /></Link>}
+        />
+      )}
+      {isLoading ? (
+        <LoadingState rows={4} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, invitations, and updates will land here." />
+      ) : (
+        <div className="w-full divide-y divide-border rounded-xl border border-border bg-card">
+          {items.map((item) => (
+            <button
+              data-testid={`button-notification-${item.id}`}
+              onClick={() => read(item)}
+              key={item.id}
+              className={cx('flex w-full gap-4 p-5 text-left hover:bg-muted transition-colors', !item.read && 'bg-secondary/40')}
+            >
+              <div className={cx('mt-1 h-2 w-2 shrink-0 rounded-full', item.read ? 'bg-border' : 'bg-orange-500')} />
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between gap-4">
+                  <h2 className="text-sm font-bold text-foreground">{item.title}</h2>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+                </div>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.message}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 function ProfilePage() {
@@ -11242,8 +11539,46 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
   return <AppShell user={user}>{children}</AppShell>;
 }
-function RoutedErrorBoundary({ children }: { children: React.ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
-function Router() { return <RoutedErrorBoundary><Switch><Route path="/" component={Landing} /><Route path="/login" component={LoginPage} /><Route path="/register" component={RegisterPage} /><Route path="/profile/:slug" component={SeniorProfilePage} /><Route path="/seniors/:slug" component={SeniorProfilePage} /><Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route><Route path="/feed"><ProtectedRoute><FeedPage /></ProtectedRoute></Route><Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route><Route path="/messages"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route><Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route><Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route><Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route><Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route><Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route><Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route><Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route><Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route><Route path="/people"><ProtectedRoute><PeoplePage /></ProtectedRoute></Route><Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route><Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route><Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route><Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route><Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route><Route path="/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route><Route component={NotFound} /></Switch></RoutedErrorBoundary>; }
+
+function RoutedErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+}
+
+function Router() {
+  return (
+    <RoutedErrorBoundary>
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegisterPage} />
+        <Route path="/profile/:slug" component={SeniorProfilePage} />
+        <Route path="/seniors/:slug" component={SeniorProfilePage} />
+        <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
+        <Route path="/feed"><ProtectedRoute><PeoplePage initialTab="feed" /></ProtectedRoute></Route>
+        <Route path="/connections"><ProtectedRoute><ConnectionsPage /></ProtectedRoute></Route>
+        <Route path="/messages"><ProtectedRoute><PeoplePage initialTab="messages" /></ProtectedRoute></Route>
+        <Route path="/messages/:recipientId"><ProtectedRoute><MessagesPage /></ProtectedRoute></Route>
+        <Route path="/matchmaker"><ProtectedRoute><MatchmakerPage /></ProtectedRoute></Route>
+        <Route path="/interviews"><ProtectedRoute><InterviewsPage /></ProtectedRoute></Route>
+        <Route path="/help"><ProtectedRoute><HelpDeskPage /></ProtectedRoute></Route>
+        <Route path="/campus-buddy"><ProtectedRoute><CampusBuddyPage /></ProtectedRoute></Route>
+        <Route path="/research"><ProtectedRoute><ResearchPage /></ProtectedRoute></Route>
+        <Route path="/showcase"><ProtectedRoute><ShowcasePage /></ProtectedRoute></Route>
+        <Route path="/admin"><ProtectedRoute><AdminPage /></ProtectedRoute></Route>
+        <Route path="/profile"><ProtectedRoute><ProfilePage /></ProtectedRoute></Route>
+        <Route path="/people"><ProtectedRoute><PeoplePage initialTab="feed" /></ProtectedRoute></Route>
+        <Route path="/people/:id"><ProtectedRoute><PublicProfilePage /></ProtectedRoute></Route>
+        <Route path="/mentorship"><ProtectedRoute><MentorshipPage /></ProtectedRoute></Route>
+        <Route path="/collaborations"><ProtectedRoute><CollaborationsPage /></ProtectedRoute></Route>
+        <Route path="/opportunities"><ProtectedRoute><OpportunitiesPage /></ProtectedRoute></Route>
+        <Route path="/events"><ProtectedRoute><EventsPage /></ProtectedRoute></Route>
+        <Route path="/notifications"><ProtectedRoute><PeoplePage initialTab="notifications" /></ProtectedRoute></Route>
+        <Route component={NotFound} />
+      </Switch>
+    </RoutedErrorBoundary>
+  );
+}
 
 
 
