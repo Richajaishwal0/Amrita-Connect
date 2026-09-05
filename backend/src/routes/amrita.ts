@@ -41,7 +41,7 @@ import {
   connectDatabase,
 } from "@workspace/db";
 
-import { issueToken, requireAuth, requireRole } from "../middleware/auth";
+import { issueToken, requireAuth, requireRole, optionalAuth } from "../middleware/auth";
 import { wsManager } from "../lib/ws";
 
 const router: IRouter = Router();
@@ -75,8 +75,21 @@ function serializeUser(user: any, includeEmail = false) {
   if (!user) return null;
   const plain = typeof user.toObject === "function" ? user.toObject() : user;
   const { passwordHash: _p, status: _s, email: _e, _id, id, ...rest } = plain;
+
+  let handle = plain.handle || null;
+  if (!handle && plain.fullName) {
+    handle = plain.fullName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').slice(0, 25);
+  }
+
   return {
     ...rest,
+    handle,
+    experiences: Array.isArray(plain.experiences) ? plain.experiences : [],
+    education: Array.isArray(plain.education) ? plain.education : [],
+    linkedinUrl: plain.linkedinUrl || null,
+    githubUrl: plain.githubUrl || null,
+    websiteUrl: plain.websiteUrl || null,
+    coverUrl: plain.coverUrl || null,
     ...(includeEmail ? { email: plain.email } : {}),
     id: String(_id || id),
     createdAt: plain.createdAt ? new Date(plain.createdAt).toISOString() : new Date().toISOString(),
@@ -300,22 +313,125 @@ router.get("/auth/me", requireAuth, async (req, res, next) => {
 
 router.patch("/users/me", requireAuth, async (req, res, next) => {
   try {
-    const { coverUrl, avatarUrl, fullName, ...other } = req.body;
+    const userId = getUserId(req);
+    const {
+      coverUrl,
+      avatarUrl,
+      fullName,
+      handle,
+      headline,
+      bio,
+      company,
+      jobRole,
+      skills,
+      interests,
+      helpWith,
+      lookingFor,
+      campus,
+      department,
+      graduationYear,
+      experiences,
+      education,
+      linkedinUrl,
+      githubUrl,
+      websiteUrl,
+    } = req.body;
+
     const updateFields: Record<string, any> = {};
+
     if (coverUrl !== undefined) updateFields.coverUrl = coverUrl && typeof coverUrl === "string" ? coverUrl.trim() : null;
     if (avatarUrl !== undefined) updateFields.avatarUrl = avatarUrl && typeof avatarUrl === "string" ? avatarUrl.trim() : null;
     if (fullName !== undefined && typeof fullName === "string" && fullName.trim()) {
       updateFields.fullName = fullName.trim();
     }
-    Object.assign(updateFields, other);
+    if (headline !== undefined && typeof headline === "string") updateFields.headline = headline.trim();
+    if (bio !== undefined && typeof bio === "string") updateFields.bio = bio.trim();
+    if (company !== undefined) updateFields.company = company && typeof company === "string" ? company.trim() : null;
+    if (jobRole !== undefined) updateFields.jobRole = jobRole && typeof jobRole === "string" ? jobRole.trim() : null;
+    if (campus !== undefined && typeof campus === "string" && campus.trim()) updateFields.campus = campus.trim();
+    if (department !== undefined && typeof department === "string" && department.trim()) updateFields.department = department.trim();
+    if (graduationYear !== undefined) updateFields.graduationYear = graduationYear ? Number(graduationYear) : null;
 
-    const user = await UserModel.findByIdAndUpdate(getUserId(req), { $set: updateFields }, { new: true });
+    if (skills !== undefined && Array.isArray(skills)) {
+      updateFields.skills = skills.map((s: any) => String(s).trim()).filter(Boolean);
+    }
+    if (interests !== undefined && Array.isArray(interests)) {
+      updateFields.interests = interests.map((s: any) => String(s).trim()).filter(Boolean);
+    }
+    if (helpWith !== undefined && Array.isArray(helpWith)) {
+      updateFields.helpWith = helpWith.map((s: any) => String(s).trim()).filter(Boolean);
+    }
+    if (lookingFor !== undefined && Array.isArray(lookingFor)) {
+      updateFields.lookingFor = lookingFor.map((s: any) => String(s).trim()).filter(Boolean);
+    }
+
+    if (experiences !== undefined && Array.isArray(experiences)) {
+      updateFields.experiences = experiences.map((exp: any) => ({
+        title: String(exp.title || "").trim(),
+        company: String(exp.company || "").trim(),
+        location: String(exp.location || "").trim(),
+        startDate: String(exp.startDate || "").trim(),
+        endDate: String(exp.endDate || "").trim(),
+        current: Boolean(exp.current),
+        description: String(exp.description || "").trim(),
+      }));
+    }
+
+    if (education !== undefined && Array.isArray(education)) {
+      updateFields.education = education.map((edu: any) => ({
+        school: String(edu.school || "").trim(),
+        degree: String(edu.degree || "").trim(),
+        fieldOfStudy: String(edu.fieldOfStudy || "").trim(),
+        startYear: edu.startYear ? Number(edu.startYear) : null,
+        endYear: edu.endYear ? Number(edu.endYear) : null,
+        grade: String(edu.grade || "").trim(),
+        activities: String(edu.activities || "").trim(),
+      }));
+    }
+
+    if (linkedinUrl !== undefined) updateFields.linkedinUrl = linkedinUrl && typeof linkedinUrl === "string" ? linkedinUrl.trim() : null;
+    if (githubUrl !== undefined) updateFields.githubUrl = githubUrl && typeof githubUrl === "string" ? githubUrl.trim() : null;
+    if (websiteUrl !== undefined) updateFields.websiteUrl = websiteUrl && typeof websiteUrl === "string" ? websiteUrl.trim() : null;
+
+    // Handle validation & uniqueness
+    if (handle !== undefined) {
+      const cleanHandle = String(handle || "").trim().toLowerCase().replace(/^@/, "");
+      if (cleanHandle.length > 0) {
+        if (!/^[a-z0-9_.-]{3,30}$/.test(cleanHandle)) {
+          res.status(400).json({
+            success: false,
+            message: "Handle must be 3-30 characters long and contain only lowercase letters, numbers, underscores, dashes, or dots.",
+          });
+          return;
+        }
+
+        const existing = await UserModel.findOne({
+          handle: cleanHandle,
+          _id: { $ne: new mongoose.Types.ObjectId(userId) },
+        });
+
+        if (existing) {
+          res.status(409).json({
+            success: false,
+            message: `Handle '@${cleanHandle}' is already taken. Please choose another handle.`,
+          });
+          return;
+        }
+        updateFields.handle = cleanHandle;
+      }
+    }
+
+    const user = await UserModel.findByIdAndUpdate(userId, { $set: updateFields }, { new: true });
     if (!user) {
       res.status(404).json({ success: false, message: "User not found" });
       return;
     }
     res.json(serializeUser(user, true));
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 11000 && error?.keyPattern?.handle) {
+      res.status(409).json({ success: false, message: "Handle is already in use by another member." });
+      return;
+    }
     next(error);
   }
 });
@@ -454,10 +570,31 @@ router.get("/users", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/users/:id", requireAuth, async (req, res, next) => {
+router.get("/users/:id", optionalAuth, async (req, res, next) => {
   try {
-    const { id } = GetUserParams.parse(req.params);
-    const user = await UserModel.findById(id).lean();
+    const rawId = req.params.id ? String(req.params.id).trim() : "";
+    let user: any = null;
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      user = await UserModel.findById(rawId).lean();
+    }
+    if (!user) {
+      const cleanHandle = rawId.toLowerCase().replace(/^@/, "");
+      user = await UserModel.findOne({ handle: cleanHandle }).lean();
+    }
+    if (!user) {
+      res.status(404).json({ success: false, message: "Member not found" });
+      return;
+    }
+    res.json(serializeUser(user));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/users/by-handle/:handle", optionalAuth, async (req, res, next) => {
+  try {
+    const cleanHandle = String(req.params.handle || "").trim().toLowerCase().replace(/^@/, "");
+    const user = await UserModel.findOne({ handle: cleanHandle }).lean();
     if (!user) {
       res.status(404).json({ success: false, message: "Member not found" });
       return;
@@ -479,6 +616,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       upcomingEvents,
       opportunitiesCount,
       unreadNotifications,
+      unreadMessages,
       savedOpportunities,
       registeredRows,
       recentPeople,
@@ -492,7 +630,8 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       MentorshipRequestModel.countDocuments({ requesterId: userObjId, status: "pending" }),
       EventModel.countDocuments(),
       OpportunityModel.countDocuments(),
-      NotificationModel.countDocuments({ userId: userObjId, read: false }),
+      NotificationModel.countDocuments({ userId: userObjId, read: false, type: { $nin: ["direct_message", "message"] } }),
+      MessageModel.countDocuments({ recipientId: userObjId, read: false, isDeletedForEveryone: false, deletedFor: { $ne: userObjId } }),
       SavedOpportunityModel.countDocuments({ userId: userObjId }),
       EventRegistrationModel.find({ userId: userObjId }).select("eventId").lean(),
       UserModel.find({ verified: true, _id: { $ne: userObjId }, role: { $ne: "admin" }, email: { $ne: "admin@amrita.edu" } }).sort({ createdAt: -1 }).limit(3).lean(),
@@ -523,6 +662,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res, next) => {
       savedOpportunities,
       upcomingEvents,
       unreadNotifications,
+      unreadMessages,
       recentPeople: recentPeople.map((user) => serializeUser(user)),
       upcoming: upcoming.map((event) => ({
         ...event,
@@ -1369,8 +1509,14 @@ router.delete("/events/:id/register", requireAuth, async (req, res, next) => {
 
 router.get("/notifications", requireAuth, async (req, res, next) => {
   try {
-    const userId = toObjectId(getUserId(req));
-    const items = await NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const items = await NotificationModel.find({
+      userId: { $in: [userObjId, String(userId)] },
+      type: { $nin: ["direct_message", "message"] },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(
       items.map((item) => ({
         ...item,
@@ -1383,12 +1529,34 @@ router.get("/notifications", requireAuth, async (req, res, next) => {
   }
 });
 
+router.patch("/notifications/read-all", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    await NotificationModel.updateMany(
+      {
+        userId: { $in: [userObjId, String(userId)] },
+        read: false,
+      },
+      { $set: { read: true } },
+    );
+    res.json({ success: true, message: "All notifications marked as read" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.patch("/notifications/:id/read", requireAuth, async (req, res, next) => {
   try {
-    const { id } = MarkNotificationReadParams.parse(req.params);
-    const userId = toObjectId(getUserId(req));
+    const rawId = req.params.id ? String(req.params.id).trim() : "";
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+
     const item = await NotificationModel.findOneAndUpdate(
-      { _id: toObjectId(id), userId },
+      {
+        _id: toObjectId(rawId),
+        userId: { $in: [userObjId, String(userId)] },
+      },
       { $set: { read: true } },
       { new: true },
     ).lean();
@@ -1398,6 +1566,34 @@ router.patch("/notifications/:id/read", requireAuth, async (req, res, next) => {
       return;
     }
     res.json({ ...item, id: String(item._id), createdAt: new Date(item.createdAt).toISOString() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/notifications/clear-all", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    await NotificationModel.deleteMany({
+      userId: { $in: [userObjId, String(userId)] },
+    });
+    res.json({ success: true, message: "All notifications cleared" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/notifications/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const notifId = toObjectId(req.params.id);
+    await NotificationModel.deleteOne({
+      _id: notifId,
+      userId: { $in: [userObjId, String(userId)] },
+    });
+    res.json({ success: true, message: "Notification deleted" });
   } catch (error) {
     next(error);
   }
@@ -1463,6 +1659,8 @@ router.get("/posts", requireAuth, async (req, res, next) => {
       filter.savedBy = userObjId;
     } else if (req.query.filter === "my_posts") {
       filter.authorId = userObjId;
+    } else if (req.query.authorId && mongoose.Types.ObjectId.isValid(String(req.query.authorId))) {
+      filter.authorId = toObjectId(String(req.query.authorId));
     }
 
     const [rows, total] = await Promise.all([
@@ -2201,21 +2399,41 @@ router.post("/connections", requireAuth, async (req, res, next) => {
         return;
       }
       if (existing.status === "pending") {
-        res.status(400).json({ success: false, message: "A connection request is already pending" });
+        if (String(existing.senderId) === senderId) {
+          res.status(400).json({ success: false, message: "A connection request is already pending with this user" });
+        } else {
+          res.status(400).json({
+            success: false,
+            message: "This user has already sent you a connection request. Please check your invitations to accept.",
+          });
+        }
         return;
       }
+
+      // Re-send / renew connection if previously rejected or inactive
       existing.senderId = toObjectId(senderId);
       existing.receiverId = toObjectId(receiverId);
       existing.status = "pending";
       existing.message = message?.trim() || null;
+      existing.updatedAt = new Date();
       await existing.save();
 
-      await NotificationModel.create({
+      // Avoid duplicate unread notification in 24h window
+      const existingNotif = await NotificationModel.findOne({
         userId: receiver._id,
         type: "connection_request",
-        title: "New Connection Request",
-        message: `${sender?.fullName ?? "A member"} sent you a connection request.`,
+        read: false,
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       });
+
+      if (!existingNotif) {
+        await NotificationModel.create({
+          userId: receiver._id,
+          type: "connection_request",
+          title: "New Connection Request",
+          message: `${sender?.fullName ?? "A member"} sent you a connection request.`,
+        });
+      }
 
       res.status(201).json({ success: true, connectionId: String(existing._id), status: "pending_sent" });
       return;
@@ -2431,6 +2649,8 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
         previewContent = "This message was deleted";
       } else if (!previewContent && msg.imageUrl) {
         previewContent = "📷 Photo";
+      } else if (!previewContent && (msg as any).fileUrl) {
+        previewContent = `📎 ${(msg as any).fileName || "Document"}`;
       } else if (!previewContent && msg.linkUrl) {
         previewContent = "🔗 Link";
       }
@@ -2442,6 +2662,10 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
             id: String(msg._id),
             content: previewContent,
             imageUrl: msg.isDeletedForEveryone ? null : msg.imageUrl,
+            fileUrl: msg.isDeletedForEveryone ? null : (msg as any).fileUrl,
+            fileName: msg.isDeletedForEveryone ? null : (msg as any).fileName,
+            fileSize: msg.isDeletedForEveryone ? null : (msg as any).fileSize,
+            fileType: msg.isDeletedForEveryone ? null : (msg as any).fileType,
             linkUrl: msg.isDeletedForEveryone ? null : msg.linkUrl,
             isDeletedForEveryone: !!msg.isDeletedForEveryone,
             createdAt: new Date(msg.createdAt).toISOString(),
@@ -2466,6 +2690,22 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/messages/unread-count", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const count = await MessageModel.countDocuments({
+      recipientId: userObjId,
+      read: false,
+      isDeletedForEveryone: false,
+      deletedFor: { $ne: userObjId },
+    });
+    res.json({ unreadCount: count });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
   try {
     const userId = getUserId(req);
@@ -2473,7 +2713,7 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
     const recipientId = req.params.recipientId;
     const recipientObjId = toObjectId(recipientId);
 
-    const [recipient, messages] = await Promise.all([
+    const [recipient, messages, connection] = await Promise.all([
       UserModel.findById(recipientId).lean(),
       MessageModel.find({
         $or: [
@@ -2484,6 +2724,12 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
       })
         .sort({ createdAt: 1 })
         .lean(),
+      ConnectionModel.findOne({
+        $or: [
+          { senderId: userObjId, receiverId: recipientObjId, status: "accepted" },
+          { senderId: recipientObjId, receiverId: userObjId, status: "accepted" },
+        ],
+      }).lean(),
     ]);
 
     if (!recipient) {
@@ -2498,12 +2744,17 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
 
     res.json({
       recipient: serializeUser(recipient),
+      isConnected: !!connection,
       messages: messages.map((msg) => ({
         id: String(msg._id),
         senderId: String(msg.senderId),
         recipientId: String(msg.recipientId),
         content: msg.isDeletedForEveryone ? "This message was deleted" : msg.content,
         imageUrl: msg.isDeletedForEveryone ? null : msg.imageUrl,
+        fileUrl: msg.isDeletedForEveryone ? null : (msg as any).fileUrl,
+        fileName: msg.isDeletedForEveryone ? null : (msg as any).fileName,
+        fileSize: msg.isDeletedForEveryone ? null : (msg as any).fileSize,
+        fileType: msg.isDeletedForEveryone ? null : (msg as any).fileType,
         linkUrl: msg.isDeletedForEveryone ? null : msg.linkUrl,
         isDeletedForEveryone: !!msg.isDeletedForEveryone,
         read: msg.read,
@@ -2519,7 +2770,7 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
 router.post("/messages", requireAuth, async (req, res, next) => {
   try {
     const senderId = getUserId(req);
-    const { recipientId, content, imageUrl, linkUrl } = req.body;
+    const { recipientId, content, imageUrl, linkUrl, fileUrl, fileName, fileSize, fileType } = req.body;
 
     if (!recipientId || typeof recipientId !== "string") {
       res.status(400).json({ success: false, message: "Recipient ID is required" });
@@ -2529,9 +2780,27 @@ router.post("/messages", requireAuth, async (req, res, next) => {
     const trimmedContent = typeof content === "string" ? content.trim() : "";
     const cleanImageUrl = typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null;
     const cleanLinkUrl = typeof linkUrl === "string" && linkUrl.trim() ? linkUrl.trim() : null;
+    const cleanFileUrl = typeof fileUrl === "string" && fileUrl.trim() ? fileUrl.trim() : null;
+    const cleanFileName = typeof fileName === "string" && fileName.trim() ? fileName.trim() : null;
+    const cleanFileType = typeof fileType === "string" && fileType.trim() ? fileType.trim() : null;
+    const cleanFileSize = typeof fileSize === "number" && Number.isFinite(fileSize) ? fileSize : null;
 
-    if (!trimmedContent && !cleanImageUrl && !cleanLinkUrl) {
-      res.status(400).json({ success: false, message: "Message content or photo is required" });
+    if (!trimmedContent && !cleanImageUrl && !cleanLinkUrl && !cleanFileUrl) {
+      res.status(400).json({ success: false, message: "Message content or attachment is required" });
+      return;
+    }
+
+    // Security validation on file attachments
+    if (cleanFileName) {
+      const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif)$/i;
+      if (dangerousExtRegex.test(cleanFileName)) {
+        res.status(400).json({ success: false, message: "Executable and script attachments are not permitted." });
+        return;
+      }
+    }
+
+    if (cleanFileSize && cleanFileSize > 15 * 1024 * 1024) {
+      res.status(400).json({ success: false, message: "File attachment exceeds maximum limit of 15MB." });
       return;
     }
 
@@ -2550,23 +2819,35 @@ router.post("/messages", requireAuth, async (req, res, next) => {
       return;
     }
 
+    // Strict Connection Authorization: Verify users are CONNECTED before creating any message
+    const connection = await ConnectionModel.findOne({
+      $or: [
+        { senderId: toObjectId(senderId), receiverId: toObjectId(recipientId), status: "accepted" },
+        { senderId: toObjectId(recipientId), receiverId: toObjectId(senderId), status: "accepted" },
+      ],
+    }).lean();
+
+    if (!connection) {
+      res.status(403).json({
+        success: false,
+        message: "You must be connected with this user before sending messages. Please send a connection request first.",
+      });
+      return;
+    }
+
     const message = await MessageModel.create({
       senderId: toObjectId(senderId),
       recipientId: toObjectId(recipientId),
       content: trimmedContent,
       imageUrl: cleanImageUrl,
+      fileUrl: cleanFileUrl,
+      fileName: cleanFileName,
+      fileSize: cleanFileSize,
+      fileType: cleanFileType,
       linkUrl: cleanLinkUrl,
       deletedFor: [],
       isDeletedForEveryone: false,
       read: false,
-    });
-
-    const notifSnippet = trimmedContent || (cleanImageUrl ? "Sent a photo" : "Sent a link");
-    await NotificationModel.create({
-      userId: recipient._id,
-      type: "direct_message",
-      title: "New direct message",
-      message: `${sender?.fullName ?? "A member"}: "${notifSnippet.slice(0, 50)}${notifSnippet.length > 50 ? "..." : ""}"`,
     });
 
     const serializedMsg = {
@@ -2575,6 +2856,10 @@ router.post("/messages", requireAuth, async (req, res, next) => {
       recipientId: String(message.recipientId),
       content: message.content,
       imageUrl: message.imageUrl,
+      fileUrl: (message as any).fileUrl,
+      fileName: (message as any).fileName,
+      fileSize: (message as any).fileSize,
+      fileType: (message as any).fileType,
       linkUrl: message.linkUrl,
       isDeletedForEveryone: false,
       read: message.read,

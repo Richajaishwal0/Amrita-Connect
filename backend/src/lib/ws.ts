@@ -369,19 +369,79 @@ class WebSocketManager {
       }
 
       case "send_message": {
-        // data: { recipientId: string, content?: string, imageUrl?: string, linkUrl?: string }
+        // data: { recipientId: string, content?: string, imageUrl?: string, linkUrl?: string, fileUrl?: string, fileName?: string, fileSize?: number, fileType?: string }
         const trimmedContent = typeof data?.content === "string" ? data.content.trim() : "";
         const cleanImageUrl = typeof data?.imageUrl === "string" && data.imageUrl.trim() ? data.imageUrl.trim() : null;
         const cleanLinkUrl = typeof data?.linkUrl === "string" && data.linkUrl.trim() ? data.linkUrl.trim() : null;
+        const cleanFileUrl = typeof data?.fileUrl === "string" && data.fileUrl.trim() ? data.fileUrl.trim() : null;
+        const cleanFileName = typeof data?.fileName === "string" && data.fileName.trim() ? data.fileName.trim() : null;
+        const cleanFileType = typeof data?.fileType === "string" && data.fileType.trim() ? data.fileType.trim() : null;
+        const cleanFileSize = typeof data?.fileSize === "number" && Number.isFinite(data.fileSize) ? data.fileSize : null;
 
-        if (!data?.recipientId || (!trimmedContent && !cleanImageUrl && !cleanLinkUrl)) return;
+        if (!data?.recipientId || (!trimmedContent && !cleanImageUrl && !cleanLinkUrl && !cleanFileUrl)) return;
+
+        // Security validation on file attachments
+        if (cleanFileName) {
+          const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif)$/i;
+          if (dangerousExtRegex.test(cleanFileName)) {
+            client.send({
+              type: "error" as any,
+              data: { message: "Executable and script attachments are not permitted.", recipientId: data.recipientId },
+            });
+            return;
+          }
+        }
+
+        if (cleanFileSize && cleanFileSize > 15 * 1024 * 1024) {
+          client.send({
+            type: "error" as any,
+            data: { message: "File attachment exceeds maximum limit of 15MB.", recipientId: data.recipientId },
+          });
+          return;
+        }
+
+        // Prevent messaging self
+        if (client.userId === data.recipientId) {
+          client.send({
+            type: "error" as any,
+            data: { message: "You cannot message yourself.", recipientId: data.recipientId },
+          });
+          return;
+        }
 
         try {
+          // Strict Connection Authorization: Verify users have an accepted connection
+          const isConnected = await ConnectionModel.findOne({
+            $or: [
+              { senderId: client.userId, receiverId: data.recipientId, status: "accepted" },
+              { senderId: data.recipientId, receiverId: client.userId, status: "accepted" },
+            ],
+          }).lean();
+
+          if (!isConnected) {
+            logger.warn(
+              { senderId: client.userId, recipientId: data.recipientId },
+              "Blocked WS direct message: Users are not connected"
+            );
+            client.send({
+              type: "error" as any,
+              data: {
+                message: "You must be connected with this user before sending messages.",
+                recipientId: data.recipientId,
+              },
+            });
+            return;
+          }
+
           const newMsg = await MessageModel.create({
             senderId: client.userId,
             recipientId: data.recipientId,
             content: trimmedContent,
             imageUrl: cleanImageUrl,
+            fileUrl: cleanFileUrl,
+            fileName: cleanFileName,
+            fileSize: cleanFileSize,
+            fileType: cleanFileType,
             linkUrl: cleanLinkUrl,
             deletedFor: [],
             isDeletedForEveryone: false,
@@ -399,6 +459,10 @@ class WebSocketManager {
             recipientId: newMsg.recipientId.toString(),
             content: newMsg.content,
             imageUrl: newMsg.imageUrl,
+            fileUrl: (newMsg as any).fileUrl,
+            fileName: (newMsg as any).fileName,
+            fileSize: (newMsg as any).fileSize,
+            fileType: (newMsg as any).fileType,
             linkUrl: newMsg.linkUrl,
             isDeletedForEveryone: false,
             read: newMsg.read,

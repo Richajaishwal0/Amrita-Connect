@@ -1,8 +1,29 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 
+export interface IUserExperience {
+  title?: string;
+  company?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+  description?: string;
+}
+
+export interface IUserEducation {
+  school?: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  startYear?: number;
+  endYear?: number;
+  grade?: string;
+  activities?: string;
+}
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   fullName: string;
+  handle?: string | null;
   email: string;
   passwordHash: string;
   role: "student" | "alumni" | "faculty" | "researcher" | "admin";
@@ -17,6 +38,11 @@ export interface IUser extends Document {
   interests: string[];
   helpWith: string[];
   lookingFor: string[];
+  experiences?: IUserExperience[];
+  education?: IUserEducation[];
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
+  websiteUrl?: string | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   verified: boolean;
@@ -27,6 +53,7 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
+    handle: { type: String, unique: true, sparse: true, lowercase: true, trim: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: true },
     role: {
@@ -47,6 +74,37 @@ const UserSchema = new Schema<IUser>(
     interests: { type: [String], default: [] },
     helpWith: { type: [String], default: [] },
     lookingFor: { type: [String], default: [] },
+    experiences: {
+      type: [
+        {
+          title: { type: String, default: "" },
+          company: { type: String, default: "" },
+          location: { type: String, default: "" },
+          startDate: { type: String, default: "" },
+          endDate: { type: String, default: "" },
+          current: { type: Boolean, default: false },
+          description: { type: String, default: "" },
+        },
+      ],
+      default: [],
+    },
+    education: {
+      type: [
+        {
+          school: { type: String, default: "" },
+          degree: { type: String, default: "" },
+          fieldOfStudy: { type: String, default: "" },
+          startYear: { type: Number, default: null },
+          endYear: { type: Number, default: null },
+          grade: { type: String, default: "" },
+          activities: { type: String, default: "" },
+        },
+      ],
+      default: [],
+    },
+    linkedinUrl: { type: String, default: null },
+    githubUrl: { type: String, default: null },
+    websiteUrl: { type: String, default: null },
     avatarUrl: { type: String, default: null },
     coverUrl: { type: String, default: null },
     verified: { type: Boolean, default: false },

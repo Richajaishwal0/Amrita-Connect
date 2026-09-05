@@ -65,3 +65,25 @@ export function requireRole(...roles: string[]) {
     next();
   };
 }
+
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.header("authorization");
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) {
+    return next();
+  }
+  try {
+    const claims = jwt.verify(token, jwtSecret) as unknown as AuthClaims;
+    if (claims && typeof claims === "object" && typeof claims.sub === "string") {
+      const user = await UserModel.findById(claims.sub).select("role status").lean();
+      if (user && user.status === "active") {
+        req.userId = String(user._id);
+        req.userRole = user.role;
+      }
+    }
+  } catch {
+    // Ignore invalid token for optional auth
+  }
+  next();
+}
+

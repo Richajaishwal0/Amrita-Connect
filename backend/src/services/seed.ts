@@ -22,6 +22,7 @@ export async function seedDevelopmentData() {
     const passwordHash = await bcrypt.hash("amrita-admin-2026", 10);
     await UserModel.create({
       fullName: "Platform Admin",
+      handle: "admin",
       email: "admin@amrita.edu",
       passwordHash,
       role: "admin",
@@ -37,5 +38,23 @@ export async function seedDevelopmentData() {
       verified: true,
       status: "active",
     });
+  }
+
+  // Backfill unique handle for any existing users missing handle
+  const usersWithoutHandle = await UserModel.find({
+    $or: [{ handle: null }, { handle: { $exists: false } }, { handle: "" }],
+  });
+  for (const u of usersWithoutHandle) {
+    let baseHandle = u.email ? u.email.split("@")[0].toLowerCase().replace(/[^a-z0-9_.-]/g, "") : "";
+    if (!baseHandle || baseHandle.length < 3) {
+      baseHandle = (u.fullName || "member").toLowerCase().replace(/[^a-z0-9_.-]/g, "_").replace(/_+/g, "_").slice(0, 20);
+    }
+    let uniqueHandle = baseHandle;
+    let counter = 1;
+    while (await UserModel.findOne({ handle: uniqueHandle, _id: { $ne: u._id } })) {
+      uniqueHandle = `${baseHandle}${counter++}`;
+    }
+    u.handle = uniqueHandle;
+    await u.save();
   }
 }

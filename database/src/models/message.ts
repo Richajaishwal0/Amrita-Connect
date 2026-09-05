@@ -6,6 +6,10 @@ export interface IMessage extends Document {
   recipientId: mongoose.Types.ObjectId;
   content: string;
   imageUrl?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  fileType?: string | null;
   linkUrl?: string | null;
   deletedFor: mongoose.Types.ObjectId[];
   isDeletedForEveryone: boolean;
@@ -20,6 +24,10 @@ const MessageSchema = new Schema<IMessage>(
     recipientId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     content: { type: String, required: false, default: "", trim: true },
     imageUrl: { type: String, default: null },
+    fileUrl: { type: String, default: null },
+    fileName: { type: String, default: null },
+    fileSize: { type: Number, default: null },
+    fileType: { type: String, default: null },
     linkUrl: { type: String, default: null },
     deletedFor: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
     isDeletedForEveryone: { type: Boolean, default: false },

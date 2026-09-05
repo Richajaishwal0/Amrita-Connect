@@ -198,12 +198,30 @@ export function useWebSocketChat(activeRecipientId?: string) {
   }, [connect]);
 
   const sendDirectMessage = useCallback(
-    (recipientId: string, content: string, imageUrl?: string | null, linkUrl?: string | null) => {
+    (
+      recipientId: string,
+      content: string,
+      imageUrl?: string | null,
+      linkUrl?: string | null,
+      fileUrl?: string | null,
+      fileName?: string | null,
+      fileSize?: number | null,
+      fileType?: string | null
+    ) => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
             type: 'send_message',
-            data: { recipientId, content, imageUrl: imageUrl || null, linkUrl: linkUrl || null },
+            data: {
+              recipientId,
+              content,
+              imageUrl: imageUrl || null,
+              linkUrl: linkUrl || null,
+              fileUrl: fileUrl || null,
+              fileName: fileName || null,
+              fileSize: fileSize || null,
+              fileType: fileType || null,
+            },
           })
         );
       }
