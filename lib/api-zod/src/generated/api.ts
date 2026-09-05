@@ -130,7 +130,8 @@ export const UpdateMyProfileBody = zod.object({
   "interests": zod.array(zod.string()).optional(),
   "helpWith": zod.array(zod.string()).optional(),
   "lookingFor": zod.array(zod.string()).optional(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish()
 })
 
 export const UpdateMyProfileResponse = zod.object({

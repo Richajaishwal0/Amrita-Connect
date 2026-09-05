@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Bookmark, BookOpen, Briefcase, BriefcaseBusiness,
-  Building2, CalendarDays, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
-  Code, Compass, Copy, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Layers,
+  Building2, CalendarDays, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
+  Code, Compass, Copy, CornerDownRight, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Info, Layers,
   Lightbulb, Link2, LoaderCircle, LogIn, LogOut, Mail, MapPin, Menu, MessageSquare, Moon,
-  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Rocket, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Sparkles,
+  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
   Star, Sun, Terminal, ThumbsUp, Trash2, TrendingUp, Trophy, Upload, UserCheck, UserCircle, UserPlus, UserRoundPlus, Users, Users2, UserX, Video, X, Zap,
 } from 'lucide-react';
+import { useWebSocketChat } from './hooks/useWebSocketChat';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getGetAdminSummaryQueryKey, getListCollaborationsQueryKey, getListMentorshipRequestsQueryKey,
@@ -43,6 +45,44 @@ function setAuthSession(token: string) {
 function clearAuthSession() {
   localStorage.removeItem('amrita_token');
   queryClient.clear();
+}
+
+async function apiFetch<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('amrita_token') : null;
+  const headers = new Headers(options.headers || {});
+
+  if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = cleanEndpoint.startsWith('/api') ? cleanEndpoint : `/api${cleanEndpoint}`;
+
+  const res = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    let errorMsg = `Request failed (${res.status})`;
+    try {
+      const errData = await res.json();
+      errorMsg = errData.message || errData.error || errorMsg;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return res.json();
+  }
+  const text = await res.text();
+  return (text ? text : null) as unknown as T;
 }
 
 function useTheme() {
@@ -2488,7 +2528,7 @@ function LoginPage() {
     setError('');
     setSuccessMsg('');
     login.mutate(
-      { data: { email, password } },
+      { data: { email: email.trim(), password } },
       {
         onSuccess: (data) => {
           setAuthSession(data.token);
@@ -2497,7 +2537,12 @@ function LoginPage() {
           const redirect = params.get('redirect') || '/feed';
           setLocation(redirect);
         },
-        onError: () => setError('Those details did not work. Check your email and password, then try again.'),
+        onError: (err: any) => {
+          setError(
+            err?.message ||
+              'Those details did not work. Please check your password, reset it using the link below, or register if you haven\'t created this account yet.'
+          );
+        },
       }
     );
   };
@@ -2523,7 +2568,7 @@ function LoginPage() {
           <button
             data-testid="button-forgot-password"
             type="button"
-            className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+            className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
             onClick={() => setShowResetDialog(true)}
           >
             Forgot password? Reset here
@@ -2534,8 +2579,25 @@ function LoginPage() {
             <Check className="h-4 w-4" /> {successMsg}
           </p>
         )}
-        {error && <p data-testid="status-auth-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-        <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5" disabled={login.isPending}>
+        {error && (
+          <div data-testid="status-auth-error" className="rounded-xl bg-destructive/10 border border-destructive/20 p-3.5 text-xs text-destructive space-y-1.5">
+            <p className="font-semibold">{error}</p>
+            <div className="flex items-center gap-3 pt-1 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setShowResetDialog(true)}
+                className="text-orange-500 hover:underline cursor-pointer"
+              >
+                Reset Password →
+              </button>
+              <span className="text-muted-foreground/50">·</span>
+              <Link href="/register" className="text-orange-500 hover:underline">
+                Create new account →
+              </Link>
+            </div>
+          </div>
+        )}
+        <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5 cursor-pointer" disabled={login.isPending}>
           {login.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
           Sign in
         </Button>
@@ -2606,12 +2668,43 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useLocation();
   const [globalSearch, setGlobalSearch] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const unread = useListNotifications({ query: { queryKey: getListNotificationsQueryKey(), staleTime: 30000 } });
   const unreadCount = unread.data?.filter((n) => !n.read).length ?? 0;
 
+  const searchUserParams = useMemo(
+    () => ({
+      search: globalSearch.trim() || undefined,
+      pageSize: 5,
+      page: 1,
+    }),
+    [globalSearch]
+  );
+
+  const { data: searchUsersData, isLoading: searchUsersLoading } = useListUsers(searchUserParams, {
+    query: {
+      queryKey: getListUsersQueryKey(searchUserParams),
+      enabled: Boolean(globalSearch.trim().length >= 1 && showSearchDropdown),
+      staleTime: 10000,
+    },
+  });
+
+  const matchingSearchUsers = (searchUsersData?.items ?? []).filter((u) => u.id !== user?.id && u.role !== 'admin');
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const socialNavItems: NavItem[] = [
     { href: '/feed', label: 'Feed & Stories', icon: Rss },
-    { href: '/people', label: 'Discover Members', icon: Users },
+    { href: '/people', label: 'My Friends & Network', icon: Users },
     { href: '/blogs', label: 'Blogs', icon: FileText },
     { href: '/mentorship', label: 'Mentorship Hub', icon: HeartHandshake },
     { href: '/showcase', label: 'Project Showcase', icon: Trophy },
@@ -2632,6 +2725,7 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
   const handleGlobalSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (globalSearch.trim()) {
+      setShowSearchDropdown(false);
       setLocation(`/feed?search=${encodeURIComponent(globalSearch.trim())}`);
     }
   };
@@ -2780,17 +2874,107 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Global Search Bar */}
-            <form onSubmit={handleGlobalSearchSubmit} className="relative w-full max-w-sm hidden sm:block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder="Search posts, members, #tags..."
-                className="w-full rounded-full border border-input bg-secondary/50 hover:bg-secondary/70 focus:bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
-              />
-            </form>
+            {/* Global Search Bar (LinkedIn Style with People Autocomplete) */}
+            <div ref={searchContainerRef} className="relative w-full max-w-sm hidden sm:block">
+              <form onSubmit={handleGlobalSearchSubmit} className="relative w-full">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={globalSearch}
+                  onFocus={() => setShowSearchDropdown(true)}
+                  onChange={(e) => {
+                    setGlobalSearch(e.target.value);
+                    setShowSearchDropdown(true);
+                  }}
+                  placeholder="Search posts, members, #tags..."
+                  className="w-full rounded-full border border-input bg-secondary/50 hover:bg-secondary/70 focus:bg-background py-1.5 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
+                />
+                {globalSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGlobalSearch('');
+                      setShowSearchDropdown(false);
+                    }}
+                    className="absolute right-2.5 top-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </form>
+
+              {/* LinkedIn Style Quick Autocomplete Dropdown */}
+              {showSearchDropdown && globalSearch.trim().length >= 1 && (
+                <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl p-2.5 space-y-2 animate-scale-in">
+                  <div className="flex items-center justify-between px-2 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-orange-500" />
+                      <span>People on Amrita Connect</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-semibold">
+                      {matchingSearchUsers.length} found
+                    </span>
+                  </div>
+
+                  {searchUsersLoading ? (
+                    <div className="p-3 text-center text-xs text-muted-foreground">Searching members...</div>
+                  ) : matchingSearchUsers.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-muted-foreground">
+                      No members matching "{globalSearch.trim()}"
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/60">
+                      {matchingSearchUsers.map((person) => (
+                        <Link
+                          key={person.id}
+                          href={`/people/${person.id}`}
+                          onClick={() => {
+                            setShowSearchDropdown(false);
+                            setGlobalSearch('');
+                          }}
+                          className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-secondary/70 transition-all group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <Avatar user={person} size="sm" className="ring-1 ring-border group-hover:ring-orange-500/40 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                                  {person.fullName}
+                                </span>
+                                {person.verified && <Check className="h-3 w-3 text-orange-500 shrink-0" />}
+                                <span className="rounded-md bg-secondary px-1.5 py-0.2 text-[9px] font-extrabold text-muted-foreground uppercase">
+                                  {roleLabels[person.role] ?? person.role}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {person.headline || `${person.department || 'Amrita'} · ${person.campus || ''}`}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-[11px] font-bold text-orange-500 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                            <span>Profile</span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* See all results in feed */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSearchDropdown(false);
+                      setLocation(`/feed?search=${encodeURIComponent(globalSearch.trim())}`);
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl bg-orange-500/10 hover:bg-orange-500/20 px-3 py-2 text-xs font-bold text-orange-600 dark:text-orange-400 transition-all cursor-pointer"
+                  >
+                    <span>See all feed posts & posts for "{globalSearch.trim()}"</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Social Controls */}
@@ -2827,7 +3011,14 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
         </header>
 
         {/* Page Container */}
-        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:py-8">
+        <main
+          className={cx(
+            'flex-1 mx-auto w-full',
+            location.startsWith('/messages')
+              ? 'max-w-7xl px-2 sm:px-4 py-2 sm:py-3'
+              : 'max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:py-8'
+          )}
+        >
           {children}
         </main>
       </div>
@@ -3083,8 +3274,12 @@ interface PostCommentItem {
   text: string;
   createdAt: string;
   user: PublicUser;
+  likesCount?: number;
+  isLiked?: boolean;
   isMyComment: boolean;
 }
+
+export type PostReactionType = 'like' | 'celebrate' | 'support' | 'love' | 'insightful' | 'curious';
 
 interface PostItem {
   id: string;
@@ -3100,6 +3295,10 @@ interface PostItem {
   updatedAt: string;
   author: PublicUser;
   likesCount: number;
+  reactionsCount?: number;
+  userReaction?: PostReactionType | null;
+  reactionsBreakdown?: Record<string, number>;
+  recentReactors?: Array<{ id: string; fullName: string; avatarUrl?: string | null; type: string }>;
   commentsCount: number;
   isLiked: boolean;
   isSaved: boolean;
@@ -3107,163 +3306,122 @@ interface PostItem {
   comments: PostCommentItem[];
 }
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('amrita_token') : null;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers as any),
-  };
-  const res = await fetch(`/api${path}`, { ...options, headers });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `Request failed with status ${res.status}`);
-  }
-  return res.json();
-}
+const REACTION_CONFIG: Record<
+  PostReactionType,
+  { label: string; emoji: string; color: string; bg: string }
+> = {
+  like: { label: 'Like', emoji: '👍', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/15' },
+  celebrate: { label: 'Celebrate', emoji: '👏', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/15' },
+  support: { label: 'Support', emoji: '💡', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/15' },
+  love: { label: 'Love', emoji: '❤️', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/15' },
+  insightful: { label: 'Insightful', emoji: '🧠', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/15' },
+  curious: { label: 'Curious', emoji: '🤔', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-500/15' },
+};
 
-function CreatePostBox({ onCreated }: { onCreated: () => void }) {
-  const { data: user } = useGetCurrentUser();
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState<PostCategory>('General');
-  const [imageUrl, setImageUrl] = useState('');
-  const [showImageInput, setShowImageInput] = useState(false);
-  const [error, setError] = useState('');
-
-  const createMutation = useMutation({
-    mutationFn: (data: { content: string; category: PostCategory; imageUrl?: string | null }) =>
-      apiFetch<PostItem>('/posts', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      setContent('');
-      setImageUrl('');
-      setShowImageInput(false);
-      setError('');
-      onCreated();
-    },
-    onError: (err: any) => {
-      setError(err.message || 'Could not publish post. Please try again.');
-    },
+function PostReactionsModal({
+  postId,
+  onClose,
+}: {
+  postId: string;
+  onClose: () => void;
+}) {
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const { data, isLoading } = useQuery({
+    queryKey: ['post-reactions', postId],
+    queryFn: () => apiFetch<{ items: Array<{ user: PublicUser; type: string; createdAt: string }>; total: number }>(`/posts/${postId}/reactions`),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
-    createMutation.mutate({
-      content: content.trim(),
-      category,
-      imageUrl: imageUrl.trim() || null,
-    });
-  };
+  const reactions = data?.items ?? [];
+  const filtered = activeFilter === 'all' ? reactions : reactions.filter((r) => r.type === activeFilter);
 
-  return (
-    <div className="surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
-      <div className="flex items-start gap-3.5">
-        <Avatar user={user} size="md" />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-foreground">
-            {user?.fullName ?? 'You'} <span className="font-normal text-muted-foreground">· Amrita {user?.campus}</span>
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold text-muted-foreground">Category:</span>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as PostCategory)}
-              className="rounded-lg border border-input bg-card px-2.5 py-1 text-xs font-semibold text-foreground outline-none focus:border-accent"
-            >
-              {POST_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 sm:pt-28 pb-10 bg-black/80 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-md max-h-[75vh] rounded-3xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Pinned Header */}
+        <div className="flex items-center justify-between border-b border-border/80 px-5 py-3.5 shrink-0 bg-card">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold text-foreground">Reactions</span>
+            <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-muted-foreground">{reactions.length}</span>
           </div>
+          <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Reaction Type Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto px-5 py-2.5 border-b border-border/40 shrink-0 bg-muted/20 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveFilter('all')}
+            className={cx(
+              'rounded-full px-3 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer',
+              activeFilter === 'all' ? 'bg-orange-500 text-white shadow-xs' : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+            )}
+          >
+            All ({reactions.length})
+          </button>
+          {(['like', 'celebrate', 'support', 'love', 'insightful', 'curious'] as PostReactionType[]).map((type) => {
+            const count = reactions.filter((r) => r.type === type).length;
+            if (count === 0) return null;
+            const conf = REACTION_CONFIG[type];
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setActiveFilter(type)}
+                className={cx(
+                  'rounded-full px-2.5 py-1 text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer',
+                  activeFilter === type ? 'bg-orange-500 text-white shadow-xs' : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <span>{conf.emoji}</span>
+                <span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Scrollable Reaction User List */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {isLoading ? (
+            <LoadingState rows={3} />
+          ) : filtered.length === 0 ? (
+            <p className="text-center py-6 text-xs text-muted-foreground">No reactions found for this filter.</p>
+          ) : (
+            filtered.map((item, idx) => {
+              const rConf = REACTION_CONFIG[item.type as PostReactionType] || REACTION_CONFIG.like;
+              return (
+                <div key={`${item.user?.id}-${idx}`} className="flex items-center justify-between gap-3 rounded-2xl p-2.5 hover:bg-secondary/40 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative shrink-0">
+                      <Avatar user={item.user} size="md" />
+                      <span className="absolute -bottom-1 -right-1 text-sm bg-card rounded-full shadow-xs ring-1 ring-border p-0.5">{rConf.emoji}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <Link href={`/people/${item.user?.id}`} onClick={onClose} className="text-xs sm:text-sm font-bold text-foreground hover:text-orange-500 hover:underline truncate block">
+                        {item.user?.fullName ?? 'Amrita Member'}
+                      </Link>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {item.user?.headline || `${item.user?.department || 'Student'} · Amrita ${item.user?.campus || ''}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ConnectActionButton targetUser={item.user} size="sm" />
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-        <textarea
-          data-testid="textarea-create-post"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={`Share an achievement, interview experience, project update, or ask the Amrita community...`}
-          rows={3}
-          className="w-full rounded-xl border border-input bg-card p-3.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-accent focus:ring-2 focus:ring-accent/20"
-          required
-        />
-
-        {showImageInput && (
-          <div className="animate-rise space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                data-testid="input-post-image-url"
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Paste public image link (e.g. https://.../demo.png)"
-                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-accent"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setImageUrl('');
-                  setShowImageInput(false);
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {imageUrl.trim() && (
-              <div className="relative max-h-48 overflow-hidden rounded-lg border border-border">
-                <img
-                  src={imageUrl.trim()}
-                  alt="Attachment preview"
-                  className="max-h-48 w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowImageInput((prev) => !prev)}
-              className={cx(
-                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-                showImageInput || imageUrl ? 'bg-accent/20 text-accent font-bold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              <Image className="h-4 w-4" />
-              <span>{showImageInput ? 'Image URL active' : 'Add Image'}</span>
-            </button>
-          </div>
-
-          <Button
-            data-testid="button-publish-post"
-            type="submit"
-            disabled={createMutation.isPending || !content.trim()}
-            className="px-5 py-2 text-xs"
-          >
-            {createMutation.isPending ? (
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            Post to Feed
-          </Button>
-        </div>
-      </form>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3280,22 +3438,85 @@ function PostCard({
   const [commentText, setCommentText] = useState('');
   const [copied, setCopied] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [showReactionsModal, setShowReactionsModal] = useState(false);
+  const pickerTimeoutRef = useRef<any>(null);
 
   const queryClient = useQueryClient();
 
-  const likeMutation = useMutation({
-    mutationFn: () => apiFetch<{ id: string; isLiked: boolean; likesCount: number }>(`/posts/${post.id}/like`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+  const syncPostCache = (updatedPost: PostItem) => {
+    queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+      if (!old) return old;
+      if (Array.isArray(old)) {
+        return old.map((p: PostItem) => (p.id === updatedPost.id ? updatedPost : p));
+      }
+      if (old.items && Array.isArray(old.items)) {
+        return {
+          ...old,
+          items: old.items.map((p: PostItem) => (p.id === updatedPost.id ? updatedPost : p)),
+        };
+      }
+      return old;
+    });
+    queryClient.invalidateQueries({ queryKey: ['posts'] });
+    if (typeof onRefresh === 'function') {
+      onRefresh();
+    }
+  };
+
+  const reactMutation = useMutation({
+    mutationFn: (type: PostReactionType) =>
+      apiFetch<PostItem>(`/posts/${post.id}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ type }),
+      }),
+    onSuccess: (updatedPost) => {
+      if (updatedPost && updatedPost.id) {
+        syncPostCache(updatedPost);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+      }
+    },
   });
 
   const saveMutation = useMutation({
     mutationFn: () => apiFetch<{ id: string; isSaved: boolean; savedCount: number }>(`/posts/${post.id}/save`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+    onSuccess: (saveRes) => {
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        const updateItem = (p: PostItem) => {
+          if (p.id !== post.id) return p;
+          return {
+            ...p,
+            isSaved: saveRes.isSaved,
+          };
+        };
+        if (Array.isArray(old)) return old.map(updateItem);
+        if (old.items && Array.isArray(old.items)) {
+          return { ...old, items: old.items.map(updateItem) };
+        }
+        return old;
+      });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (typeof onRefresh === 'function') onRefresh();
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => apiFetch<{ success: boolean }>(`/posts/${post.id}`, { method: 'DELETE' }),
-    onSuccess: () => onRefresh(),
+    onSuccess: () => {
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        const filterItem = (p: PostItem) => p.id !== post.id;
+        if (Array.isArray(old)) return old.filter(filterItem);
+        if (old.items && Array.isArray(old.items)) {
+          return { ...old, items: old.items.filter(filterItem), total: Math.max(0, (old.total || 1) - 1) };
+        }
+        return old;
+      });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (typeof onRefresh === 'function') onRefresh();
+    },
   });
 
   const commentMutation = useMutation({
@@ -3304,20 +3525,42 @@ function PostCard({
         method: 'POST',
         body: JSON.stringify({ text }),
       }),
-    onSuccess: () => {
+    onSuccess: (updatedPost) => {
       setCommentText('');
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (updatedPost && updatedPost.id) {
+        syncPostCache(updatedPost);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+      }
+    },
+  });
+
+  const commentLikeMutation = useMutation({
+    mutationFn: (commentId: string) =>
+      apiFetch<PostItem>(`/posts/${post.id}/comments/${commentId}/like`, { method: 'POST' }),
+    onSuccess: (updatedPost) => {
+      if (updatedPost && updatedPost.id) {
+        syncPostCache(updatedPost);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+      }
     },
   });
 
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) =>
-      apiFetch<{ success: boolean }>(`/posts/${post.id}/comments/${commentId}`, { method: 'DELETE' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
+      apiFetch<PostItem>(`/posts/${post.id}/comments/${commentId}`, { method: 'DELETE' }),
+    onSuccess: (updatedPost) => {
+      if (updatedPost && updatedPost.id) {
+        syncPostCache(updatedPost);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+      }
+    },
   });
 
   const handleShare = () => {
-    const url = `${window.location.origin}/feed`;
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/feed?post=${post.id}` : `https://connect.amrita.edu/feed?post=${post.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
       setCopied(true);
@@ -3331,10 +3574,61 @@ function PostCard({
     commentMutation.mutate(commentText.trim());
   };
 
+  const { data: currentUser } = useGetCurrentUser();
   const badgeClass = categoryBadgeStyles[post.category] ?? categoryBadgeStyles.General;
+  const userReaction = post.userReaction || (post.isLiked ? 'like' : null);
+  const currentReactionConf = userReaction ? REACTION_CONFIG[userReaction] : null;
+
+  // Collect top reactions for display chip
+  const breakdown = post.reactionsBreakdown || {};
+  const activeEmojis = (Object.entries(breakdown) as [PostReactionType, number][])
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([type]) => REACTION_CONFIG[type]?.emoji || '👍');
+
+  const totalReactions = post.reactionsCount ?? post.likesCount ?? 0;
+  const recentReactors = post.recentReactors || [];
+
+  const getReactionSummaryText = () => {
+    if (totalReactions === 0) return null;
+
+    const isUserReacted = !!userReaction;
+    const otherReactors = recentReactors.filter((r) => r.id !== currentUser?.id);
+
+    if (isUserReacted) {
+      const othersCount = totalReactions - 1;
+      if (othersCount === 0) {
+        return 'You';
+      } else if (othersCount === 1) {
+        const otherName = otherReactors[0]?.fullName || '1 other';
+        return `You and ${otherName}`;
+      } else {
+        const otherName = otherReactors[0]?.fullName;
+        if (otherName) {
+          return `You, ${otherName} and ${othersCount - 1} ${othersCount - 1 === 1 ? 'other' : 'others'}`;
+        }
+        return `You and ${othersCount} others`;
+      }
+    } else {
+      if (recentReactors.length > 0) {
+        const first = recentReactors[0]?.fullName || 'Amrita Member';
+        const othersCount = totalReactions - 1;
+        if (othersCount === 0) {
+          return first;
+        } else if (othersCount === 1) {
+          const second = recentReactors[1]?.fullName || '1 other';
+          return `${first} and ${second}`;
+        } else {
+          return `${first} and ${othersCount} others`;
+        }
+      }
+      return `${totalReactions} ${totalReactions === 1 ? 'reaction' : 'reactions'}`;
+    }
+  };
 
   return (
-    <article className="surface relative rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/30 animate-rise">
+    <article className="surface relative rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs transition-all hover:border-border hover:shadow-md animate-rise">
       {/* Author Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -3345,11 +3639,15 @@ function PostCard({
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/people/${post.author?.id ?? ''}`}
-                className="text-sm font-bold text-foreground hover:text-accent transition-colors"
+                className="text-sm font-bold text-foreground hover:text-orange-500 hover:underline transition-colors"
               >
                 {post.author?.fullName ?? 'Amrita Member'}
               </Link>
-              {post.author?.verified && <Check className="h-3.5 w-3.5 text-accent" />}
+              {post.author?.verified && (
+                <span title="Verified Amrita Member" className="grid h-3.5 w-3.5 place-items-center rounded-full bg-blue-500 text-white">
+                  <Check className="h-2 w-2 stroke-[3]" />
+                </span>
+              )}
               <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                 {roleLabels[post.author?.role] ?? post.author?.role}
               </span>
@@ -3372,7 +3670,7 @@ function PostCard({
                 type="button"
                 aria-label="Post actions"
                 onClick={() => setActionMenuOpen((prev) => !prev)}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
@@ -3385,7 +3683,7 @@ function PostCard({
                       setActionMenuOpen(false);
                       onEdit(post);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted cursor-pointer"
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit post
                   </button>
@@ -3397,7 +3695,7 @@ function PostCard({
                         deleteMutation.mutate();
                       }
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
@@ -3431,7 +3729,7 @@ function PostCard({
 
       {/* Attached Document / PDF */}
       {post.documentUrl && (
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 sm:p-4 hover:border-accent/40 transition-all">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 sm:p-4 hover:border-orange-500/40 transition-all">
           <div className="flex items-center gap-3 min-w-0">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-500 font-bold">
               <FileText className="h-5 w-5" />
@@ -3452,7 +3750,7 @@ function PostCard({
             download={post.documentName || 'document.pdf'}
             className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all shrink-0"
           >
-            <Download className="h-3.5 w-3.5 text-accent" />
+            <Download className="h-3.5 w-3.5 text-orange-500" />
             <span>Open / Download</span>
           </a>
         </div>
@@ -3460,13 +3758,13 @@ function PostCard({
 
       {/* Attached Link */}
       {post.linkUrl && (
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 hover:border-accent/40 transition-all">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 hover:border-orange-500/40 transition-all">
           <div className="flex items-center gap-3 min-w-0">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-500">
               <Link2 className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-foreground hover:text-accent">
+              <p className="truncate text-xs font-bold text-foreground hover:text-orange-500">
                 {post.linkUrl}
               </p>
               <span className="text-[10px] text-muted-foreground">External Resource</span>
@@ -3476,7 +3774,7 @@ function PostCard({
             href={post.linkUrl.startsWith('http') ? post.linkUrl : `https://${post.linkUrl}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-accent hover:underline shrink-0"
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-orange-500 hover:underline shrink-0"
           >
             <span>Visit</span>
             <ExternalLink className="h-3 w-3" />
@@ -3484,35 +3782,111 @@ function PostCard({
         </div>
       )}
 
-      {/* Interactions Action Bar */}
-      <div className="mt-5 flex items-center justify-between border-t border-border pt-3.5 text-xs text-muted-foreground">
+      {/* Reaction & Comments Count Bar (LinkedIn Style) */}
+      {(totalReactions > 0 || post.commentsCount > 0) && (
+        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground border-b border-border/60 pb-2.5 px-1">
+          {totalReactions > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowReactionsModal(true)}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer group text-left"
+              title="Click to view all who reacted"
+            >
+              <span className="flex items-center -space-x-1 shrink-0">
+                {activeEmojis.map((emoji, i) => (
+                  <span key={i} className="inline-grid place-items-center text-sm ring-2 ring-card rounded-full bg-card">
+                    {emoji}
+                  </span>
+                ))}
+              </span>
+              <span className="group-hover:underline font-semibold text-foreground/80 text-xs">
+                {getReactionSummaryText()}
+              </span>
+            </button>
+          ) : <div />}
+
+          {post.commentsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowComments((prev) => !prev)}
+              className="hover:underline hover:text-foreground transition-colors cursor-pointer text-xs"
+            >
+              {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Interactions Action Bar (LinkedIn Style with Rich Reaction Popover) */}
+      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground pt-1">
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Like Button */}
-          <button
-            type="button"
-            data-testid={`button-like-post-${post.id}`}
-            onClick={() => likeMutation.mutate()}
-            disabled={likeMutation.isPending}
-            className={cx(
-              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold transition-all active:scale-95',
-              post.isLiked
-                ? 'bg-rose-500/15 text-rose-500 font-bold'
-                : 'hover:bg-muted hover:text-foreground'
-            )}
+          {/* Reaction Button with Hover Picker */}
+          <div
+            className="relative"
+            onMouseEnter={() => {
+              clearTimeout(pickerTimeoutRef.current);
+              setShowPicker(true);
+            }}
+            onMouseLeave={() => {
+              pickerTimeoutRef.current = setTimeout(() => setShowPicker(false), 300);
+            }}
           >
-            <Heart className={cx('h-4 w-4', post.isLiked && 'fill-rose-500 text-rose-500')} />
-            <span>{post.likesCount}</span>
-          </button>
+            {/* Reaction Hover Picker */}
+            {showPicker && (
+              <div
+                className="absolute bottom-full left-0 mb-2 z-30 flex items-center gap-1.5 rounded-full border border-border/90 bg-card p-1.5 shadow-2xl animate-scale-in"
+                onMouseEnter={() => clearTimeout(pickerTimeoutRef.current)}
+                onMouseLeave={() => setShowPicker(false)}
+              >
+                {(['like', 'celebrate', 'support', 'love', 'insightful', 'curious'] as PostReactionType[]).map((type) => {
+                  const conf = REACTION_CONFIG[type];
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        reactMutation.mutate(type);
+                        setShowPicker(false);
+                      }}
+                      className="group/btn relative grid h-9 w-9 place-items-center rounded-full hover:scale-130 transition-transform cursor-pointer"
+                      title={conf.label}
+                    >
+                      <span className="text-xl leading-none select-none">{conf.emoji}</span>
+                      <span className="pointer-events-none absolute -top-7 rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white opacity-0 group-hover/btn:opacity-100 transition-opacity backdrop-blur-xs">
+                        {conf.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              type="button"
+              data-testid={`button-like-post-${post.id}`}
+              onClick={() => reactMutation.mutate(userReaction || 'like')}
+              disabled={reactMutation.isPending}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 cursor-pointer',
+                currentReactionConf
+                  ? `${currentReactionConf.bg} ${currentReactionConf.color}`
+                  : 'hover:bg-secondary/70 hover:text-foreground'
+              )}
+            >
+              <span className="text-sm select-none">{currentReactionConf?.emoji || '👍'}</span>
+              <span>{currentReactionConf?.label || 'Like'}</span>
+            </button>
+          </div>
 
           {/* Comment Toggle Button */}
           <button
             type="button"
             data-testid={`button-comments-toggle-${post.id}`}
             onClick={() => setShowComments((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold hover:bg-muted hover:text-foreground transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold hover:bg-secondary/70 hover:text-foreground transition-all cursor-pointer"
           >
             <MessageSquare className="h-4 w-4" />
-            <span>{post.commentsCount}</span>
+            <span>Comment</span>
           </button>
 
           {/* Save Bookmark Button */}
@@ -3522,13 +3896,13 @@ function PostCard({
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
             className={cx(
-              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold transition-all active:scale-95',
+              'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 cursor-pointer',
               post.isSaved
-                ? 'bg-accent/20 text-accent font-bold'
-                : 'hover:bg-muted hover:text-foreground'
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
+                : 'hover:bg-secondary/70 hover:text-foreground'
             )}
           >
-            <Bookmark className={cx('h-4 w-4', post.isSaved && 'fill-accent text-accent')} />
+            <Bookmark className={cx('h-4 w-4', post.isSaved && 'fill-amber-500 text-amber-500')} />
             <span className="hidden sm:inline">{post.isSaved ? 'Saved' : 'Save'}</span>
           </button>
         </div>
@@ -3537,16 +3911,16 @@ function PostCard({
         <button
           type="button"
           onClick={handleShare}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold text-muted-foreground hover:bg-secondary/70 hover:text-foreground transition-all cursor-pointer"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Share2 className="h-3.5 w-3.5" />}
-          <span>{copied ? 'Link Copied' : 'Share'}</span>
+          {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
+          <span>{copied ? 'Link Copied!' : 'Share'}</span>
         </button>
       </div>
 
-      {/* Collapsible Comments Section */}
+      {/* Collapsible Comments Section with Reactions and Delete */}
       {showComments && (
-        <div className="mt-4 border-t border-border pt-4 space-y-3 animate-rise">
+        <div className="mt-4 border-t border-border/80 pt-4 space-y-3 animate-rise">
           {/* Add Comment Input */}
           <form onSubmit={handleAddComment} className="flex gap-2">
             <input
@@ -3554,13 +3928,13 @@ function PostCard({
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write a supportive reply or answer..."
-              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-accent"
+              placeholder="Write a thoughtful comment or reply..."
+              className="w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500"
             />
             <Button
               type="submit"
               disabled={commentMutation.isPending || !commentText.trim()}
-              className="px-3 py-2 text-xs shrink-0"
+              className="px-4 py-2 text-xs font-bold shrink-0 bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
             >
               {commentMutation.isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             </Button>
@@ -3571,22 +3945,37 @@ function PostCard({
             {post.comments?.map((comment) => (
               <div
                 key={comment.id}
-                className="flex items-start justify-between gap-3 rounded-xl bg-secondary/40 p-3 text-xs"
+                className="group/comment flex items-start justify-between gap-3 rounded-2xl bg-secondary/35 p-3.5 text-xs transition-colors hover:bg-secondary/50"
               >
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
                   <Avatar user={comment.user} size="sm" />
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-foreground">
+                      <Link href={`/people/${comment.user?.id}`} className="font-bold text-foreground hover:text-orange-500 hover:underline">
                         {comment.user?.fullName ?? 'Member'}
-                      </span>
+                      </Link>
                       <span className="text-[10px] text-muted-foreground">
                         {relative(comment.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-1 text-foreground/90 font-normal leading-relaxed">
+                    <p className="mt-1 text-foreground/90 font-normal leading-relaxed whitespace-pre-line">
                       {comment.text}
                     </p>
+
+                    {/* Comment like reaction button */}
+                    <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() => commentLikeMutation.mutate(comment.id)}
+                        className={cx(
+                          'inline-flex items-center gap-1 font-bold hover:text-foreground transition-colors cursor-pointer',
+                          comment.isLiked ? 'text-rose-500 font-bold' : ''
+                        )}
+                      >
+                        <Heart className={cx('h-3 w-3', comment.isLiked && 'fill-rose-500 text-rose-500')} />
+                        <span>{(comment.likesCount ?? 0) > 0 ? `${comment.likesCount} Like` : 'Like'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -3594,10 +3983,14 @@ function PostCard({
                   <button
                     type="button"
                     aria-label="Delete comment"
-                    onClick={() => deleteCommentMutation.mutate(comment.id)}
-                    className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                    onClick={() => {
+                      if (confirm('Delete this comment?')) {
+                        deleteCommentMutation.mutate(comment.id);
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg opacity-80 hover:opacity-100 hover:bg-destructive/10 transition-all cursor-pointer"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
@@ -3610,11 +4003,19 @@ function PostCard({
           </div>
         </div>
       )}
+
+      {/* See Who Reacted Modal */}
+      {showReactionsModal && (
+        <PostReactionsModal
+          postId={post.id}
+          onClose={() => setShowReactionsModal(false)}
+        />
+      )}
     </article>
   );
 }
 
-function EditPostDialog({
+function EditPostModal({
   post,
   onClose,
   onUpdated,
@@ -3625,17 +4026,30 @@ function EditPostDialog({
 }) {
   const [content, setContent] = useState(post.content);
   const [category, setCategory] = useState<PostCategory>(post.category);
-  const [imageUrl, setImageUrl] = useState(post.imageUrl ?? '');
-  const [error, setError] = useState('');
-
+  const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (data: { content: string; category: PostCategory; imageUrl?: string | null }) =>
       apiFetch<PostItem>(`/posts/${post.id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onSuccess: (updatedPost) => {
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) {
+          return old.map((p: PostItem) => (p.id === updatedPost.id ? updatedPost : p));
+        }
+        if (old.items && Array.isArray(old.items)) {
+          return {
+            ...old,
+            items: old.items.map((p: PostItem) => (p.id === updatedPost.id ? updatedPost : p)),
+          };
+        }
+        return old;
+      });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       onUpdated();
+      onClose();
     },
     onError: (err: any) => {
       setError(err.message || 'Could not update post');
@@ -3652,9 +4066,9 @@ function EditPostDialog({
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl animate-rise">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-14 sm:pt-20 pb-8 overflow-y-auto bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl animate-scale-in">
         <div className="flex items-start justify-between">
           <div>
             <div className="mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">
@@ -3724,7 +4138,8 @@ function EditPostDialog({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -4017,6 +4432,9 @@ interface DirectMessage {
   senderId: string;
   recipientId: string;
   content: string;
+  imageUrl?: string | null;
+  linkUrl?: string | null;
+  isDeletedForEveryone?: boolean;
   read: boolean;
   createdAt: string;
   isMine: boolean;
@@ -4027,6 +4445,9 @@ interface ConversationItem {
   lastMessage: {
     id: string;
     content: string;
+    imageUrl?: string | null;
+    linkUrl?: string | null;
+    isDeletedForEveryone?: boolean;
     createdAt: string;
     isMine: boolean;
     read: boolean;
@@ -4034,12 +4455,94 @@ interface ConversationItem {
   unreadCount: number;
 }
 
+function getLocalDeletedForMe(): Set<string> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('amrita_deleted_for_me') : null;
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addLocalDeletedForMe(messageId: string) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const current = getLocalDeletedForMe();
+    current.add(messageId);
+    localStorage.setItem('amrita_deleted_for_me', JSON.stringify(Array.from(current)));
+  } catch {
+    // ignore
+  }
+}
+
+function getLocalDeletedForEveryone(): Set<string> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('amrita_deleted_for_everyone') : null;
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addLocalDeletedForEveryone(messageId: string) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const current = getLocalDeletedForEveryone();
+    current.add(messageId);
+    localStorage.setItem('amrita_deleted_for_everyone', JSON.stringify(Array.from(current)));
+  } catch {
+    // ignore
+  }
+}
+
+function sanitizeDirectMessages(messages: DirectMessage[]): DirectMessage[] {
+  const deletedForMe = getLocalDeletedForMe();
+  const deletedForEveryone = getLocalDeletedForEveryone();
+
+  return (messages || [])
+    .filter((m) => !deletedForMe.has(m.id))
+    .map((m) => {
+      if (deletedForEveryone.has(m.id) || m.isDeletedForEveryone) {
+        return {
+          ...m,
+          isDeletedForEveryone: true,
+          content: 'This message was deleted',
+          imageUrl: null,
+          linkUrl: null,
+        };
+      }
+      return m;
+    });
+}
+
 function useConversations() {
   const queryKey = ['messages', 'conversations'];
   return {
     ...useQuery({
       queryKey,
-      queryFn: () => apiFetch<{ items: ConversationItem[] }>('/messages/conversations'),
+      queryFn: async () => {
+        const res = await apiFetch<{ items: ConversationItem[] }>('/messages/conversations');
+        const deletedForEveryone = getLocalDeletedForEveryone();
+        return {
+          items: (res.items || []).map((item) => {
+            if (item.lastMessage) {
+              if (deletedForEveryone.has(item.lastMessage.id) || item.lastMessage.isDeletedForEveryone) {
+                return {
+                  ...item,
+                  lastMessage: {
+                    ...item.lastMessage,
+                    isDeletedForEveryone: true,
+                    content: 'This message was deleted',
+                    imageUrl: null,
+                    linkUrl: null,
+                  },
+                };
+              }
+            }
+            return item;
+          }),
+        };
+      },
       refetchInterval: 5000,
     }),
     queryKey,
@@ -4051,7 +4554,13 @@ function useMessagesThread(recipientId?: string) {
   return {
     ...useQuery({
       queryKey,
-      queryFn: () => apiFetch<{ recipient: PublicUser; messages: DirectMessage[] }>(`/messages/${recipientId}`),
+      queryFn: async () => {
+        const res = await apiFetch<{ recipient: PublicUser; messages: DirectMessage[] }>(`/messages/${recipientId}`);
+        return {
+          ...res,
+          messages: sanitizeDirectMessages(res.messages || []),
+        };
+      },
       enabled: Boolean(recipientId),
       refetchInterval: 3000,
     }),
@@ -4167,13 +4676,101 @@ function NewChatModal({
   );
 }
 
+// Helper to compress local image files using HTML canvas before sending
+function compressMessageImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1600;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper to render text with rich auto-detected links
+function renderRichMessageText(text: string, isMine: boolean) {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={cx(
+            'inline-flex items-center gap-1 font-semibold underline underline-offset-2 break-all hover:opacity-85 transition-opacity',
+            isMine ? 'text-amber-200' : 'text-orange-600 dark:text-orange-400'
+          )}
+        >
+          <span>{part}</span>
+          <ExternalLink className="h-3 w-3 inline shrink-0" />
+        </a>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
+
 function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const params = useParams<{ recipientId?: string }>();
   const [activeRecipientId, setActiveRecipientId] = useState<string | undefined>(params.recipientId);
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
+  const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'mentors' | 'students'>('all');
   const [content, setContent] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Photo attachment & deletion states (LinkedIn style)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState<DirectMessage | null>(null);
+  const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  const chatStreamRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     if (params.recipientId) {
@@ -4181,130 +4778,493 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
     }
   }, [params.recipientId]);
 
+  // Close message action menu on outside clicks
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.msg-action-menu-wrapper')) {
+        setActiveActionMenuId(null);
+      }
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  const { isConnected, onlineUsers, typingMap, sendDirectMessage, deleteDirectMessage, sendTyping, markAsRead } =
+    useWebSocketChat(activeRecipientId);
+
   const { data: convData, isLoading: convLoading } = useConversations();
-  const { data: threadData, isLoading: threadLoading, refetch: refetchThread } = useMessagesThread(activeRecipientId);
+  const { data: threadData, isLoading: threadLoading, refetch: refetchThread } =
+    useMessagesThread(activeRecipientId);
   const queryClient = useQueryClient();
 
+  // Mark as read whenever active recipient changes or new message comes in
+  useEffect(() => {
+    if (activeRecipientId) {
+      markAsRead(activeRecipientId);
+      apiFetch(`/messages/${activeRecipientId}/read`, { method: 'PATCH' }).catch(() => {});
+    }
+  }, [activeRecipientId, threadData?.messages?.length, markAsRead]);
+
+  // Auto scroll to bottom of the chat container ONLY
+  const scrollToBottom = (smooth = true) => {
+    if (chatStreamRef.current) {
+      chatStreamRef.current.scrollTo({
+        top: chatStreamRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom(false);
+  }, [activeRecipientId]);
+
+  useEffect(() => {
+    scrollToBottom(true);
+  }, [threadData?.messages?.length, typingMap[String(activeRecipientId)], selectedImage]);
+
   const sendMutation = useMutation({
-    mutationFn: (text: string) =>
+    mutationFn: (payload: { content?: string; imageUrl?: string | null; linkUrl?: string | null }) =>
       apiFetch<DirectMessage>('/messages', {
         method: 'POST',
-        body: JSON.stringify({ recipientId: activeRecipientId, content: text }),
+        body: JSON.stringify({
+          recipientId: activeRecipientId,
+          content: payload.content || '',
+          imageUrl: payload.imageUrl || null,
+          linkUrl: payload.linkUrl || null,
+        }),
       }),
-    onSuccess: () => {
+    onSuccess: (newMsg) => {
       setContent('');
+      setSelectedImage(null);
+      sendTyping(activeRecipientId!, false);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+      // Optimistically push to thread
+      const threadKey = ['messages', 'thread', activeRecipientId];
+      queryClient.setQueryData(threadKey, (old: any) => {
+        if (!old) return old;
+        const exists = (old.messages || []).some((m: any) => m.id === newMsg.id);
+        if (exists) return old;
+        return {
+          ...old,
+          messages: [...(old.messages || []), newMsg],
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       refetchThread();
     },
   });
 
+  const handleConfirmDelete = async (mode: 'for_me' | 'for_everyone') => {
+    if (!deletingMessage || !activeRecipientId) return;
+    const messageId = deletingMessage.id;
+
+    // 1. Persist to local client deletion registry immediately
+    if (mode === 'for_everyone') {
+      addLocalDeletedForEveryone(messageId);
+    } else {
+      addLocalDeletedForMe(messageId);
+    }
+
+    // 2. Immediately close the dialog and action menu for instant UI response
+    setDeletingMessage(null);
+    setActiveActionMenuId(null);
+
+    // 3. Optimistically update local React Query thread cache right away
+    const threadKey = ['messages', 'thread', activeRecipientId];
+    queryClient.setQueryData(threadKey, (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        messages: sanitizeDirectMessages(old.messages || []),
+      };
+    });
+    queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+    // 4. Dispatch real-time WebSocket deletion event
+    deleteDirectMessage(messageId, mode);
+
+    // 5. Persist to backend database via REST
+    try {
+      await apiFetch(`/messages/${messageId}?mode=${mode}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Backend REST delete synced via WS fallback:', err);
+    }
+    refetchThread();
+  };
+
   const handleSelectRecipient = (id: string) => {
     setActiveRecipientId(id);
     setLocation(`/messages/${id}`);
+    markAsRead(id);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() || !activeRecipientId) return;
-    sendMutation.mutate(content.trim());
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if ((!content.trim() && !selectedImage) || !activeRecipientId) return;
+
+    const trimmed = content.trim();
+    const photoToSend = selectedImage;
+
+    // Dispatch via WS for instant real-time delivery
+    sendDirectMessage(activeRecipientId, trimmed, photoToSend, null);
+    // Also persist via REST for hybrid resilience
+    sendMutation.mutate({ content: trimmed, imageUrl: photoToSend });
   };
 
-  const conversations = (convData?.items ?? []).filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsCompressingImage(true);
+      const compressed = await compressMessageImage(file);
+      setSelectedImage(compressed);
+    } catch (err) {
+      console.error('Failed to compress image', err);
+    } finally {
+      setIsCompressingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleCopyMessage = (msg: DirectMessage) => {
+    if (msg.content) {
+      navigator.clipboard.writeText(msg.content);
+      setCopiedMessageId(msg.id);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    }
+    setActiveActionMenuId(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    if (activeRecipientId) {
+      sendTyping(activeRecipientId, true);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(() => {
+        sendTyping(activeRecipientId, false);
+      }, 2500);
+    }
+    // Auto-resize textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const addEmoji = (emoji: string) => {
+    setContent((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
+  };
+
+  const quickPrompts = [
+    '👋 Hi! Would love to connect regarding your research.',
+    '📅 Can we schedule a 1:1 mentorship call?',
+    '🚀 Are you looking for collaborators on your project?',
+    '💡 Could you review my recent project update?',
+  ];
+
+  const rawConversations = convData?.items ?? [];
+
+  // Filter tabs
+  const conversations = rawConversations.filter((c) => {
+    const q = search.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
       c.otherUser?.fullName?.toLowerCase().includes(q) ||
       c.otherUser?.department?.toLowerCase().includes(q) ||
-      c.lastMessage?.content?.toLowerCase().includes(q)
-    );
+      c.otherUser?.campus?.toLowerCase().includes(q) ||
+      c.lastMessage?.content?.toLowerCase().includes(q);
+
+    if (!matchesSearch) return false;
+
+    if (filterTab === 'unread') {
+      return c.unreadCount > 0;
+    }
+    if (filterTab === 'mentors') {
+      return c.otherUser?.role === 'alumni' || c.otherUser?.role === 'faculty';
+    }
+    if (filterTab === 'students') {
+      return c.otherUser?.role === 'student';
+    }
+    return true;
   });
 
+  const totalUnread = rawConversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
   const currentRecipient = threadData?.recipient;
-  const messages = threadData?.messages ?? [];
+  const rawMessages = threadData?.messages ?? [];
+  const messages = useMemo(() => sanitizeDirectMessages(rawMessages), [rawMessages]);
+  const isRecipientOnline = activeRecipientId ? onlineUsers.has(String(activeRecipientId)) : false;
+  const isRecipientTyping = activeRecipientId ? !!typingMap[String(activeRecipientId)] : false;
+
+  // Format message time
+  const formatTime = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  // Group messages by date
+  const groupedMessages: { date: string; items: DirectMessage[] }[] = [];
+  messages.forEach((msg) => {
+    const msgDate = new Date(msg.createdAt);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let dateLabel = msgDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    if (msgDate.toDateString() === today.toDateString()) {
+      dateLabel = 'Today';
+    } else if (msgDate.toDateString() === yesterday.toDateString()) {
+      dateLabel = 'Yesterday';
+    }
+    const lastGroup = groupedMessages[groupedMessages.length - 1];
+    if (lastGroup && lastGroup.date === dateLabel) {
+      lastGroup.items.push(msg);
+    } else {
+      groupedMessages.push({ date: dateLabel, items: [msg] });
+    }
+  });
 
   return (
     <>
-      {!embedded && (
-        <PageTitle
-          eyebrow="Direct Messages"
-          title="Amrita Community Chat."
-          detail="Collaborate in real time with batchmates, mentors, and faculty across all Amrita campuses."
-        />
-      )}
+      <div className="relative grid h-[calc(100vh-5.5rem)] min-h-[500px] max-h-[900px] w-full overflow-hidden rounded-3xl border border-border/80 bg-card/90 shadow-2xl backdrop-blur-xl md:grid-cols-[320px_1fr] lg:grid-cols-[360px_1fr]">
+        {/* Living Ambient Background Mesh in Container */}
+        <div className="absolute -top-32 -right-32 h-[450px] w-[450px] rounded-full bg-gradient-to-br from-orange-400/15 via-amber-300/10 to-transparent dark:from-orange-500/15 blur-[100px] pointer-events-none animate-drift" />
+        <div className="absolute -bottom-32 -left-32 h-[450px] w-[450px] rounded-full bg-gradient-to-tr from-purple-400/15 via-indigo-300/10 to-transparent dark:from-purple-600/15 blur-[110px] pointer-events-none animate-drift-reverse" />
+        <div className="absolute inset-0 bg-dot-pattern opacity-35 dark:opacity-15 pointer-events-none" />
 
-      <div className="mt-4 grid h-[calc(100vh-220px)] min-h-[550px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-[320px_1fr] lg:grid-cols-[360px_1fr]">
-        {/* Left Sidebar: Conversations */}
-        <div className={cx('flex flex-col border-r border-border bg-card', activeRecipientId ? 'hidden md:flex' : 'flex')}>
-          {/* Header & New Chat button */}
-          <div className="flex items-center justify-between border-b border-border p-4">
-            <h2 className="text-base font-bold tracking-tight text-foreground">Conversations</h2>
+        {/* Left Sidebar: Conversations & Filters */}
+        <div className={cx('relative z-10 flex h-full min-h-0 flex-col border-r border-border/80 bg-card/75 dark:bg-[#070b14]/75 backdrop-blur-xl', activeRecipientId ? 'hidden md:flex' : 'flex')}>
+          {/* Top Header */}
+          <div className="flex items-center justify-between border-b border-border/70 p-4 shrink-0 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-base font-extrabold tracking-tight text-foreground">Inbox</h2>
+              {totalUnread > 0 && (
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white shadow-xs animate-pulse">
+                  {totalUnread}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/80 dark:border-emerald-800/60 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {isConnected ? 'Live' : 'Syncing'}
+              </span>
+            </div>
             <Button
               variant="outline"
               onClick={() => setShowNewChat(true)}
-              className="px-2.5 py-1 text-xs font-bold border-accent/40 text-accent hover:bg-accent/10"
+              className="px-3 py-1.5 text-xs font-bold border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white hover:border-orange-500 dark:hover:bg-orange-600 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
             >
-              <UserPlus className="h-3.5 w-3.5" /> New Chat
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> New Chat
             </Button>
           </div>
 
           {/* Search bar */}
-          <div className="border-b border-border p-3">
+          <div className="p-3 border-b border-border/60 bg-card/40 shrink-0">
             <label className="relative block">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search conversations..."
-                className="w-full rounded-xl border border-input bg-secondary/50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-accent"
+                placeholder="Search chats, names, departments..."
+                className="w-full rounded-2xl border border-border/80 bg-background/80 py-2 pl-9 pr-8 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </label>
+
+            {/* Filter Tabs (WhatsApp/LinkedIn Style) */}
+            <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => setFilterTab('all')}
+                className={cx(
+                  'rounded-full px-3 py-1 transition-all whitespace-nowrap cursor-pointer shadow-2xs',
+                  filterTab === 'all'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/25'
+                    : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('unread')}
+                className={cx(
+                  'rounded-full px-3 py-1 transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer shadow-2xs',
+                  filterTab === 'unread'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/25'
+                    : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                <span>Unread</span>
+                {totalUnread > 0 && (
+                  <span className={cx('h-1.5 w-1.5 rounded-full', filterTab === 'unread' ? 'bg-white' : 'bg-orange-500')} />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('mentors')}
+                className={cx(
+                  'rounded-full px-3 py-1 transition-all whitespace-nowrap cursor-pointer shadow-2xs',
+                  filterTab === 'mentors'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/25'
+                    : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                Mentors & Faculty
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('students')}
+                className={cx(
+                  'rounded-full px-3 py-1 transition-all whitespace-nowrap cursor-pointer shadow-2xs',
+                  filterTab === 'students'
+                    ? 'bg-gradient-to-r from-slate-900 to-slate-800 dark:from-white dark:to-slate-200 text-white dark:text-slate-900 shadow-md'
+                    : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                Students
+              </button>
+            </div>
           </div>
 
           {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-border">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/60">
             {convLoading ? (
-              <div className="p-4"><LoadingState rows={3} /></div>
+              <div className="p-4"><LoadingState rows={4} /></div>
             ) : conversations.length === 0 ? (
-              <div className="p-6 text-center text-xs text-muted-foreground">
-                <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="font-semibold text-foreground">No conversations yet</p>
-                <p className="mt-1">Click "New Chat" to connect with peers and mentors.</p>
+              <div className="p-8 text-center text-xs text-muted-foreground">
+                <div className="mx-auto relative h-16 w-16 flex items-center justify-center mb-3">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-400/25 to-purple-400/25 blur-md animate-pulse-slow" />
+                  <div className="relative z-10 grid h-12 w-12 place-items-center rounded-2xl bg-card border border-border shadow-md text-orange-500 animate-float">
+                    <MessageSquare className="h-6 w-6" />
+                  </div>
+                </div>
+                <p className="font-extrabold text-foreground text-sm">No conversations found</p>
+                <p className="mt-1 leading-relaxed text-slate-500 dark:text-slate-400 max-w-[200px] mx-auto">
+                  {search ? 'Try adjusting your search query.' : 'Connect with batchmates and mentors across 7 campuses.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowNewChat(true)}
+                  className="mt-4 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white text-xs font-extrabold px-4 py-2 shadow-md shadow-orange-500/25 active:scale-95 transition-all cursor-pointer"
+                >
+                  <UserPlus className="h-3.5 w-3.5 mr-1.5 text-white" /> Start Chat
+                </button>
               </div>
             ) : (
               conversations.map((conv) => {
                 const isActive = activeRecipientId === conv.otherUser?.id;
+                const isOnline = onlineUsers.has(String(conv.otherUser?.id));
+                const isTyping = !!typingMap[String(conv.otherUser?.id)];
+
                 return (
                   <button
                     key={conv.otherUser?.id}
                     type="button"
                     onClick={() => handleSelectRecipient(conv.otherUser.id)}
                     className={cx(
-                      'flex w-full items-start gap-3 p-3.5 text-left transition-all',
-                      isActive ? 'bg-accent/15 border-l-4 border-l-accent' : 'hover:bg-secondary/40'
+                      'flex w-full items-start gap-3.5 p-3.5 text-left transition-all relative cursor-pointer',
+                      isActive
+                        ? 'bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-transparent border-l-4 border-l-orange-500 shadow-sm'
+                        : 'hover:bg-secondary/40'
                     )}
                   >
-                    <div className="relative shrink-0">
+                    {/* Avatar with Presence Indicator */}
+                    <div className="relative shrink-0 mt-0.5">
                       <Avatar user={conv.otherUser} size="md" />
-                      {conv.unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-primary">
-                          {conv.unreadCount}
-                        </span>
+                      {isOnline && (
+                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-card shadow-xs animate-pulse" />
                       )}
                     </div>
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className={cx('truncate text-xs font-bold', isActive ? 'text-accent' : 'text-foreground')}>
+                      {/* Name & Time */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-xs sm:text-sm text-foreground truncate">
                           {conv.otherUser?.fullName}
                         </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
+                        <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
                           {relative(conv.lastMessage?.createdAt || '')}
                         </span>
                       </div>
-                      <p className="truncate text-xs text-muted-foreground mt-0.5">
-                        {conv.lastMessage?.isMine && <span className="font-semibold text-foreground/80">You: </span>}
-                        {conv.lastMessage?.content}
+
+                      {/* Role & Campus subtitle */}
+                      <p className="text-[10px] text-muted-foreground/90 truncate mt-0.5">
+                        {roleLabels[conv.otherUser?.role] ?? conv.otherUser?.role} · {conv.otherUser?.campus}
                       </p>
+
+                      {/* Last Message Snippet / Live Typing Status */}
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1 flex items-center gap-1">
+                          {isTyping ? (
+                            <span className="text-xs font-bold text-orange-500 animate-pulse flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce" />
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce delay-1" />
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500 animate-bounce delay-2" />
+                              <span className="italic ml-0.5">typing...</span>
+                            </span>
+                          ) : (
+                            <p className="truncate text-xs text-muted-foreground flex items-center gap-1">
+                              {conv.lastMessage?.isMine && (
+                                <span className="inline-flex shrink-0">
+                                  {conv.lastMessage?.read ? (
+                                    <CheckCheck className="h-3.5 w-3.5 text-orange-500" />
+                                  ) : (
+                                    <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </span>
+                              )}
+                              <span className="truncate">
+                                {conv.lastMessage?.isDeletedForEveryone ? (
+                                  <span className="italic text-muted-foreground/75 flex items-center gap-1">
+                                    <Trash2 className="h-3 w-3 inline opacity-60" /> This message was deleted
+                                  </span>
+                                ) : conv.lastMessage?.content ? (
+                                  conv.lastMessage.content
+                                ) : conv.lastMessage?.imageUrl ? (
+                                  <span className="flex items-center gap-1 font-medium text-foreground">
+                                    <Camera className="h-3 w-3 text-orange-500 inline" /> Photo
+                                  </span>
+                                ) : (
+                                  'Started conversation'
+                                )}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Unread Badge */}
+                        {conv.unreadCount > 0 && (
+                          <span className="shrink-0 grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white shadow-xs">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -4313,147 +5273,630 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
           </div>
         </div>
 
-        {/* Right Pane: Active Thread */}
-        <div className={cx('flex flex-col bg-background/50', !activeRecipientId ? 'hidden md:flex' : 'flex')}>
+        {/* Right Pane: Active WhatsApp/LinkedIn Style Chat Area */}
+        <div className="flex h-full min-h-0 flex-col bg-slate-100/70 dark:bg-[#070b14]/80 relative overflow-hidden">
+          {/* Subtle Ambient Mesh Glows */}
+          <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-orange-400/15 via-amber-300/10 to-transparent dark:from-orange-500/15 blur-[100px] pointer-events-none animate-drift" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-gradient-to-tr from-purple-400/15 via-indigo-300/10 to-transparent dark:from-purple-600/15 blur-[90px] pointer-events-none animate-drift-reverse" />
+          <div className="absolute inset-0 bg-dot-pattern opacity-45 dark:opacity-20 [mask-image:radial-gradient(ellipse_at_center,#000_65%,transparent_100%)] pointer-events-none" />
+
           {activeRecipientId && currentRecipient ? (
             <>
-              {/* Thread Header */}
-              <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-3">
+              {/* WhatsApp / LinkedIn Style Chat Header */}
+              <div className="relative z-10 flex items-center justify-between border-b border-border/80 bg-card/95 dark:bg-[#0c1220]/95 px-4 py-3 shrink-0 shadow-xs backdrop-blur-md">
+                <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveRecipientId(undefined);
                       setLocation('/messages');
                     }}
-                    className="md:hidden rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
+                    className="md:hidden rounded-xl p-1.5 text-muted-foreground hover:bg-muted active:scale-95 cursor-pointer"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <Link href={`/people/${currentRecipient.id}`}>
-                    <Avatar user={currentRecipient} size="md" />
-                  </Link>
-                  <div>
+
+                  <div className="relative shrink-0">
+                    <Link href={`/people/${currentRecipient.id}`}>
+                      <Avatar user={currentRecipient} size="md" />
+                    </Link>
+                    {isRecipientOnline && (
+                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-card shadow-xs animate-pulse" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/people/${currentRecipient.id}`}
-                        className="text-sm font-bold text-foreground hover:text-accent transition-colors"
+                        className="text-sm font-extrabold text-foreground hover:text-orange-500 transition-colors truncate"
                       >
                         {currentRecipient.fullName}
                       </Link>
-                      {currentRecipient.verified && <Check className="h-3.5 w-3.5 text-accent" />}
-                      <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                      {currentRecipient.verified && <Check className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+                      <span className="hidden sm:inline-block rounded-lg bg-secondary px-2 py-0.5 text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider">
                         {roleLabels[currentRecipient.role] ?? currentRecipient.role}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      {currentRecipient.department} · Amrita {currentRecipient.campus}
-                    </p>
+
+                    {/* Presence Subtitle */}
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                      {isRecipientTyping ? (
+                        <span className="text-orange-500 font-bold flex items-center gap-1 animate-pulse">
+                          <span>typing</span>
+                          <span className="inline-block animate-bounce">.</span>
+                          <span className="inline-block animate-bounce delay-1">.</span>
+                          <span className="inline-block animate-bounce delay-2">.</span>
+                        </span>
+                      ) : isRecipientOnline ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Online</span>
+                        </span>
+                      ) : (
+                        <span>{currentRecipient.department} · {currentRecipient.campus}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Right Header Action Buttons */}
+                <div className="flex items-center gap-2 shrink-0">
                   <Link
                     href={`/people/${currentRecipient.id}`}
-                    className="rounded-xl border border-border px-3 py-1 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    className="rounded-xl border border-border/80 bg-card px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all flex items-center gap-1.5"
                   >
-                    View Profile
+                    <span>View Profile</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
                   </Link>
                 </div>
               </div>
 
-              {/* Message Stream */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 flex flex-col justify-end">
+              {/* Chat Message Stream */}
+              <div
+                ref={chatStreamRef}
+                className="relative z-10 flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 flex flex-col justify-start"
+              >
                 {threadLoading ? (
-                  <LoadingState rows={3} />
+                  <div className="m-auto"><LoadingState rows={3} /></div>
                 ) : messages.length === 0 ? (
-                  <div className="my-auto text-center py-10 text-xs text-muted-foreground">
-                    <Avatar user={currentRecipient} size="lg" />
-                    <h3 className="mt-3 text-sm font-bold text-foreground">{currentRecipient.fullName}</h3>
-                    <p className="mt-1 max-w-xs mx-auto">
-                      Send a friendly message to kick off your conversation with {currentRecipient.fullName.split(' ')[0]}!
+                  <div className="my-auto mx-auto text-center py-6 px-5 max-w-sm w-full rounded-3xl border border-border/80 bg-card/95 shadow-xl backdrop-blur-md">
+                    <div className="mx-auto relative h-20 w-20 flex items-center justify-center mb-3">
+                      <Avatar user={currentRecipient} size="lg" />
+                      {isRecipientOnline && (
+                        <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-500 ring-2 ring-card shadow-sm animate-pulse" />
+                      )}
+                    </div>
+                    <h3 className="text-base font-extrabold text-foreground">{currentRecipient.fullName}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {currentRecipient.department} · Amrita {currentRecipient.campus}
                     </p>
+                    <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                      Send a message or share photo updates to discuss research, request mentorship, or collaborate across campuses.
+                    </p>
+
+                    {/* Quick Icebreaker buttons */}
+                    <div className="mt-4 flex flex-col gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quick Icebreakers</span>
+                      {quickPrompts.map((prompt, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setContent(prompt);
+                            textareaRef.current?.focus();
+                          }}
+                          className="rounded-xl border border-orange-200/80 dark:border-orange-900/60 bg-secondary/70 hover:bg-orange-500 hover:text-white hover:border-orange-500 px-3 py-2 text-xs font-semibold text-left text-foreground transition-all shadow-2xs cursor-pointer active:scale-98"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cx(
-                        'flex flex-col',
-                        msg.isMine ? 'items-end' : 'items-start'
-                      )}
-                    >
-                      <div
-                        className={cx(
-                          'rounded-2xl px-4 py-2.5 text-xs leading-relaxed max-w-[85%] sm:max-w-md shadow-sm',
-                          msg.isMine
-                            ? 'bg-primary text-primary-foreground rounded-br-xs'
-                            : 'bg-card text-foreground border border-border rounded-bl-xs'
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                  groupedMessages.map((group) => (
+                    <div key={group.date} className="space-y-3">
+                      {/* WhatsApp / LinkedIn Date Divider Pill */}
+                      <div className="flex justify-center my-3">
+                        <span className="rounded-full border border-border/80 bg-card/95 px-3.5 py-1 text-[10px] font-bold text-muted-foreground shadow-xs backdrop-blur-md">
+                          {group.date}
+                        </span>
                       </div>
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground px-1">
-                        <span>{relative(msg.createdAt)}</span>
-                        {msg.isMine && (
-                          <Check className={cx('h-3 w-3', msg.read ? 'text-accent' : 'text-muted-foreground')} />
-                        )}
-                      </div>
+
+                      {/* Messages in this Date */}
+                      {group.items.map((msg) => {
+                        const isDeleted = !!msg.isDeletedForEveryone;
+                        const isActionOpen = activeActionMenuId === msg.id;
+
+                        return (
+                          <div
+                            key={msg.id}
+                            className={cx(
+                              'group relative flex flex-col transition-all',
+                              msg.isMine ? 'items-end' : 'items-start'
+                            )}
+                          >
+                            <div className={cx('flex items-center gap-1.5 max-w-[88%] sm:max-w-md', msg.isMine ? 'flex-row-reverse' : 'flex-row')}>
+                              {/* Message Bubble */}
+                              <div
+                                className={cx(
+                                  'relative rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-md transition-all break-words min-w-[120px]',
+                                  isDeleted
+                                    ? 'bg-secondary/60 text-muted-foreground border border-dashed border-border italic'
+                                    : msg.isMine
+                                    ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white rounded-tr-xs font-medium shadow-orange-500/20'
+                                    : 'bg-card text-foreground border border-border/80 rounded-tl-xs shadow-xs'
+                                )}
+                              >
+                                {isDeleted ? (
+                                  <div className="flex items-center gap-2 py-0.5 text-muted-foreground/80 not-italic font-normal">
+                                    <Trash2 className="h-3.5 w-3.5 opacity-60 shrink-0" />
+                                    <span className="italic text-xs">This message was deleted</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {/* Photo attachment (LinkedIn/WhatsApp style) */}
+                                    {msg.imageUrl && (
+                                      <div className="relative mb-2 overflow-hidden rounded-xl border border-black/10 dark:border-white/10 shadow-xs group/img">
+                                        <img
+                                          src={msg.imageUrl}
+                                          alt="Attachment"
+                                          onClick={() => setViewingImage(msg.imageUrl!)}
+                                          className="max-h-64 sm:max-h-80 w-auto object-cover rounded-xl cursor-zoom-in hover:scale-[1.02] transition-transform duration-200"
+                                          loading="lazy"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setViewingImage(msg.imageUrl!)}
+                                          title="Expand photo"
+                                          className="absolute bottom-2 right-2 rounded-lg bg-black/60 p-1.5 text-white backdrop-blur-xs opacity-0 group-hover/img:opacity-100 transition-opacity hover:bg-black/80"
+                                        >
+                                          <Camera className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {/* Content with link auto-detection */}
+                                    {msg.content && (
+                                      <p className="whitespace-pre-wrap leading-relaxed">
+                                        {renderRichMessageText(msg.content, msg.isMine)}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Bubble footer with time & double tick receipt */}
+                                <div
+                                  className={cx(
+                                    'mt-1.5 flex items-center justify-end gap-1.5 text-[10px] font-medium leading-none',
+                                    msg.isMine ? (isDeleted ? 'text-muted-foreground' : 'text-white/80') : 'text-muted-foreground'
+                                  )}
+                                >
+                                  <span>{formatTime(msg.createdAt)}</span>
+                                  {msg.isMine && !isDeleted && (
+                                    <span title={msg.read ? 'Read' : 'Delivered'}>
+                                      {msg.read ? (
+                                        <CheckCheck className="h-3.5 w-3.5 text-amber-200" />
+                                      ) : (
+                                        <CheckCheck className="h-3.5 w-3.5 text-white/70" />
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* LinkedIn-style 3-dots Message Action Menu (Hover & Tap) */}
+                              {!isDeleted && (
+                                <div className="msg-action-menu-wrapper relative shrink-0 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveActionMenuId(isActionOpen ? null : msg.id);
+                                    }}
+                                    className="grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-all shadow-2xs border border-border/40 bg-card/80 backdrop-blur-xs"
+                                    title="Message options"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {isActionOpen && (
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
+                                      className={cx(
+                                        'absolute z-50 min-w-[150px] rounded-xl border border-border bg-card p-1.5 shadow-xl backdrop-blur-md animate-scale-in text-xs font-semibold',
+                                        msg.isMine ? 'right-0 top-8' : 'left-0 top-8'
+                                      )}
+                                    >
+                                      {msg.content && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopyMessage(msg)}
+                                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                                        >
+                                          {copiedMessageId === msg.id ? (
+                                            <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                          ) : (
+                                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                          )}
+                                          <span>{copiedMessageId === msg.id ? 'Copied!' : 'Copy text'}</span>
+                                        </button>
+                                      )}
+
+                                      {msg.imageUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setViewingImage(msg.imageUrl!);
+                                            setActiveActionMenuId(null);
+                                          }}
+                                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                                        >
+                                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                          <span>View photo</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setDeletingMessage(msg);
+                                          setActiveActionMenuId(null);
+                                        }}
+                                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-red-600 dark:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <span>Delete message</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ))
                 )}
+
+                {/* Animated WhatsApp Typing Bubble when recipient is typing */}
+                {isRecipientTyping && (
+                  <div className="flex items-end gap-2 animate-fade-in">
+                    <Avatar user={currentRecipient} size="sm" />
+                    <div className="rounded-2xl rounded-tl-xs border border-border/80 bg-card px-4 py-3 shadow-sm flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-orange-500 animate-bounce" />
+                      <span className="h-2 w-2 rounded-full bg-orange-500 animate-bounce delay-1" />
+                      <span className="h-2 w-2 rounded-full bg-orange-500 animate-bounce delay-2" />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Message Input Form */}
-              <form onSubmit={handleSendMessage} className="border-t border-border bg-card p-3 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    data-testid="input-chat-message"
-                    type="text"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder={`Message ${currentRecipient.fullName.split(' ')[0]}... (press Enter to send)`}
-                    className="flex-1 rounded-xl border border-input bg-secondary/40 px-4 py-2.5 text-xs outline-none focus:border-accent"
-                    autoFocus
-                  />
-                  <Button
+              {/* Message Composer Input Form (LinkedIn & WhatsApp Style) */}
+              <div className="relative z-10 border-t border-border/80 bg-card/95 dark:bg-[#0c1220]/95 p-3 sm:p-3.5 shrink-0 backdrop-blur-md">
+                {/* Photo attachment preview bar */}
+                {selectedImage && (
+                  <div className="mb-2.5 flex items-center gap-3 rounded-2xl border border-orange-200/80 dark:border-orange-900/60 bg-orange-500/10 p-2.5 animate-scale-in">
+                    <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-orange-300 dark:border-orange-700 shadow-sm shrink-0">
+                      <img src={selectedImage} alt="Preview" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                        <Camera className="h-3.5 w-3.5 text-orange-500" />
+                        <span>Photo attached</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        Ready to send with your message
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedImage(null)}
+                      title="Remove photo"
+                      className="grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-card hover:text-foreground active:scale-95 transition-all cursor-pointer shadow-xs"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Emoji popover bar */}
+                {showEmojiPicker && (
+                  <div className="mb-2 p-2 rounded-2xl border border-border bg-card shadow-xl flex items-center gap-2 overflow-x-auto animate-scale-in">
+                    {['👍', '❤️', '🔥', '👏', '🎉', '🚀', '😊', '💡', '🎓', '🙏', '🤝', '⚡'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => addEmoji(emoji)}
+                        className="text-lg hover:scale-125 transition-transform p-1 cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Hidden File Input for Image Upload */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                />
+
+                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                  {/* Photo Attachment Button (LinkedIn Style) */}
+                  <button
+                    type="button"
+                    title="Attach photo"
+                    disabled={isCompressingImage}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cx(
+                      'grid h-10 w-10 shrink-0 place-items-center rounded-2xl transition-all cursor-pointer shadow-2xs',
+                      selectedImage
+                        ? 'bg-orange-500 text-white shadow-orange-500/25'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60 active:scale-95'
+                    )}
+                  >
+                    {isCompressingImage ? (
+                      <LoaderCircle className="h-5 w-5 animate-spin text-orange-500" />
+                    ) : (
+                      <Image className="h-5 w-5" />
+                    )}
+                  </button>
+
+                  {/* Emoji Button */}
+                  <button
+                    type="button"
+                    title="Insert emoji"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-muted-foreground hover:text-foreground hover:bg-secondary/60 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+
+                  {/* Textarea */}
+                  <div className="relative flex-1">
+                    <textarea
+                      ref={textareaRef}
+                      data-testid="input-chat-message"
+                      rows={1}
+                      value={content}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder={`Message ${currentRecipient.fullName.split(' ')[0]}... (Enter to send, Shift+Enter for newline)`}
+                      className="w-full resize-none rounded-2xl border border-border/80 bg-secondary/50 px-4 py-2.5 text-xs sm:text-sm outline-none focus:border-orange-500 transition-all max-h-32"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Send Button */}
+                  <button
                     data-testid="button-send-chat-message"
                     type="submit"
-                    disabled={sendMutation.isPending || !content.trim()}
-                    className="px-4 py-2.5 text-xs shrink-0"
+                    disabled={sendMutation.isPending || (!content.trim() && !selectedImage)}
+                    className="h-10 px-5 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 !text-white font-bold hover:opacity-90 shadow-md active:scale-95 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {sendMutation.isPending ? (
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      <LoaderCircle className="h-4 w-4 animate-spin text-white" />
                     ) : (
-                      <Send className="h-3.5 w-3.5" />
+                      <Send className="h-4 w-4 text-white" />
                     )}
-                    <span className="hidden sm:inline">Send</span>
-                  </Button>
-                </div>
-              </form>
+                    <span className="hidden sm:inline text-xs !text-white font-extrabold">Send</span>
+                  </button>
+                </form>
+              </div>
             </>
           ) : (
-            <div className="m-auto text-center p-8 max-w-md">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-secondary text-accent mb-4">
-                <MessageSquare className="h-8 w-8" />
+            /* Premium Empty State Illustration with 3D Orbiting Campus Discs */
+            <div className="relative z-10 m-auto text-center p-8 sm:p-12 max-w-lg">
+              {/* Central Glowing Shield & Connected Orbit */}
+              <div className="relative mx-auto h-44 w-44 flex items-center justify-center mb-6">
+                {/* Orbiting Dashed Ring */}
+                <div className="absolute inset-0 rounded-full border-2 border-dashed border-orange-400/35 dark:border-orange-500/30 animate-spin-slow" />
+                <div className="absolute inset-4 rounded-full border border-purple-400/25 dark:purple-500/20 animate-spin-slow-reverse" />
+
+                {/* Floating Campus Badge 1 (Coimbatore) */}
+                <div className="absolute -top-1 left-2 h-7 w-7 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-float">
+                  CBE
+                </div>
+
+                {/* Floating Campus Badge 2 (Amritapuri) */}
+                <div className="absolute top-2 -right-1 h-7 w-7 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-700 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-float-reverse">
+                  AMP
+                </div>
+
+                {/* Floating Campus Badge 3 (Bengaluru) */}
+                <div className="absolute -bottom-1 right-3 h-7 w-7 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-float">
+                  BLR
+                </div>
+
+                {/* Floating Campus Badge 4 (Kochi) */}
+                <div className="absolute bottom-2 -left-1 h-7 w-7 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-700 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-float-reverse">
+                  KOC
+                </div>
+
+                {/* Center Core Amrita Logo Hub */}
+                <div className="relative z-10 grid h-20 w-20 place-items-center rounded-3xl bg-card border-2 border-border/90 shadow-2xl p-3">
+                  <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-orange-500/40 via-amber-400/30 to-purple-500/40 blur-md -z-10 animate-pulse-slow" />
+                  <MessageSquare className="h-8 w-8 text-orange-500" />
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-foreground">Your Amrita Inbox</h3>
-              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                Connect and exchange ideas with peers, alumni mentors, and faculty researchers across all 7 campuses.
+
+              {/* Title & Description */}
+              <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Amrita Direct Commons
+              </h3>
+              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
+                Connect, exchange photos, and collaborate in real-time with peers, mentors, researchers, and faculty across all 7 Amrita campuses.
               </p>
-              <Button onClick={() => setShowNewChat(true)} className="mt-6">
-                <UserPlus className="h-4 w-4" /> Start a new conversation
-              </Button>
+
+              {/* Feature Highlights Pills */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                <span className="rounded-full border border-border/80 bg-card/90 px-3 py-1.5 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Real-time WebSocket sync
+                </span>
+                <span className="rounded-full border border-border/80 bg-card/90 px-3 py-1.5 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
+                  <Camera className="h-3 w-3 text-orange-500" />
+                  Photos & Rich Links
+                </span>
+                <span className="rounded-full border border-border/80 bg-card/90 px-3 py-1.5 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse" />
+                  Delete for Everyone
+                </span>
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowNewChat(true)}
+                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 !text-white font-extrabold px-8 py-3.5 shadow-xl shadow-orange-500/25 active:scale-95 transition-all text-xs sm:text-sm cursor-pointer"
+                >
+                  <UserPlus className="h-4 w-4 mr-2 text-white" /> Start a conversation
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
+      {/* New Chat Modal */}
       {showNewChat && (
         <NewChatModal
           onClose={() => setShowNewChat(false)}
           onSelect={(userId) => handleSelectRecipient(userId)}
         />
+      )}
+
+      {/* Delete Message Dialog Modal (LinkedIn & WhatsApp Style) */}
+      {deletingMessage && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] grid place-items-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl animate-rise">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">Delete message?</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Choose how you want to delete this message
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletingMessage(null)}
+                className="rounded-xl p-1.5 text-muted-foreground hover:bg-secondary cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Message snippet preview */}
+            <div className="mt-4 rounded-2xl border border-border/80 bg-secondary/40 p-3 text-xs text-muted-foreground">
+              {deletingMessage.imageUrl ? (
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Camera className="h-4 w-4 text-orange-500" />
+                  <span>[Photo Attachment]</span>
+                  {deletingMessage.content && <span>— {deletingMessage.content.slice(0, 40)}</span>}
+                </div>
+              ) : (
+                <p className="truncate italic">"{deletingMessage.content}"</p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-5 space-y-2">
+              {deletingMessage.isMine && !deletingMessage.isDeletedForEveryone && (
+                <button
+                  type="button"
+                  onClick={() => handleConfirmDelete('for_everyone')}
+                  className="flex w-full items-center justify-between rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-500/10 hover:bg-red-500/20 px-4 py-3 text-xs font-bold text-red-600 dark:text-red-400 transition-all cursor-pointer"
+                >
+                  <div className="text-left">
+                    <p className="font-extrabold">Delete for everyone</p>
+                    <p className="text-[11px] font-normal text-red-500/80">
+                      Remove this message for all chat participants
+                    </p>
+                  </div>
+                  <Trash2 className="h-4 w-4 shrink-0" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleConfirmDelete('for_me')}
+                className="flex w-full items-center justify-between rounded-2xl border border-border bg-secondary/50 hover:bg-secondary px-4 py-3 text-xs font-bold text-foreground transition-all cursor-pointer"
+              >
+                <div className="text-left">
+                  <p className="font-extrabold">Delete for me</p>
+                  <p className="text-[11px] font-normal text-muted-foreground">
+                    This message will be removed from your chat view only
+                  </p>
+                </div>
+                <UserX className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeletingMessage(null)}
+                className="w-full rounded-2xl border border-border/80 bg-card py-2.5 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer mt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Fullscreen Photo Viewer Lightbox Modal */}
+      {viewingImage && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setViewingImage(null)}
+          className="fixed inset-0 z-[9999] grid place-items-center bg-black/90 p-4 sm:p-8 backdrop-blur-md animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-h-[90vh] max-w-[90vw] flex flex-col items-center justify-center animate-scale-in"
+          >
+            {/* Top Toolbar */}
+            <div className="absolute -top-12 right-0 flex items-center gap-2">
+              <a
+                href={viewingImage}
+                download="amrita_message_photo.jpg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-white/20 hover:bg-white/30 p-2 text-white backdrop-blur-md transition-all shadow-md"
+                title="Download full size"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+              <button
+                type="button"
+                onClick={() => setViewingImage(null)}
+                className="rounded-full bg-white/20 hover:bg-white/30 p-2 text-white backdrop-blur-md transition-all shadow-md cursor-pointer"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* High Resolution Image */}
+            <img
+              src={viewingImage}
+              alt="Full size preview"
+              className="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+            />
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -9345,7 +10788,7 @@ function ShowcasePage() {
 
 function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } = {}) {
   const { data: currentUser } = useGetCurrentUser();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [activeView, setActiveView] = useState<'feed' | 'discover'>(initialTab);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -9353,6 +10796,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
   const [selectedRole, setSelectedRole] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState<'category' | 'compose'>('category');
   const [createCategory, setCreateCategory] = useState<PostCategory>('General');
   const [createContent, setCreateContent] = useState('');
   const [createImageUrl, setCreateImageUrl] = useState('');
@@ -9369,15 +10813,44 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Photo size exceeds 5MB limit.');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Photo size exceeds 20MB limit.');
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        setCreateImageUrl(reader.result);
-        setActiveAttachmentTab('none');
+        const img = new window.Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.85);
+            setCreateImageUrl(compressed);
+          } else {
+            setCreateImageUrl(reader.result as string);
+          }
+          setActiveAttachmentTab('none');
+        };
+        img.onerror = () => {
+          setCreateImageUrl(reader.result as string);
+          setActiveAttachmentTab('none');
+        };
+        img.src = reader.result;
       }
     };
     reader.readAsDataURL(file);
@@ -9386,8 +10859,8 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
   const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Document size exceeds 10MB limit.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Document size exceeds 25MB limit.');
       return;
     }
     setCreateDocumentName(file.name);
@@ -9409,17 +10882,32 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     setCreateLinkUrl('');
     setActiveAttachmentTab('none');
     setShowCreateModal(false);
+    setCreateStep('category');
   };
 
+  // Synchronize URL search parameters on route change
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
+      const searchStr = window.location.search || (location.includes('?') ? location.substring(location.indexOf('?')) : '');
+      const params = new URLSearchParams(searchStr);
       const tabParam = params.get('tab');
+      const searchParam = params.get('search');
+      if (searchParam !== null) {
+        setSearch(searchParam);
+      }
       if (tabParam === 'discover') setActiveView('discover');
       else if (tabParam === 'feed') setActiveView('feed');
       else if (initialTab) setActiveView(initialTab);
     }
-  }, [initialTab]);
+  }, [location, initialTab]);
+
+  // Network discovery filters & view mode (defaults to friends)
+  const [networkTab, setNetworkTab] = useState<'friends' | 'all' | 'campus' | 'batch'>('friends');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [sortBy, setSortBy] = useState<'recent' | 'name'>('recent');
+  const { data: connectionsData } = useConnections();
+  const connectedUsers = useMemo(() => connectionsData?.connected?.map((c) => c.user) ?? [], [connectionsData]);
+  const connectedIds = useMemo(() => new Set(connectedUsers.map((u) => u.id)), [connectedUsers]);
 
   // Users query for member discovery
   const userParams = useMemo(() => ({
@@ -9434,7 +10922,76 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     query: { queryKey: getListUsersQueryKey(userParams), enabled: activeView === 'discover' }
   });
 
-  const memberItems = (usersData?.items ?? []).filter((u) => u.id !== currentUser?.id && u.role !== 'admin');
+  const rawMemberItems = (usersData?.items ?? []).filter((u) => u.id !== currentUser?.id && u.role !== 'admin');
+
+  // LinkedIn-style live member search spotlight on feed
+  const feedSearchUserParams = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      pageSize: 4,
+      page: 1,
+    }),
+    [search]
+  );
+
+  const { data: feedMatchingUsersData } = useListUsers(feedSearchUserParams, {
+    query: {
+      queryKey: getListUsersQueryKey(feedSearchUserParams),
+      enabled: Boolean(activeView === 'feed' && search.trim().length >= 1),
+      staleTime: 15000,
+    },
+  });
+
+  const matchingPeople = (feedMatchingUsersData?.items ?? []).filter((u) => u.id !== currentUser?.id && u.role !== 'admin');
+
+  const [showFeedSearchDropdown, setShowFeedSearchDropdown] = useState(false);
+  const feedSearchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (feedSearchContainerRef.current && !feedSearchContainerRef.current.contains(e.target as Node)) {
+        setShowFeedSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtered members based on network tab and sorting
+  const memberItems = useMemo(() => {
+    let list: PublicUser[] = [];
+    if (networkTab === 'friends') {
+      list = [...connectedUsers];
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        list = list.filter(
+          (u) =>
+            u.fullName?.toLowerCase().includes(q) ||
+            u.department?.toLowerCase().includes(q) ||
+            u.campus?.toLowerCase().includes(q) ||
+            u.headline?.toLowerCase().includes(q) ||
+            u.skills?.some((s) => s.toLowerCase().includes(q))
+        );
+      }
+      if (selectedCampus) {
+        list = list.filter((u) => u.campus?.toLowerCase() === selectedCampus.toLowerCase());
+      }
+      if (selectedRole) {
+        list = list.filter((u) => u.role === selectedRole);
+      }
+    } else {
+      list = [...rawMemberItems];
+      if (networkTab === 'campus' && currentUser?.campus) {
+        list = list.filter((u) => u.campus?.toLowerCase() === currentUser.campus?.toLowerCase());
+      } else if (networkTab === 'batch' && currentUser?.graduationYear) {
+        list = list.filter((u) => u.graduationYear === currentUser.graduationYear);
+      }
+    }
+    if (sortBy === 'name') {
+      list.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    }
+    return list;
+  }, [networkTab, connectedUsers, rawMemberItems, search, selectedCampus, selectedRole, currentUser, sortBy]);
 
   // Posts query for social feed
   const postsQueryKey = useMemo(() => [
@@ -9454,12 +11011,41 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
       const q = new URLSearchParams();
       if (selectedCategory) q.set('category', selectedCategory);
       if (selectedCampus) q.set('campus', selectedCampus);
-      if (search) q.set('search', search);
       return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
     },
   });
 
   const posts = postsData?.items ?? [];
+
+  // Instant reactive client-side post filtering
+  const filteredPosts = useMemo(() => {
+    let list = posts;
+    const q = search.toLowerCase().trim();
+    const cleanQ = q.startsWith('#') ? q.slice(1).trim() : q;
+
+    if (q) {
+      list = list.filter((p) => {
+        const contentMatch = p.content?.toLowerCase().includes(q) || (cleanQ ? p.content?.toLowerCase().includes(cleanQ) : false);
+        const authorMatch =
+          p.author?.fullName?.toLowerCase().includes(q) ||
+          p.author?.department?.toLowerCase().includes(q) ||
+          p.author?.campus?.toLowerCase().includes(q) ||
+          p.author?.headline?.toLowerCase().includes(q);
+        const tagMatch = p.tags?.some((t) => t.toLowerCase().includes(q) || (cleanQ ? t.toLowerCase().includes(cleanQ) : false));
+        const docMatch = p.documentName?.toLowerCase().includes(q);
+        const catMatch = p.category?.toLowerCase().includes(q);
+        const campusMatch = p.campus?.toLowerCase().includes(q);
+        return Boolean(contentMatch || authorMatch || tagMatch || docMatch || catMatch || campusMatch);
+      });
+    }
+    if (selectedCategory) {
+      list = list.filter((p) => p.category?.toLowerCase() === selectedCategory.toLowerCase());
+    }
+    if (selectedCampus) {
+      list = list.filter((p) => p.campus?.toLowerCase() === selectedCampus.toLowerCase() || p.author?.campus?.toLowerCase() === selectedCampus.toLowerCase());
+    }
+    return list;
+  }, [posts, search, selectedCategory, selectedCampus]);
 
   // Create post mutation
   const createPostMutation = useMutation({
@@ -9475,11 +11061,41 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onSuccess: (newPost) => {
       resetCreateForm();
+      if (newPost && newPost.id) {
+        queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+          if (!old) return old;
+          if (Array.isArray(old)) {
+            return [newPost, ...old];
+          }
+          if (old.items && Array.isArray(old.items)) {
+            return {
+              ...old,
+              items: [newPost, ...old.items],
+              total: (old.total || 0) + 1,
+            };
+          }
+          return old;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      refetchPosts();
     },
   });
+
+  const handleCreatePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createContent.trim()) return;
+    createPostMutation.mutate({
+      content: createContent.trim(),
+      category: createCategory,
+      imageUrl: createImageUrl || null,
+      documentUrl: createDocumentUrl || null,
+      documentName: createDocumentName || null,
+      linkUrl: createLinkUrl.trim() || null,
+    });
+  };
 
   const handleCopyInvite = () => {
     if (typeof window !== 'undefined') {
@@ -9489,8 +11105,18 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     }
   };
 
-  const handleOpenCreateWithCategory = (cat: PostCategory) => {
+  const handleOpenCreateWithCategory = (
+    cat: PostCategory,
+    tab: 'none' | 'photo' | 'document' | 'link' | 'milestone' = 'none'
+  ) => {
     setCreateCategory(cat);
+    setCreateStep('compose');
+    setActiveAttachmentTab(tab);
+    setShowCreateModal(true);
+  };
+
+  const handleOpenCreateCategoryPrompt = () => {
+    setCreateStep('category');
     setShowCreateModal(true);
   };
 
@@ -9508,7 +11134,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
               setSearch('');
             }}
             className={cx(
-              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2',
+              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer',
               activeView === 'feed'
                 ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
@@ -9521,25 +11147,31 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             type="button"
             onClick={() => {
               setActiveView('discover');
+              setNetworkTab('friends');
               setSearch('');
             }}
             className={cx(
-              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2',
+              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer',
               activeView === 'discover'
                 ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
             )}
           >
             <Users className="h-3.5 w-3.5" />
-            <span>Discover Members</span>
+            <span>My Friends</span>
+            {connectedUsers.length > 0 && (
+              <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', activeView === 'discover' ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
+                {connectedUsers.length}
+              </span>
+            )}
           </button>
         </div>
 
         {activeView === 'feed' ? (
           <button
             type="button"
-            onClick={() => handleOpenCreateWithCategory('General')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95 transition-all"
+            onClick={handleOpenCreateCategoryPrompt}
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
           >
             <Pencil className="h-3.5 w-3.5" />
             <span>Start a Post</span>
@@ -9548,7 +11180,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary/70 shadow-2xs transition-all"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary/70 shadow-2xs transition-all cursor-pointer"
           >
             <UserPlus className="h-3.5 w-3.5 text-orange-500" />
             <span>Invite People</span>
@@ -9563,116 +11195,237 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
           {/* Main Feed Column */}
           <div className="space-y-5 min-w-0">
 
-            {/* Social Post Creator Box */}
-            <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs hover:border-border transition-colors">
-              <div className="flex items-center gap-3">
-                <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('General')}
-                  className="flex-1 rounded-full border border-input/80 bg-secondary/40 hover:bg-secondary/70 px-4 py-2.5 text-left text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-all truncate"
-                >
-                  What's on your mind? Share an update, blog, or project...
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('General')}
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  <span>Post</span>
-                </button>
+            {/* LinkedIn-style People / Member Spotlight Search Results (Prominently on Upper Side) */}
+            {search.trim() && matchingPeople.length > 0 && (
+              <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-3.5 animate-rise">
+                <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="grid h-8 w-8 place-items-center rounded-xl bg-orange-500/10 text-orange-500">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-extrabold text-foreground">
+                        People matching "{search}"
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground">
+                        {feedMatchingUsersData?.total ?? matchingPeople.length} members found on Amrita Connect
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('discover');
+                      setNetworkTab('all');
+                    }}
+                    className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>All People</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {matchingPeople.map((person) => (
+                    <div
+                      key={person.id}
+                      className="group rounded-2xl border border-border/70 bg-secondary/30 hover:bg-secondary/60 hover:border-orange-500/30 p-3.5 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <Link href={`/people/${person.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar user={person} size="md" className="ring-2 ring-background group-hover:ring-orange-500/30 transition-all shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-foreground group-hover:text-orange-500 transition-colors truncate">
+                              {person.fullName}
+                            </span>
+                            {person.verified && <Check className="h-3 w-3 text-orange-500 shrink-0" />}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {person.headline || `${roleLabels[person.role] ?? person.role} · ${person.department || 'Amrita'}`}
+                          </p>
+                          <p className="text-[10px] font-medium text-muted-foreground/80 mt-0.5">
+                            Amrita {person.campus}
+                          </p>
+                        </div>
+                      </Link>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/people/${person.id}`}
+                          className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 text-xs font-bold shadow-2xs transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+                        >
+                          View Profile
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
 
-              {/* Action buttons with rich colors */}
-              <div className="flex flex-wrap items-center justify-between gap-1 pt-3.5 mt-3.5 border-t border-border/60">
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('General')}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
-                >
-                  <Image className="h-4 w-4 text-sky-500" />
-                  <span>Photo</span>
-                </button>
+            {/* Social Post Creator Box (Hidden or lowered when searching) */}
+            {!search.trim() && (
+              <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs hover:border-border transition-colors">
+                <div className="flex items-center gap-3">
+                  <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateCategoryPrompt}
+                    className="flex-1 rounded-full border border-input/80 bg-secondary/40 hover:bg-secondary/70 px-4 py-2.5 text-left text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-all truncate cursor-pointer"
+                  >
+                    What category of post would you like to create? (Click to choose)...
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateCategoryPrompt}
+                    className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span>Post</span>
+                  </button>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('Resource')}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                >
-                  <FileText className="h-4 w-4 text-rose-500" />
-                  <span>Document</span>
-                </button>
+                {/* Action buttons with rich colors */}
+                <div className="flex flex-wrap items-center justify-between gap-1 pt-3.5 mt-3.5 border-t border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateWithCategory('General', 'photo')}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors cursor-pointer"
+                  >
+                    <Image className="h-4 w-4 text-sky-500" />
+                    <span>Photo</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('Blog')}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 transition-colors"
-                >
-                  <BookOpen className="h-4 w-4 text-purple-500" />
-                  <span>Article</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateWithCategory('Resource', 'document')}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <FileText className="h-4 w-4 text-rose-500" />
+                    <span>Document</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('Project')}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                >
-                  <Rocket className="h-4 w-4 text-emerald-500" />
-                  <span>Project</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateWithCategory('Blog')}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  >
+                    <BookOpen className="h-4 w-4 text-purple-500" />
+                    <span>Article</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateWithCategory('Achievement')}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                >
-                  <PartyPopper className="h-4 w-4 text-amber-500" />
-                  <span>Milestone</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateWithCategory('Project')}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                  >
+                    <Rocket className="h-4 w-4 text-emerald-500" />
+                    <span>Project</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateWithCategory('Achievement', 'milestone')}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                  >
+                    <PartyPopper className="h-4 w-4 text-amber-500" />
+                    <span>Milestone</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Optimized Clean Category & Campus Filter Bar */}
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-2 sm:p-2.5 shadow-xs backdrop-blur-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                {/* Clean Category Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                  {[
-                    { id: '', label: 'All Feed' },
-                    { id: 'Blog', label: 'Blogs' },
-                    { id: 'Project', label: 'Projects' },
-                    { id: 'Achievement', label: 'Achievements' },
-                    { id: 'Opportunity', label: 'Opportunities' },
-                    { id: 'Interview Experience', label: 'Interview Prep' },
-                    { id: 'Research', label: 'Research' },
-                    { id: 'Help Needed', label: 'Q&A' },
-                  ].map((cat) => {
-                    const isSelected = selectedCategory === cat.id;
-                    return (
-                      <button
-                        key={cat.id || 'all'}
-                        type="button"
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={cx(
-                          'rounded-full px-3.5 py-1.5 text-xs transition-all shrink-0 font-medium',
-                          isSelected
-                            ? 'bg-orange-500 text-white font-semibold shadow-xs'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'
-                        )}
-                      >
-                        {cat.label}
-                      </button>
-                    );
-                  })}
+            {/* Optimized Clean Category, Campus & In-Feed Search Filter Bar */}
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-3 shadow-xs backdrop-blur-sm space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                {/* Search input with live upper-side floating dropdown */}
+                <div ref={feedSearchContainerRef} className="relative flex-1">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={search}
+                    onFocus={() => setShowFeedSearchDropdown(true)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setShowFeedSearchDropdown(true);
+                    }}
+                    placeholder="Search feed by keywords, author name, #tags..."
+                    className="w-full rounded-xl border border-border/80 bg-secondary/40 py-2 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-orange-500 focus:bg-background transition-all shadow-inner"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('');
+                        setShowFeedSearchDropdown(false);
+                      }}
+                      className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-secondary cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  {/* Upper-side live floating autocomplete dropdown (LinkedIn Style) */}
+                  {showFeedSearchDropdown && search.trim().length >= 1 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border border-border/80 bg-card/98 shadow-2xl backdrop-blur-xl p-2.5 space-y-2 animate-scale-in">
+                      <div className="flex items-center justify-between px-2 pt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Users className="h-3 w-3 text-orange-500" />
+                          <span>People Matching "{search}"</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-semibold">
+                          {matchingPeople.length} found
+                        </span>
+                      </div>
+
+                      {matchingPeople.length === 0 ? (
+                        <div className="p-2.5 text-center text-xs text-muted-foreground">
+                          No people matching "{search}"
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border/60">
+                          {matchingPeople.map((person) => (
+                            <Link
+                              key={person.id}
+                              href={`/people/${person.id}`}
+                              onClick={() => setShowFeedSearchDropdown(false)}
+                              className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-secondary/70 transition-all group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <Avatar user={person} size="sm" className="ring-1 ring-border group-hover:ring-orange-500/40 shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                                      {person.fullName}
+                                    </span>
+                                    {person.verified && <Check className="h-3 w-3 text-orange-500 shrink-0" />}
+                                    <span className="rounded-md bg-secondary px-1.5 py-0.2 text-[9px] font-extrabold text-muted-foreground uppercase">
+                                      {roleLabels[person.role] ?? person.role}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground truncate">
+                                    {person.headline || `${person.department || 'Amrita'} · ${person.campus || ''}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="shrink-0 rounded-lg bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-1 text-[11px] font-bold group-hover:bg-orange-500 group-hover:text-white transition-all flex items-center gap-0.5">
+                                <span>Profile</span>
+                                <ChevronRight className="h-3 w-3" />
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Campus Filter Dropdown */}
-                <div className="relative shrink-0 self-end sm:self-auto">
+                <div className="relative shrink-0">
                   <select
                     value={selectedCampus}
                     onChange={(e) => setSelectedCampus(e.target.value)}
-                    className="appearance-none rounded-full border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-1.5 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+                    className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
                   >
                     <option value="">All Campuses</option>
                     {campuses.map((c) => (
@@ -9684,12 +11437,43 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               </div>
+
+              {/* Clean Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
+                {[
+                  { id: '', label: 'All Feed' },
+                  { id: 'Blog', label: 'Blogs' },
+                  { id: 'Project', label: 'Projects' },
+                  { id: 'Achievement', label: 'Achievements' },
+                  { id: 'Opportunity', label: 'Opportunities' },
+                  { id: 'Interview Experience', label: 'Interview Prep' },
+                  { id: 'Research', label: 'Research' },
+                  { id: 'Help Needed', label: 'Q&A' },
+                ].map((cat) => {
+                  const isSelected = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id || 'all'}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={cx(
+                        'rounded-full px-3.5 py-1.5 text-xs transition-all shrink-0 font-medium cursor-pointer',
+                        isSelected
+                          ? 'bg-orange-500 text-white font-bold shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                      )}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Active Filters Summary (if any active) */}
             {(selectedCategory || selectedCampus || search) && (
               <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span>Filtered by:</span>
                   {selectedCategory && (
                     <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
@@ -9702,7 +11486,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     </span>
                   )}
                   {search && (
-                    <span className="rounded-md bg-secondary px-2 py-0.5 font-bold text-foreground">
+                    <span className="rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2 py-0.5 font-bold">
                       "{search}"
                     </span>
                   )}
@@ -9714,7 +11498,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     setSelectedCampus('');
                     setSearch('');
                   }}
-                  className="text-orange-500 font-bold hover:underline"
+                  className="text-orange-500 font-bold hover:underline cursor-pointer"
                 >
                   Reset all
                 </button>
@@ -9727,7 +11511,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                 <LoadingState rows={3} />
               ) : postsError ? (
                 <ErrorState onRetry={() => refetchPosts()} />
-              ) : posts.length === 0 ? (
+              ) : filteredPosts.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center animate-rise">
                   <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
                     <Sparkles className="h-6 w-6" />
@@ -9765,7 +11549,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   </div>
                 </div>
               ) : (
-                posts.map((post) => (
+                filteredPosts.map((post) => (
                   <PostCard
                     key={post.id}
                     post={post}
@@ -9844,11 +11628,14 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
               <button
                 type="button"
-                onClick={() => setActiveView('discover')}
+                onClick={() => {
+                  setActiveView('discover');
+                  setNetworkTab('all');
+                }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/50 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-all active:scale-95"
               >
                 <Users className="h-3.5 w-3.5 text-orange-500" />
-                <span>Discover Members</span>
+                <span>Explore Directory</span>
               </button>
             </div>
 
@@ -9873,11 +11660,60 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
         </div>
       )}
 
-      {/* VIEW 2: DISCOVER MEMBERS */}
+      {/* VIEW 2: DISCOVER MEMBERS & FRIENDS */}
       {activeView === 'discover' && (
-        <div className="space-y-4 max-w-4xl">
+        <div className="space-y-5 max-w-5xl">
+          {/* Top Network Subtabs */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-3 sm:p-4 rounded-2xl border border-border/80 shadow-xs">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+              {[
+                { id: 'friends', label: 'My Friends', count: connectedUsers.length, icon: UserCheck },
+                { id: 'all', label: 'Campus Directory', count: rawMemberItems.length, icon: Globe },
+                ...(currentUser?.campus
+                  ? [{ id: 'campus', label: `Amrita ${currentUser.campus}`, count: rawMemberItems.filter((u) => u.campus?.toLowerCase() === currentUser.campus?.toLowerCase()).length, icon: MapPin }]
+                  : []),
+                ...(currentUser?.graduationYear
+                  ? [{ id: 'batch', label: `Class of ${currentUser.graduationYear}`, count: rawMemberItems.filter((u) => u.graduationYear === currentUser.graduationYear).length, icon: GraduationCap }]
+                  : []),
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = networkTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setNetworkTab(tab.id as any)}
+                    className={cx(
+                      'rounded-xl px-3.5 py-2 transition-all flex items-center gap-1.5 cursor-pointer',
+                      isActive
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 !text-white shadow-md shadow-orange-500/20'
+                        : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{tab.label}</span>
+                    <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', isActive ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 dark:border-orange-900 bg-orange-500/10 px-3 py-1.5 text-xs font-extrabold text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-all shadow-2xs cursor-pointer"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Invite Friends</span>
+              </button>
+            </div>
+          </div>
+
           {/* Member Search Bar and Role Filter */}
-          <div className="space-y-3 bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm">
+          <div className="space-y-3 bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-xs">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
@@ -9885,7 +11721,11 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search members by name, skill, department, research lab..."
+                  placeholder={
+                    networkTab === 'friends'
+                      ? 'Search your friends by name, department, campus...'
+                      : 'Search all members across Amrita 7 campuses by name, skill, department...'
+                  }
                   className="w-full rounded-xl border border-input bg-secondary/30 py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-xs"
                 />
                 {search && (
@@ -9927,7 +11767,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   type="button"
                   onClick={() => setSelectedRole(r.id)}
                   className={cx(
-                    'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs',
+                    'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs cursor-pointer',
                     selectedRole === r.id
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-xs'
                       : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -9939,31 +11779,117 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             </div>
           </div>
 
-          {/* Members List */}
-          <div className="space-y-4 pt-1">
+          {/* Members List Container (LinkedIn Style) */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-muted-foreground">
+                {networkTab === 'friends'
+                  ? `${memberItems.length} Connections`
+                  : `${memberItems.length} Members in Campus Directory`}
+              </span>
+
+              {/* View Layout Controls */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="hidden sm:inline">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="rounded-lg border border-border bg-card px-2 py-1 text-xs font-semibold text-foreground outline-none shadow-2xs"
+                  >
+                    <option value="recent">Recently active</option>
+                    <option value="name">First Name</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center rounded-lg border border-border bg-card p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    title="List View (LinkedIn Style)"
+                    onClick={() => setViewMode('list')}
+                    className={cx(
+                      'rounded-md p-1.5 text-xs transition-colors cursor-pointer',
+                      viewMode === 'list' ? 'bg-secondary text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Network className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Grid Cards"
+                    onClick={() => setViewMode('grid')}
+                    className={cx(
+                      'rounded-md p-1.5 text-xs transition-colors cursor-pointer',
+                      viewMode === 'grid' ? 'bg-secondary text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {usersLoading ? (
               <LoadingState rows={4} />
             ) : usersError ? (
               <ErrorState onRetry={() => refetchUsers()} />
             ) : memberItems.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
-                <Search className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-                <h3 className="text-base font-bold text-foreground">No members found</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Try adjusting your keywords or role filters.
+              <div className="rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center max-w-md mx-auto my-6 animate-rise">
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 mb-3">
+                  <Users className="h-7 w-7" />
+                </div>
+                <h3 className="text-base font-extrabold text-foreground">
+                  {networkTab === 'friends'
+                    ? search
+                      ? `No friends match "${search}"`
+                      : 'You have no connections yet'
+                    : 'No members found'}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  {networkTab === 'friends'
+                    ? search
+                      ? 'Looking for someone across other departments or campuses? Search the entire Amrita Campus Directory.'
+                      : 'Connect with batchmates, professors, and alumni across all 7 Amrita campuses in the Campus Directory.'
+                    : 'Try adjusting your keywords, campus selection, or role filters.'}
                 </p>
-                <Button onClick={() => { setSearch(''); setSelectedRole(''); setSelectedCampus(''); }} className="mt-4" variant="outline">
-                  Reset filters
-                </Button>
+                <div className="mt-5 flex items-center justify-center gap-2">
+                  {networkTab === 'friends' ? (
+                    <button
+                      type="button"
+                      onClick={() => setNetworkTab('all')}
+                      className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 !text-white text-xs font-extrabold px-4 py-2 shadow-md shadow-orange-500/20 active:scale-95 transition-all cursor-pointer"
+                    >
+                      {search ? 'Search Campus Directory' : 'Explore Campus Directory'}
+                    </button>
+                  ) : (
+                    <Button onClick={() => { setSearch(''); setSelectedRole(''); setSelectedCampus(''); }} variant="outline">
+                      Reset filters
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : viewMode === 'list' ? (
+              /* LinkedIn Standard Unified Connections Card with Dividers */
+              <div className="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden divide-y divide-border/60 animate-rise">
+                {memberItems.map((person) => (
+                  <LinkedInConnectionRow
+                    key={person.id}
+                    user={person}
+                    isConnected={connectedIds.has(person.id)}
+                  />
+                ))}
               </div>
             ) : (
-              memberItems.map((person, idx) => (
-                <SpotlightPersonCard
-                  key={person.id}
-                  user={person}
-                  isSpotlight={idx === 0 && !selectedRole && !search}
-                />
-              ))
+              /* LinkedIn Portrait Card Grid */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-rise">
+                {memberItems.map((person) => (
+                  <LinkedInConnectionCard
+                    key={person.id}
+                    user={person}
+                    isConnected={connectedIds.has(person.id)}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -9977,7 +11903,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
           }}
           className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 p-3 sm:p-4 pt-6 sm:pt-12 pb-8 backdrop-blur-md animate-fade-in overflow-y-auto"
         >
-          <div className="relative w-full max-w-2xl max-h-[86vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden mt-1 sm:mt-2">
+          <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden mt-1 sm:mt-2 animate-rise">
             {/* Hidden native file inputs for local uploads */}
             <input
               ref={imageInputRef}
@@ -9994,455 +11920,572 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
               onChange={handleDocFileChange}
             />
 
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border px-5 py-4 bg-muted/20">
-              <div className="flex items-center gap-3">
-                <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-foreground">
-                      {currentUser?.fullName ?? 'You'}
+            {createStep === 'category' ? (
+              /* STEP 1: CATEGORY SELECTION PROMPT */
+              <div className="flex flex-col max-h-[88vh] overflow-hidden">
+                {/* Header */}
+                <div className="flex items-start justify-between border-b border-border px-6 py-5 bg-muted/20">
+                  <div>
+                    <div className="mono text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                      Step 1 of 2 · Choose Post Category
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-extrabold text-foreground mt-0.5">
+                      What type of post would you like to create?
                     </h3>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      <Globe className="h-3 w-3" />
-                      Anyone
-                    </span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Select a category to filter your post into the right community channel across Amrita campuses.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">Category:</span>
-                    <select
-                      value={createCategory}
-                      onChange={(e) => setCreateCategory(e.target.value as PostCategory)}
-                      className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
-                    >
-                      {POST_CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={resetCreateForm}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+                    aria-label="Close dialog"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={resetCreateForm}
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                aria-label="Close dialog"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body (Scrollable) */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!createContent.trim()) return;
-                createPostMutation.mutate({
-                  content: createContent.trim(),
-                  category: createCategory,
-                  imageUrl: createImageUrl.trim() || null,
-                  documentUrl: createDocumentUrl.trim() || null,
-                  documentName: createDocumentName.trim() || null,
-                  linkUrl: createLinkUrl.trim() || null,
-                });
-              }}
-              className="flex flex-col flex-1 overflow-y-auto"
-            >
-              <div className="p-5 space-y-4 flex-1">
-                {/* Text Area */}
-                <textarea
-                  value={createContent}
-                  onChange={(e) => setCreateContent(e.target.value)}
-                  placeholder={
-                    createCategory === 'Blog' || createCategory === 'Article'
-                      ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
-                      : createCategory === 'Achievement'
-                        ? 'Share your achievement, hackathon win, publication, or placement story...'
-                        : createCategory === 'Job' || createCategory === 'Internship' || createCategory === 'Placement'
-                          ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
-                          : createCategory === 'Question'
-                            ? 'Ask a question to students, professors, or alumni across campuses...'
-                            : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
-                  }
-                  rows={5}
-                  className="w-full resize-none rounded-xl border border-transparent bg-transparent p-1 text-sm sm:text-base outline-none focus:ring-0 leading-relaxed placeholder:text-muted-foreground/70"
-                  autoFocus
-                  required
-                />
-
-                {/* Attachments Previews */}
-                {/* 1. Image Preview */}
-                {createImageUrl && (
-                  <div className="relative rounded-xl border border-border bg-muted/30 p-2 overflow-hidden group">
-                    <div className="relative max-h-56 overflow-hidden rounded-lg">
-                      <img
-                        src={createImageUrl}
-                        alt="Post attachment"
-                        className="w-full max-h-56 object-contain bg-black/5 dark:bg-white/5 rounded-lg"
-                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCreateImageUrl('')}
-                      className="absolute top-4 right-4 p-1.5 rounded-full bg-background/90 hover:bg-destructive hover:text-white text-foreground shadow-md transition-colors"
-                      title="Remove image"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                    <div className="flex items-center justify-between px-2 pt-2 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Image className="h-3.5 w-3.5 text-blue-500" />
-                        Attached Image
-                      </span>
+                {/* Categories Grid */}
+                <div className="p-5 sm:p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    { cat: 'General', title: 'General Update', desc: 'Thoughts, campus discussions & casual updates', icon: MessageSquare, color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/25 hover:border-sky-500' },
+                    { cat: 'Blog', title: 'Blog & Article', desc: 'In-depth writeups, technical insights & guidebooks', icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-500/10 border-purple-500/25 hover:border-purple-500' },
+                    { cat: 'Project', title: 'Project Showcase', desc: 'Demo hackathon prototypes, GitHub repos & live apps', icon: Rocket, color: 'text-cyan-500', bg: 'bg-cyan-500/10 border-cyan-500/25 hover:border-cyan-500' },
+                    { cat: 'Achievement', title: 'Milestone & Win', desc: 'Hackathon wins, publications, certificates & placements', icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/25 hover:border-amber-500' },
+                    { cat: 'Opportunity', title: 'Job & Internship', desc: 'Hiring alerts, internships, referrals & freelance roles', icon: Briefcase, color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/25 hover:border-emerald-500' },
+                    { cat: 'Interview Experience', title: 'Interview Prep', desc: 'Questions asked, interview rounds & placement tips', icon: GraduationCap, color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/25 hover:border-indigo-500' },
+                    { cat: 'Research', title: 'Research & Labs', desc: 'Academic papers, HuT Labs/faculty openings & research calls', icon: Sparkles, color: 'text-teal-500', bg: 'bg-teal-500/10 border-teal-500/25 hover:border-teal-500' },
+                    { cat: 'Question', title: 'Ask Question / Q&A', desc: 'Ask doubts, seek solutions & get help from peers/mentors', icon: HelpCircle, color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/25 hover:border-orange-500' },
+                    { cat: 'Resource', title: 'Resource & Notes', desc: 'Curated study materials, cheat sheets, links & PDF guides', icon: FileText, color: 'text-rose-500', bg: 'bg-rose-500/10 border-rose-500/25 hover:border-rose-500' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
                       <button
-                        type="button"
-                        onClick={() => imageInputRef.current?.click()}
-                        className="text-orange-500 hover:underline font-medium"
-                      >
-                        Change photo
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Document / PDF Preview */}
-                {createDocumentUrl && (
-                  <div className="relative flex items-center justify-between rounded-xl border border-border bg-gradient-to-r from-red-500/10 via-background to-orange-500/10 p-3 shadow-sm">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400">
-                        <FileText className="h-6 w-6" />
-                      </div>
-                      <div className="truncate">
-                        <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
-                          {createDocumentName || 'Attached Document.pdf'}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Document ready to share with Amrita network
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCreateDocumentUrl('');
-                        setCreateDocumentName('');
-                      }}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
-                      title="Remove document"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* 3. Link Preview */}
-                {createLinkUrl && (
-                  <div className="relative flex items-center justify-between rounded-xl border border-border bg-secondary/40 p-3">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                        <Link2 className="h-5 w-5" />
-                      </div>
-                      <div className="truncate">
-                        <p className="text-xs font-semibold text-foreground truncate">{createLinkUrl}</p>
-                        <p className="text-[11px] text-muted-foreground">External link attachment</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCreateLinkUrl('')}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
-                      title="Remove link"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Expandable Attachment Inputs Tabs */}
-                {activeAttachmentTab === 'photo' && !createImageUrl && (
-                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Image className="h-4 w-4 text-blue-500" />
-                        Add a Photo
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveAttachmentTab('none')}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => imageInputRef.current?.click()}
-                        className="flex-1 justify-center gap-2 text-xs"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload from Device
-                      </Button>
-                      <div className="relative flex-1">
-                        <input
-                          type="url"
-                          placeholder="Or paste Image URL (https://...)"
-                          value={createImageUrl}
-                          onChange={(e) => setCreateImageUrl(e.target.value)}
-                          className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeAttachmentTab === 'document' && !createDocumentUrl && (
-                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <FileText className="h-4 w-4 text-red-500" />
-                        Attach Document / PDF
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveAttachmentTab('none')}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => docInputRef.current?.click()}
-                        className="flex-1 justify-center gap-2 text-xs"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload PDF / Doc (.pdf, .docx, .ppt)
-                      </Button>
-                      <div className="relative flex-1">
-                        <input
-                          type="url"
-                          placeholder="Or paste Doc URL (e.g. Google Drive/Dropbox)"
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setCreateDocumentUrl(e.target.value);
-                              setCreateDocumentName('Online Document');
-                            }
-                          }}
-                          className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeAttachmentTab === 'link' && !createLinkUrl && (
-                  <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Link2 className="h-4 w-4 text-indigo-500" />
-                        Attach Web Link or Article
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveAttachmentTab('none')}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        placeholder="https://example.com/article-or-repo"
-                        value={createLinkUrl}
-                        onChange={(e) => setCreateLinkUrl(e.target.value)}
-                        className="flex-1 rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500"
-                        autoFocus
-                      />
-                      <Button
+                        key={item.cat}
                         type="button"
                         onClick={() => {
-                          if (createLinkUrl.trim()) {
-                            setActiveAttachmentTab('none');
-                          }
+                          setCreateCategory(item.cat as PostCategory);
+                          setCreateStep('compose');
                         }}
-                        disabled={!createLinkUrl.trim()}
-                        className="text-xs"
+                        className={cx(
+                          'flex flex-col items-start text-left p-4 rounded-2xl border transition-all duration-200 group cursor-pointer hover:shadow-md hover:scale-[1.02]',
+                          item.bg
+                        )}
                       >
-                        Attach
-                      </Button>
+                        <div className="flex items-center justify-between w-full">
+                          <div className={cx('p-2.5 rounded-xl transition-transform group-hover:scale-110', item.bg, item.color)}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                        </div>
+                        <h4 className="mt-3 text-sm font-bold text-foreground group-hover:text-orange-500 transition-colors">
+                          {item.title}
+                        </h4>
+                        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                          {item.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Footer Skip */}
+                <div className="flex items-center justify-between border-t border-border px-6 py-3.5 bg-muted/10 text-xs">
+                  <span className="text-muted-foreground">You can change the category at any time during editing.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateCategory('General');
+                      setCreateStep('compose');
+                    }}
+                    className="font-bold text-orange-500 hover:underline cursor-pointer"
+                  >
+                    Skip & start writing →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* STEP 2: RICH COMPOSER */
+              <>
+                {/* Modal Header */}
+                <div className="flex items-center justify-between border-b border-border px-5 py-3.5 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <Avatar user={currentUser} size="md" className="ring-2 ring-orange-500/20" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm sm:text-base font-bold text-foreground">
+                          {currentUser?.fullName ?? 'You'}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          <Globe className="h-3 w-3" />
+                          Anyone
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setCreateStep('category')}
+                          className="text-xs text-orange-500 font-bold hover:underline flex items-center gap-0.5"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                          <span>Change Category</span>
+                        </button>
+                        <span className="text-muted-foreground/50">·</span>
+                        <select
+                          value={createCategory}
+                          onChange={(e) => setCreateCategory(e.target.value as PostCategory)}
+                          className="rounded-lg border border-border bg-background px-2 py-0.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        >
+                          {POST_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {activeAttachmentTab === 'milestone' && (
-                  <div className="p-3.5 rounded-xl border border-border bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 space-y-2.5 animate-fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <PartyPopper className="h-4 w-4 text-amber-500" />
-                        Celebrate a Milestone
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveAttachmentTab('none')}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Done
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                      {[
-                        { title: 'New Job / Placement', cat: 'Placement' },
-                        { title: 'Hackathon Win', cat: 'Achievement' },
-                        { title: 'Research Published', cat: 'Research' },
-                        { title: 'Launched Project', cat: 'Project' },
-                        { title: 'Patent Filed', cat: 'Achievement' },
-                        { title: 'Certificate Earned', cat: 'Achievement' },
-                      ].map((item) => (
+                  <button
+                    type="button"
+                    onClick={resetCreateForm}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    aria-label="Close dialog"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body (Scrollable) */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!createContent.trim()) return;
+                    createPostMutation.mutate({
+                      content: createContent.trim(),
+                      category: createCategory,
+                      imageUrl: createImageUrl.trim() || null,
+                      documentUrl: createDocumentUrl.trim() || null,
+                      documentName: createDocumentName.trim() || null,
+                      linkUrl: createLinkUrl.trim() || null,
+                    });
+                  }}
+                  className="flex flex-col flex-1 overflow-y-auto"
+                >
+                  <div className="p-5 space-y-4 flex-1">
+                    {/* Text Area */}
+                    <textarea
+                      value={createContent}
+                      onChange={(e) => setCreateContent(e.target.value)}
+                      placeholder={
+                        createCategory === 'Blog' || createCategory === 'Article'
+                          ? 'Write your blog or article... share your insights, takeaways, and guide for the Amrita community!'
+                          : createCategory === 'Achievement'
+                            ? 'Share your achievement, hackathon win, publication, or placement story...'
+                            : createCategory === 'Opportunity'
+                              ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
+                              : createCategory === 'Project'
+                                ? 'Describe your project, stack, architecture, live demo link or GitHub repository...'
+                              : createCategory === 'Question'
+                                ? 'Ask a question to students, professors, or alumni across campuses...'
+                                : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
+                      }
+                      rows={5}
+                      className="w-full resize-none rounded-xl border border-transparent bg-transparent p-1 text-sm sm:text-base outline-none focus:ring-0 leading-relaxed placeholder:text-muted-foreground/70"
+                      autoFocus
+                      required
+                    />
+
+                    {/* Attachments Previews */}
+                    {/* 1. Image Preview */}
+                    {createImageUrl && (
+                      <div className="relative rounded-xl border border-border bg-muted/30 p-2 overflow-hidden group">
+                        <div className="relative max-h-56 overflow-hidden rounded-lg">
+                          <img
+                            src={createImageUrl}
+                            alt="Post attachment"
+                            className="w-full max-h-56 object-contain bg-black/5 dark:bg-white/5 rounded-lg"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
                         <button
-                          key={item.title}
+                          type="button"
+                          onClick={() => setCreateImageUrl('')}
+                          className="absolute top-4 right-4 p-1.5 rounded-full bg-background/90 hover:bg-destructive hover:text-white text-foreground shadow-md transition-colors cursor-pointer"
+                          title="Remove image"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="flex items-center justify-between px-2 pt-2 text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Image className="h-3.5 w-3.5 text-blue-500" />
+                            Attached Image
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => imageInputRef.current?.click()}
+                            className="text-orange-500 hover:underline font-medium cursor-pointer"
+                          >
+                            Change photo
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. Document / PDF Preview */}
+                    {createDocumentUrl && (
+                      <div className="relative flex items-center justify-between rounded-xl border border-border bg-gradient-to-r from-red-500/10 via-background to-orange-500/10 p-3 shadow-sm">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="p-2.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400">
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div className="truncate">
+                            <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                              {createDocumentName || 'Attached Document.pdf'}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Document ready to share with Amrita network
+                            </p>
+                          </div>
+                        </div>
+                        <button
                           type="button"
                           onClick={() => {
-                            setCreateCategory(item.cat as PostCategory);
-                            setCreateContent((prev) =>
-                              prev.trim()
-                                ? `Excited to share: ${item.title}!\n\n${prev}`
-                                : `Excited to share that I have accomplished: ${item.title}!\n\n`
-                            );
-                            setActiveAttachmentTab('none');
+                            setCreateDocumentUrl('');
+                            setCreateDocumentName('');
                           }}
-                          className="p-2 rounded-lg border border-border bg-card/80 text-left text-xs font-medium text-foreground hover:border-orange-500 hover:bg-orange-500/10 transition-all truncate"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0 cursor-pointer"
+                          title="Remove document"
                         >
-                          {item.title}
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 3. Link Preview */}
+                    {createLinkUrl && (
+                      <div className="relative flex items-center justify-between rounded-xl border border-border bg-secondary/40 p-3">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="p-2 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                            <Link2 className="h-5 w-5" />
+                          </div>
+                          <div className="truncate">
+                            <p className="text-xs font-semibold text-foreground truncate">{createLinkUrl}</p>
+                            <p className="text-[11px] text-muted-foreground">External link attachment</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCreateLinkUrl('')}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0 cursor-pointer"
+                          title="Remove link"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Expandable Attachment Inputs Tabs */}
+                    {activeAttachmentTab === 'photo' && !createImageUrl && (
+                      <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Image className="h-4 w-4 text-blue-500" />
+                            Add a Photo
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveAttachmentTab('none')}
+                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => imageInputRef.current?.click()}
+                            className="flex-1 justify-center gap-2 text-xs"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload from Device
+                          </Button>
+                          <div className="relative flex-1">
+                            <input
+                              type="url"
+                              placeholder="Or paste Image URL (https://...)"
+                              value={createImageUrl}
+                              onChange={(e) => setCreateImageUrl(e.target.value)}
+                              className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeAttachmentTab === 'document' && !createDocumentUrl && (
+                      <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <FileText className="h-4 w-4 text-red-500" />
+                            Attach Document / PDF
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveAttachmentTab('none')}
+                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => docInputRef.current?.click()}
+                            className="flex-1 justify-center gap-2 text-xs"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload PDF / Doc (.pdf, .docx, .ppt)
+                          </Button>
+                          <div className="relative flex-1">
+                            <input
+                              type="url"
+                              placeholder="Or paste Doc URL (e.g. Google Drive/Dropbox)"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setCreateDocumentUrl(e.target.value);
+                                  setCreateDocumentName('Online Document');
+                                }
+                              }}
+                              className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeAttachmentTab === 'link' && !createLinkUrl && (
+                      <div className="p-3.5 rounded-xl border border-dashed border-border bg-secondary/30 space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Link2 className="h-4 w-4 text-indigo-500" />
+                            Attach Web Link or Article
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveAttachmentTab('none')}
+                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="https://example.com/article-or-repo"
+                            value={createLinkUrl}
+                            onChange={(e) => setCreateLinkUrl(e.target.value)}
+                            className="flex-1 rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-orange-500"
+                            autoFocus
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (createLinkUrl.trim()) {
+                                setActiveAttachmentTab('none');
+                              }
+                            }}
+                            disabled={!createLinkUrl.trim()}
+                            className="text-xs"
+                          >
+                            Attach
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeAttachmentTab === 'milestone' && (
+                      <div className="p-3.5 rounded-xl border border-border bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 space-y-2.5 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <PartyPopper className="h-4 w-4 text-amber-500" />
+                            Celebrate a Milestone
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveAttachmentTab('none')}
+                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {[
+                            { title: 'New Job / Placement', cat: 'Opportunity' },
+                            { title: 'Hackathon Win', cat: 'Achievement' },
+                            { title: 'Research Published', cat: 'Research' },
+                            { title: 'Launched Project', cat: 'Project' },
+                            { title: 'Patent Filed', cat: 'Achievement' },
+                            { title: 'Certificate Earned', cat: 'Achievement' },
+                          ].map((item) => (
+                            <button
+                              key={item.title}
+                              type="button"
+                              onClick={() => {
+                                setCreateCategory(item.cat as PostCategory);
+                                setCreateContent((prev) =>
+                                  prev.trim()
+                                    ? `Excited to share: ${item.title}!\n\n${prev}`
+                                    : `Excited to share that I have accomplished: ${item.title}!\n\n`
+                                );
+                                setActiveAttachmentTab('none');
+                              }}
+                              className="p-2 rounded-lg border border-border bg-card/80 text-left text-xs font-medium text-foreground hover:border-orange-500 hover:bg-orange-500/10 transition-all truncate cursor-pointer"
+                            >
+                              {item.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Trending Hashtags */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[11px] font-semibold text-muted-foreground">Add Tag:</span>
+                      {trendingTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            if (!createContent.includes(tag)) {
+                              setCreateContent((prev) => `${prev.trim()} ${tag}`);
+                            }
+                          }}
+                          className="rounded-lg border border-border bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-orange-500/50 transition-colors cursor-pointer"
+                        >
+                          {tag}
                         </button>
                       ))}
                     </div>
                   </div>
-                )}
 
-                {/* Quick Trending Hashtags */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] font-semibold text-muted-foreground">Add Tag:</span>
-                  {trendingTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        if (!createContent.includes(tag)) {
-                          setCreateContent((prev) => `${prev.trim()} ${tag}`);
+                  {/* Modal Footer with Rich Attachment Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5 bg-muted/20">
+                    {/* Left Attachment Icon Toolbar */}
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!createImageUrl) imageInputRef.current?.click();
+                          else setActiveAttachmentTab('photo');
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                          createImageUrl || activeAttachmentTab === 'photo'
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        title="Attach Photo"
+                      >
+                        <Image className="h-4 w-4 text-blue-500" />
+                        <span className="hidden sm:inline">Photo</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!createDocumentUrl) docInputRef.current?.click();
+                          else setActiveAttachmentTab('document');
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                          createDocumentUrl || activeAttachmentTab === 'document'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        title="Attach PDF or Document"
+                      >
+                        <FileText className="h-4 w-4 text-red-500" />
+                        <span className="hidden sm:inline">Document</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveAttachmentTab((prev) => (prev === 'link' ? 'none' : 'link'))
                         }
-                      }}
-                      className="rounded-lg border border-border bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-orange-500/50 transition-colors"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                          createLinkUrl || activeAttachmentTab === 'link'
+                            ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        title="Add Web Link"
+                      >
+                        <Link2 className="h-4 w-4 text-indigo-500" />
+                        <span className="hidden sm:inline">Link</span>
+                      </button>
 
-              {/* Modal Footer with Rich LinkedIn-Style Attachment Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5 bg-muted/20">
-                {/* Left Attachment Icon Toolbar */}
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!createImageUrl) imageInputRef.current?.click();
-                      else setActiveAttachmentTab('photo');
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createImageUrl || activeAttachmentTab === 'photo'
-                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    title="Attach Photo"
-                  >
-                    <Image className="h-4 w-4 text-blue-500" />
-                    <span className="hidden sm:inline">Photo</span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveAttachmentTab((prev) => (prev === 'milestone' ? 'none' : 'milestone'))
+                        }
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                          activeAttachmentTab === 'milestone'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        title="Celebrate Milestone"
+                      >
+                        <PartyPopper className="h-4 w-4 text-amber-500" />
+                        <span className="hidden sm:inline">Milestone</span>
+                      </button>
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!createDocumentUrl) docInputRef.current?.click();
-                      else setActiveAttachmentTab('document');
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createDocumentUrl || activeAttachmentTab === 'document'
-                        ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    title="Attach PDF or Document"
-                  >
-                    <FileText className="h-4 w-4 text-red-500" />
-                    <span className="hidden sm:inline">Document</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveAttachmentTab((prev) => (prev === 'link' ? 'none' : 'link'))
-                    }
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${createLinkUrl || activeAttachmentTab === 'link'
-                        ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    title="Add Web Link"
-                  >
-                    <Link2 className="h-4 w-4 text-indigo-500" />
-                    <span className="hidden sm:inline">Link</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveAttachmentTab((prev) => (prev === 'milestone' ? 'none' : 'milestone'))
-                    }
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${activeAttachmentTab === 'milestone'
-                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    title="Celebrate Milestone"
-                  >
-                    <PartyPopper className="h-4 w-4 text-amber-500" />
-                    <span className="hidden sm:inline">Milestone</span>
-                  </button>
-                </div>
-
-                {/* Right Action Buttons & Character Counter */}
-                <div className="flex items-center gap-3 ml-auto">
-                  <span className="text-[11px] text-muted-foreground hidden xs:inline">
-                    {createContent.length} / 3000
-                  </span>
-                  <Button
-                    type="button"
-                    variant="quiet"
-                    onClick={resetCreateForm}
-                    className="text-xs sm:text-sm"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createPostMutation.isPending || !createContent.trim()}
-                    className="px-5 py-2 font-bold shadow-md shadow-orange-500/20 text-xs sm:text-sm"
-                  >
-                    {createPostMutation.isPending ? (
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
+                    {createPostMutation.isError && (
+                      <div className="w-full rounded-xl bg-destructive/10 border border-destructive/25 p-3 text-xs text-destructive flex items-center justify-between">
+                        <span>{createPostMutation.error instanceof Error ? createPostMutation.error.message : 'Could not create post. Please try again.'}</span>
+                        <button
+                          type="button"
+                          onClick={() => createPostMutation.reset()}
+                          className="font-bold underline ml-2 cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
                     )}
-                    <span>Publish Post</span>
-                  </Button>
-                </div>
-              </div>
-            </form>
+
+                    {/* Right Action Buttons & Character Counter */}
+                    <div className="flex items-center gap-3 ml-auto">
+                      <span className="text-[11px] text-muted-foreground hidden xs:inline">
+                        {createContent.length} / 3000
+                      </span>
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        onClick={resetCreateForm}
+                        className="text-xs sm:text-sm"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={createPostMutation.isPending || !createContent.trim()}
+                        className="px-5 py-2 font-bold shadow-md shadow-orange-500/20 text-xs sm:text-sm"
+                      >
+                        {createPostMutation.isPending ? (
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        <span>Publish Post</span>
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -10504,127 +12547,216 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 const PeoplePage = FeedPage;
 
 /* =========================================================================
-   COMMUNITY SPOTLIGHT / PERSON FEED CARD (Matching Reference Image)
+   LINKEDIN STYLE CONNECTIONS & MEMBERS COMPONENTS
    ========================================================================= */
 
-function SpotlightPersonCard({ user, isSpotlight = false }: { user: PublicUser; isSpotlight?: boolean }) {
-  const roleBadgeColors: Record<string, string> = {
-    student: 'bg-amber-500/15 text-amber-500 dark:text-amber-400 border-amber-500/30',
-    alumni: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-    faculty: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
-    researcher: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-    admin: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
-  };
+function LinkedInConnectionRow({
+  user,
+  isConnected = false,
+  connectedAt,
+}: {
+  user: PublicUser;
+  isConnected?: boolean;
+  connectedAt?: string;
+  isSpotlight?: boolean;
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { data: connStatus, refetch } = useConnectionStatus(user.id);
+  const queryClient = useQueryClient();
 
-  const badgeClass = roleBadgeColors[user.role] || roleBadgeColors.student;
+  const disconnectMutation = useMutation({
+    mutationFn: (connId: string) => apiFetch(`/connections/${connId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connections'] });
+      refetch();
+    },
+  });
 
   return (
     <div
-      data-testid={`card-person-${user.id}`}
-      className="group relative rounded-2xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-slate-400 dark:hover:border-slate-700 transition-all backdrop-blur-md"
+      data-testid={`connection-row-${user.id}`}
+      className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 hover:bg-muted/35 dark:hover:bg-muted/20 transition-all"
     >
-      {/* Top Banner Tag & More Button */}
-      <div className="flex items-center justify-between mb-4">
-        {isSpotlight ? (
-          <span className="mono inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-500">
-            <Sparkles className="h-3.5 w-3.5 fill-orange-500" /> COMMUNITY SPOTLIGHT
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground font-medium">
-            {user.campus} Campus
-          </span>
-        )}
+      {/* Left: Avatar + Details */}
+      <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+        <Link href={`/people/${user.id}`} className="relative shrink-0 mt-0.5 sm:mt-0 transition-transform active:scale-95">
+          <Avatar user={user} size="lg" />
+          {user.verified && (
+            <span
+              title="Verified Amrita Member"
+              className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-xs"
+            >
+              <Check className="h-2.5 w-2.5 stroke-[3]" />
+            </span>
+          )}
+        </Link>
 
-        <button
-          type="button"
-          aria-label="More options"
-          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition-colors"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
-        {/* Large Avatar with glowing ring */}
-        <div className="relative shrink-0">
-          <div className="p-0.5 rounded-full bg-gradient-to-tr from-orange-500 via-amber-400 to-purple-600 shadow-md">
-            <div className="rounded-full bg-card p-0.5">
-              <Avatar user={user} size="lg" />
-            </div>
-          </div>
-        </div>
-
-        {/* Content Body */}
-        <div className="flex-1 min-w-0 space-y-2.5">
-          {/* Name + Verified Badge + Role Badge */}
+        <div className="min-w-0 flex-1 space-y-1">
+          {/* Name & 1st Connection Degree */}
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/people/${user.id}`}
-              className="text-base sm:text-lg font-extrabold text-foreground hover:text-orange-500 transition-colors"
+              className="text-sm sm:text-base font-bold text-foreground hover:text-orange-500 hover:underline transition-colors truncate"
             >
               {user.fullName}
             </Link>
-
-            {user.verified && (
-              <div title="Verified Amrita Member" className="grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white">
-                <Check className="h-2.5 w-2.5 stroke-[3]" />
-              </div>
-            )}
-
-            <span className={cx('rounded-full border px-2.5 py-0.5 text-[10px] font-semibold', badgeClass)}>
+            <span className="rounded-md bg-secondary/80 px-1.5 py-0.5 text-[10px] font-extrabold text-muted-foreground">
+              {isConnected ? '· 1st' : '· Amrita'}
+            </span>
+            <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.2 text-[10px] font-bold text-orange-600 dark:text-orange-400">
               {roleLabels[user.role] ?? user.role}
             </span>
           </div>
 
-          {/* Headline */}
-          <p className="text-xs font-semibold text-foreground/80">
-            {user.headline || `${user.department} • Amrita ${user.campus}`}
+          {/* Headline / Department & Campus */}
+          <p className="text-xs text-foreground/80 font-medium truncate">
+            {user.headline || `${user.department} Student at Amrita Vishwa Vidyapeetham · ${user.campus} Campus`}
           </p>
 
-          {/* Bio Quote (if present) */}
-          {user.bio && (
-            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
-              "{user.bio}"
-            </p>
-          )}
+          {/* Academic & Connection timestamp */}
+          <p className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-2 pt-0.5">
+            <span className="font-semibold text-foreground/70">Amrita {user.campus}</span>
+            {user.graduationYear && <span>· Class of {user.graduationYear}</span>}
+            {connectedAt ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">· Connected {relative(connectedAt)}</span>
+            ) : isConnected ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">· Connected Friend</span>
+            ) : null}
+          </p>
+        </div>
+      </div>
 
-          {/* Skills Tags */}
-          {user.skills && user.skills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {user.skills.slice(0, 4).map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-lg bg-secondary/80 text-secondary-foreground px-2.5 py-1 text-[11px] font-medium"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          )}
+      {/* Right: Message CTA + More Actions */}
+      <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+        {isConnected ? (
+          <Link
+            href={`/messages/${user.id}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/60 bg-orange-500/10 hover:bg-orange-500 hover:text-white px-4 py-1.5 text-xs font-extrabold text-orange-600 dark:text-orange-400 shadow-2xs active:scale-95 transition-all cursor-pointer"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span>Message</span>
+          </Link>
+        ) : (
+          <ConnectActionButton targetUser={user} size="sm" />
+        )}
 
-          {/* Bottom Bar: Stats & View Profile */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/60">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" />
-                <span>{user.graduationYear ? `Class of ${user.graduationYear}` : `${user.campus} Campus`}</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5" />
-                <span>{user.department}</span>
-              </span>
-            </div>
+        {/* Dropdown Options Menu */}
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="More options"
+            onClick={() => setDropdownOpen((prev) => !prev)}
+            className="rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
 
-            <div className="flex items-center gap-2">
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-border bg-card p-1.5 shadow-xl animate-rise">
               <Link
                 href={`/people/${user.id}`}
-                className="rounded-xl border border-border/80 bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all"
+                onClick={() => setDropdownOpen(false)}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
               >
-                View Profile
+                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>View Full Profile</span>
               </Link>
+              <Link
+                href={`/messages/${user.id}`}
+                onClick={() => setDropdownOpen(false)}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Direct Message</span>
+              </Link>
+              {isConnected && connStatus?.connectionId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    if (confirm(`Remove connection with ${user.fullName}?`)) {
+                      disconnectMutation.mutate(connStatus.connectionId!);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  <span>Remove Connection</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkedInConnectionCard({
+  user,
+  isConnected = false,
+}: {
+  user: PublicUser;
+  isConnected?: boolean;
+}) {
+  return (
+    <div
+      data-testid={`card-person-${user.id}`}
+      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md transition-all text-center"
+    >
+      {/* Header Banner */}
+      <div className="h-16 w-full bg-gradient-to-r from-orange-500/25 via-amber-500/20 to-purple-500/25 relative">
+        <span className="absolute top-2 right-2 rounded-full bg-black/40 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
+          {user.campus}
+        </span>
+      </div>
+
+      {/* Avatar Centered */}
+      <div className="-mt-8 flex justify-center">
+        <Link href={`/people/${user.id}`} className="relative">
+          <div className="rounded-full p-1 bg-card ring-2 ring-border shadow-sm">
+            <Avatar user={user} size="lg" />
+          </div>
+          {user.verified && (
+            <span className="absolute bottom-0 right-0 grid h-4 w-4 place-items-center rounded-full bg-blue-500 text-white ring-2 ring-card shadow-xs">
+              <Check className="h-2.5 w-2.5 stroke-[3]" />
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* Info */}
+      <div className="p-4 flex-1 flex flex-col items-center justify-between">
+        <div>
+          <Link
+            href={`/people/${user.id}`}
+            className="text-sm font-bold text-foreground hover:text-orange-500 hover:underline transition-colors line-clamp-1 block"
+          >
+            {user.fullName}
+          </Link>
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {user.headline || `${user.department} · Amrita ${user.campus}`}
+          </p>
+          <p className="mt-2 text-[10px] text-muted-foreground/80 font-medium">
+            {user.graduationYear ? `Class of ${user.graduationYear}` : `Amrita ${user.campus}`}
+          </p>
+        </div>
+
+        {/* Action Button Full Width */}
+        <div className="mt-4 w-full pt-3 border-t border-border/60 flex items-center justify-center gap-2">
+          {isConnected ? (
+            <Link
+              href={`/messages/${user.id}`}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-orange-500/60 bg-orange-500/10 hover:bg-orange-500 hover:text-white px-3 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 transition-all shadow-2xs active:scale-95"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Message</span>
+            </Link>
+          ) : (
+            <div className="w-full flex justify-center">
               <ConnectActionButton targetUser={user} size="sm" />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -10637,28 +12769,36 @@ function PublicProfilePage() {
   const [showRequest, setShowRequest] = useState(false);
   if (isLoading) return <LoadingState rows={2} />;
   if (isError || !person) return <ErrorState onRetry={() => refetch()} />;
-  return <>
-    <Link data-testid="link-back-people" href="/people" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
-      <ChevronRight className="h-4 w-4 rotate-180" /> Back to people
-    </Link>
-    <div className="surface overflow-hidden rounded-xl border border-border">
-      <div className="h-28 bg-gradient-to-r from-secondary via-secondary/60 to-accent/10 sm:h-40" />
-      <div className="px-5 pb-7 sm:px-8">
-        <div className="-mt-10 flex flex-col gap-5 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
-          <Avatar user={person} size="lg" />
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link
-              href={`/messages/${person.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-sm"
-            >
-              <MessageSquare className="h-4 w-4 text-accent" /> Message
-            </Link>
-            <ConnectActionButton targetUser={person} />
-            <Button data-testid="button-request-mentorship" onClick={() => setShowRequest(true)}>
-              <HeartHandshake className="h-4 w-4" />Ask for mentorship
-            </Button>
+  return (
+    <>
+      <Link data-testid="link-back-people" href="/people" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+        <ChevronRight className="h-4 w-4 rotate-180" /> Back to people
+      </Link>
+      <div className="surface overflow-hidden rounded-2xl border border-border shadow-sm">
+        <div className="relative h-44 sm:h-60 w-full bg-slate-900">
+          <img
+            src={person.coverUrl || DEFAULT_COVER}
+            alt={`${person.fullName} Cover`}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+        </div>
+        <div className="px-6 sm:px-8 pb-7">
+          <div className="relative z-10 -mt-16 sm:-mt-20 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-4">
+            <Avatar user={person} size="xl" className="ring-4 ring-background shadow-2xl bg-card" />
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <Link
+                href={`/messages/${person.id}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
+              >
+                <MessageSquare className="h-4 w-4 text-orange-500" /> Message
+              </Link>
+              <ConnectActionButton targetUser={person} />
+              <Button data-testid="button-request-mentorship" onClick={() => setShowRequest(true)} className="rounded-xl px-4 py-2 text-xs font-bold shadow-2xs">
+                <HeartHandshake className="h-4 w-4" />Ask for mentorship
+              </Button>
+            </div>
           </div>
-
         </div>
 
         <div className="mt-5">
@@ -10688,19 +12828,537 @@ function PublicProfilePage() {
           </div>
         </div>
       </div>
-    </div>
-    {showRequest && <MentorshipDialog mentor={person} onClose={() => setShowRequest(false)} />}
-  </>;
+      {showRequest && <MentorshipDialog mentor={person} onClose={() => setShowRequest(false)} />}
+    </>
+  );
 }
 function InfoGroup({ title, items = [] }: { title: string; items?: string[] }) { return items?.length ? <div className="mt-8"><h3 className="text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">{title}</h3><div className="mt-3 flex flex-wrap gap-2">{items.map((item) => <Tag key={item} warm>{item}</Tag>)}</div></div> : null; }
 function ProfileAside({ title, items = [] }: { title: string; items?: string[] }) { return <div><h3 className="text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">{title}</h3><div className="mt-3 space-y-2">{items?.length ? items.map((item) => <div className="flex gap-2 text-sm text-foreground" key={item}><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />{item}</div>) : <span className="text-sm text-muted-foreground">Not shared yet</span>}</div></div>; }
 function MentorshipDialog({ mentor, onClose }: { mentor: PublicUser; onClose: () => void }) { const create = useCreateMentorshipRequest(); const [form, setForm] = useState({ topic: '', reason: '', message: '' }); const queryClient = useQueryClient(); const submit = (e: React.FormEvent) => { e.preventDefault(); create.mutate({ data: { mentorId: mentor.id, ...form } }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }); onClose(); } }); }; return <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl"><div className="flex items-start justify-between"><div><div className="mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">A thoughtful ask</div><h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Ask {mentor.fullName.split(' ')[0]} to mentor you</h2></div><button data-testid="button-close-mentorship-dialog" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button></div><form onSubmit={submit} className="mt-6 space-y-4"><Field id="mentorship-topic" label="What would you like to learn?" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required /><Field id="mentorship-reason" label="Why this person?" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required /><label className="block"><span className="mb-1.5 block text-xs font-bold text-foreground">Your note</span><textarea data-testid="textarea-mentorship-message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required rows={4} className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-accent-foreground" placeholder="Introduce yourself and share what a useful first conversation looks like." /></label><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="quiet" onClick={onClose}>Cancel</Button><Button data-testid="button-submit-mentorship" type="submit" disabled={create.isPending}>{create.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send request</Button></div></form></div></div>; }
 
-function MentorshipPage() {
-  const { data, isLoading, isError, refetch } = useListMentorshipRequests(); const status = useUpdateMentorshipRequestStatus(); const queryClient = useQueryClient(); const [filter, setFilter] = useState('all'); const items = data?.filter((item) => filter === 'all' || item.status === filter) ?? []; const update = (id: string, value: 'accepted' | 'rejected') => status.mutate({ id, data: { status: value } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }) }); return <><PageTitle eyebrow="Mentorship" title="Make room for guidance." detail="Keep track of the conversations you have started and the ones waiting on you." action={<div className="flex rounded-lg border border-border bg-card p-1">{['all', 'pending', 'accepted'].map((value) => <button data-testid={`button-filter-mentorship-${value}`} key={value} onClick={() => setFilter(value)} className={cx('rounded-md px-3 py-1.5 text-xs font-bold capitalize', filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{value}</button>)}</div>} />{isLoading ? <LoadingState rows={3} /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <EmptyState icon={HeartHandshake} title={filter === 'all' ? 'No mentorship requests yet' : `No ${filter} requests`} detail="When you find the right person, a clear and considered note is a good place to start." action={<Link href="/people" className="text-sm font-bold text-accent">Explore the directory</Link>} /> : <div className="space-y-4">{items.map((item) => <MentorshipCard key={item.id} item={item} onUpdate={update} pending={status.isPending} />)}</div>}</>;
+function AcceptMentorshipModal({
+  item,
+  onClose,
+  onSuccess,
+}: {
+  item: MentorshipRequest;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [availableSlots, setAvailableSlots] = useState('');
+  const [note, setNote] = useState('');
+  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [meetingPlatform, setMeetingPlatform] = useState('Google Meet');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const slotSuggestions = [
+    'Tuesdays & Thursdays: 5:00 PM – 6:30 PM',
+    'Saturdays: 10:00 AM – 1:00 PM',
+    'Sundays: 4:00 PM – 7:00 PM',
+    'Weekdays post 6:00 PM (Online)',
+    'Campus Department / Library (In-Person)',
+  ];
+
+  const toggleChip = (slot: string) => {
+    if (selectedChips.includes(slot)) {
+      setSelectedChips(selectedChips.filter((s) => s !== slot));
+    } else {
+      setSelectedChips([...selectedChips, slot]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const finalSlots = [
+        ...selectedChips,
+        availableSlots.trim()
+      ].filter(Boolean).join('\n');
+
+      const fullNote = [
+        note.trim() || `Excited to connect with you regarding ${item.topic}!`,
+        `Preferred Platform/Mode: ${meetingPlatform}`,
+      ].join('\n\n');
+
+      await apiFetch(`/mentorship/requests/${item.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'accepted',
+          availableSlots: finalSlots || 'Flexible on weekdays after 5 PM. Please message me to finalize a slot.',
+          note: fullNote,
+        }),
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Could not accept mentorship request');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b border-border/80 pb-4">
+          <div className="flex items-center gap-3">
+            <Avatar user={item.requester} size="md" />
+            <div>
+              <div className="mono text-[10px] uppercase font-bold tracking-wider text-emerald-500">
+                Accept Mentorship Request
+              </div>
+              <h2 className="text-lg font-bold text-foreground">
+                Connect with {item.requester.fullName}
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-secondary/30 p-3.5 space-y-1.5 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">Topic:</span>
+            <span className="text-accent font-semibold">{item.topic}</span>
+          </div>
+          <p className="text-muted-foreground italic line-clamp-2">"{item.message}"</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">
+              Select or Suggest Available Free Slots <span className="text-emerald-500">*</span>
+            </label>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              The mentee will receive these times in their direct messages so you can coordinate smoothly:
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              {slotSuggestions.map((slot) => {
+                const isSelected = selectedChips.includes(slot);
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => toggleChip(slot)}
+                    className={cx(
+                      'rounded-lg px-2.5 py-1 text-xs font-semibold transition-all border text-left cursor-pointer',
+                      isSelected
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-2xs font-bold'
+                        : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                  >
+                    {isSelected ? '✓ ' : '+ '}
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+            <textarea
+              value={availableSlots}
+              onChange={(e) => setAvailableSlots(e.target.value)}
+              placeholder="e.g. Wednesday & Friday from 4 PM to 6 PM, or share your Calendly/Cal.com link..."
+              rows={2}
+              className="w-full rounded-xl border border-input bg-card px-3.5 py-2 text-xs outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Preferred Mode / Platform
+              </label>
+              <select
+                value={meetingPlatform}
+                onChange={(e) => setMeetingPlatform(e.target.value)}
+                className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:border-emerald-500"
+              >
+                <option value="Google Meet">Google Meet</option>
+                <option value="Zoom Meeting">Zoom Meeting</option>
+                <option value="Microsoft Teams">Microsoft Teams</option>
+                <option value="In-person (Campus)">In-person (Campus)</option>
+                <option value="Direct Messages / Chat">Direct Messages / Chat</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Personal Welcome Note (Optional)
+              </label>
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Looking forward to talking about your career!"
+                className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/70">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || (!availableSlots.trim() && selectedChips.length === 0)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+            >
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Accept & Send Free Slots
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
-function MentorshipCard({ item, onUpdate, pending }: { item: MentorshipRequest; onUpdate: (id: string, status: 'accepted' | 'rejected') => void; pending: boolean }) { return <div className="surface rounded-xl border border-border p-5 sm:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-start"><Avatar user={item.requester} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold text-foreground">{item.requester.fullName}</h2><Status status={item.status} /></div><p className="mt-1 text-xs text-muted-foreground">Requesting mentorship · {relative(item.createdAt)}</p><p className="mt-4 text-sm leading-6 text-foreground">{item.message}</p><div className="mt-4 flex flex-wrap gap-2"><Tag warm>{item.topic}</Tag><Tag>{item.reason}</Tag></div></div>{item.status === 'pending' && <div className="flex shrink-0 gap-2 sm:flex-col"><Button data-testid={`button-accept-mentorship-${item.id}`} className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'accepted')}><Check className="h-4 w-4" />Accept</Button><Button data-testid={`button-reject-mentorship-${item.id}`} variant="quiet" className="px-3 py-2" disabled={pending} onClick={() => onUpdate(item.id, 'rejected')}>Decline</Button></div>}</div></div>; }
-function Status({ status }: { status: string }) { return <span data-testid={`status-${status}`} className={cx('rounded-full px-2.5 py-1 text-[10px] font-bold capitalize', status === 'accepted' ? 'bg-emerald-500/15 text-emerald-500' : status === 'rejected' ? 'bg-destructive/15 text-destructive' : 'bg-accent/20 text-accent')}>{status}</span>; }
+
+function MentorshipPage() {
+  const { data, isLoading, isError, refetch } = useListMentorshipRequests();
+  const { data: currentUser } = useGetCurrentUser();
+  const status = useUpdateMentorshipRequestStatus();
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<'all' | 'received' | 'sent'>('all');
+  const [filter, setFilter] = useState('all');
+  const [acceptingItem, setAcceptingItem] = useState<MentorshipRequest | null>(null);
+
+  const rawItems = data ?? [];
+
+  const receivedCount = rawItems.filter(
+    (item) => String(item.mentor?.id) === String(currentUser?.id) && item.status === 'pending'
+  ).length;
+
+  const sentCount = rawItems.filter(
+    (item) => String(item.requester?.id) === String(currentUser?.id) && item.status === 'pending'
+  ).length;
+
+  const items = rawItems.filter((item) => {
+    const isSender = String(item.requester?.id) === String(currentUser?.id);
+    const isMentor = String(item.mentor?.id) === String(currentUser?.id);
+
+    if (tab === 'received' && !isMentor) return false;
+    if (tab === 'sent' && !isSender) return false;
+
+    if (filter !== 'all' && item.status !== filter) return false;
+
+    return true;
+  });
+
+  const handleDecline = (id: string) => {
+    status.mutate(
+      { id, data: { status: 'rejected' } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() }) }
+    );
+  };
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Mentorship"
+        title="Make room for guidance."
+        detail="Keep track of the mentorship conversations you have started and the ones requested from you."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Filter */}
+            <div className="flex rounded-xl border border-border bg-card p-1 shadow-2xs">
+              {['all', 'pending', 'accepted', 'rejected'].map((value) => (
+                <button
+                  data-testid={`button-filter-mentorship-${value}`}
+                  key={value}
+                  onClick={() => setFilter(value)}
+                  className={cx(
+                    'rounded-lg px-3 py-1.5 text-xs font-extrabold capitalize transition-all cursor-pointer',
+                    filter === value
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+      />
+
+      {/* Direction Switcher Tabs (All, Received, Sent) */}
+      <div className="mb-6 flex items-center gap-2 border-b border-border pb-3">
+        <button
+          type="button"
+          onClick={() => setTab('all')}
+          className={cx(
+            'rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
+            tab === 'all'
+              ? 'bg-foreground text-background shadow-xs'
+              : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <span>All Requests</span>
+          <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-[10px]">{rawItems.length}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('received')}
+          className={cx(
+            'rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
+            tab === 'received'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <span>Received (Waiting on You)</span>
+          {receivedCount > 0 && (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-black px-1 animate-pulse">
+              {receivedCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('sent')}
+          className={cx(
+            'rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
+            tab === 'sent'
+              ? 'bg-orange-500 text-white shadow-xs'
+              : 'bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <span>Sent by You</span>
+          {sentCount > 0 && (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-orange-500 text-white text-[9px] font-black px-1">
+              {sentCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {isLoading ? (
+        <LoadingState rows={3} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !items.length ? (
+        <EmptyState
+          icon={HeartHandshake}
+          title={
+            tab === 'sent'
+              ? 'No sent mentorship requests'
+              : tab === 'received'
+              ? 'No incoming mentorship requests'
+              : filter === 'all'
+              ? 'No mentorship requests yet'
+              : `No ${filter} requests`
+          }
+          detail={
+            tab === 'sent'
+              ? 'Visit the directory or mentor profiles to request 1:1 guidance and interview prep.'
+              : 'When members discover your background, you will see their guidance requests here.'
+          }
+          action={
+            <Link href="/people" className="text-sm font-bold text-orange-500 hover:underline">
+              Explore the member directory
+            </Link>
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {items.map((item) => (
+            <MentorshipCard
+              key={item.id}
+              item={item}
+              currentUserId={currentUser?.id}
+              onAcceptClick={() => setAcceptingItem(item)}
+              onDeclineClick={() => handleDecline(item.id)}
+              pending={status.isPending}
+            />
+          ))}
+        </div>
+      )}
+
+      {acceptingItem && (
+        <AcceptMentorshipModal
+          item={acceptingItem}
+          onClose={() => setAcceptingItem(null)}
+          onSuccess={() => {
+            setAcceptingItem(null);
+            queryClient.invalidateQueries({ queryKey: getListMentorshipRequestsQueryKey() });
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function MentorshipCard({
+  item,
+  currentUserId,
+  onAcceptClick,
+  onDeclineClick,
+  pending,
+}: {
+  item: MentorshipRequest;
+  currentUserId?: string;
+  onAcceptClick: () => void;
+  onDeclineClick: () => void;
+  pending: boolean;
+}) {
+  const isSender = String(item.requester?.id) === String(currentUserId);
+  const isMentor = String(item.mentor?.id) === String(currentUserId);
+  const otherUser = isSender ? item.mentor : item.requester;
+
+  return (
+    <div className="surface rounded-2xl border border-border p-5 sm:p-6 shadow-xs hover:border-orange-500/30 transition-all">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+        <Link href={`/people/${otherUser.id}`}>
+          <Avatar user={otherUser} size="lg" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/people/${otherUser.id}`}
+              className="font-extrabold text-base text-foreground hover:text-orange-500 transition-colors"
+            >
+              {otherUser.fullName}
+            </Link>
+            <span className="rounded-lg bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground uppercase">
+              {roleLabels[otherUser.role] ?? otherUser.role} · {otherUser.campus}
+            </span>
+            <MentorshipStatusBadge status={item.status} isSender={isSender} />
+          </div>
+
+          <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+            {isSender ? (
+              <>
+                <span>You requested mentorship from {item.mentor?.fullName}</span>
+                <span>·</span>
+                <span>{relative(item.createdAt)}</span>
+              </>
+            ) : (
+              <>
+                <span>Requested mentorship from you</span>
+                <span>·</span>
+                <span>{relative(item.createdAt)}</span>
+              </>
+            )}
+          </p>
+
+          <p className="mt-3.5 text-xs sm:text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap rounded-xl bg-secondary/40 p-3 border border-border/50">
+            {item.message}
+          </p>
+
+          <div className="mt-3.5 flex flex-wrap gap-2">
+            {item.topic && <Tag warm>{item.topic}</Tag>}
+            {item.reason && <Tag>{item.reason}</Tag>}
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex shrink-0 gap-2 sm:flex-col sm:items-end">
+          {isSender ? (
+            /* Sender View: Status info and Chat button */
+            item.status === 'pending' ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 dark:border-amber-800/60 bg-amber-500/15 px-3 py-1.5 text-xs font-extrabold text-amber-700 dark:text-amber-300 shadow-2xs">
+                  <Clock className="h-3.5 w-3.5 animate-spin-slow" />
+                  <span>Awaiting Mentor's Response</span>
+                </span>
+                <Link
+                  href={`/messages/${item.mentor.id}`}
+                  className="rounded-xl border border-border/80 bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all flex items-center gap-1.5"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-orange-500" />
+                  <span>Message</span>
+                </Link>
+              </div>
+            ) : item.status === 'accepted' ? (
+              <Link
+                href={`/messages/${item.mentor.id}`}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white shadow-md active:scale-95 transition-all"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Open Chat & Slots</span>
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive">
+                Declined
+              </span>
+            )
+          ) : (
+            /* Receiver / Mentor View: Accept & Share Slots or Decline */
+            item.status === 'pending' ? (
+              <div className="flex shrink-0 gap-2 sm:flex-col">
+                <Button
+                  data-testid={`button-accept-mentorship-${item.id}`}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-sm active:scale-95 cursor-pointer"
+                  disabled={pending}
+                  onClick={onAcceptClick}
+                >
+                  <Check className="h-4 w-4" />
+                  Accept & Share Slots
+                </Button>
+                <Button
+                  data-testid={`button-reject-mentorship-${item.id}`}
+                  variant="quiet"
+                  className="px-3.5 py-2 font-bold cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={pending}
+                  onClick={onDeclineClick}
+                >
+                  Decline
+                </Button>
+              </div>
+            ) : item.status === 'accepted' ? (
+              <Link
+                href={`/messages/${item.requester.id}`}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Chat with Mentee</span>
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive">
+                Declined
+              </span>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MentorshipStatusBadge({ status, isSender }: { status: string; isSender?: boolean }) {
+  if (status === 'accepted') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" /> Accepted
+      </span>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-0.5 text-[10px] font-extrabold text-destructive">
+        Declined
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400">
+      <Clock className="h-3 w-3" /> {isSender ? 'Pending Mentor Response' : 'Pending Action'}
+    </span>
+  );
+}
 
 interface CollaborationMember {
   user: PublicUser;
@@ -13642,7 +16300,7 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !items.length && incomingList.length === 0 ? (
-        <EmptyState icon={Bell} title="You are all caught up" detail="New requests, mentorship responses, and campus event updates will land here." />
+        <EmptyState icon={Bell} title="You are all caught up" detail="New post reactions, comments, connection invitations, and campus updates will land here." />
       ) : (
         <div className="w-full divide-y divide-border/80 rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
           {items.map((item) => {
@@ -13655,29 +16313,54 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
             const isResearch = t.includes('research');
             const isHelp = t.includes('solution') || t.includes('help');
             const isBuddy = t.includes('campus_buddy');
-            const isLike = t.includes('like');
+            const isComment = t.includes('comment');
+            const isLike = t.includes('like') || t.includes('reaction');
+            const isSave = t.includes('save') || t.includes('bookmark');
+            const isMessage = t.includes('message');
+
+            const handleNotificationClick = () => {
+              read(item);
+              if (isMessage) {
+                window.location.href = '/messages';
+              } else if (isMentorship) {
+                window.location.href = '/mentorship';
+              } else if (isEvent) {
+                window.location.href = '/opportunities';
+              } else if (isCollab) {
+                window.location.href = '/feed';
+              } else if (isResearch) {
+                window.location.href = '/research';
+              } else if (isBuddy) {
+                window.location.href = '/feed';
+              } else if (isComment || isLike || isSave) {
+                window.location.href = '/feed';
+              }
+            };
 
             return (
               <button
                 data-testid={`button-notification-${item.id}`}
-                onClick={() => read(item)}
+                onClick={handleNotificationClick}
                 key={item.id}
                 className={cx(
                   'flex w-full items-start gap-4 p-4 sm:p-5 text-left transition-colors cursor-pointer',
-                  isUnread ? 'bg-secondary/40 hover:bg-secondary/60' : 'hover:bg-muted/40'
+                  isUnread ? 'bg-orange-500/[0.04] dark:bg-orange-950/20 hover:bg-orange-500/[0.08]' : 'hover:bg-muted/40'
                 )}
               >
                 {/* Visual Type Icon Indicator */}
                 <div className={cx(
-                  'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs shadow-2xs border',
-                  isMentorship ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                  isConnection ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
-                  isEvent ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                  isCollab ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
-                  isResearch ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
-                  isHelp ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                  isBuddy ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                  isLike ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
+                  'grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-sm shadow-2xs border',
+                  isMentorship ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25' :
+                  isConnection ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25' :
+                  isEvent ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/25' :
+                  isCollab ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/25' :
+                  isResearch ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/25' :
+                  isHelp ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' :
+                  isBuddy ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25' :
+                  isComment ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/25' :
+                  isLike ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/25' :
+                  isSave ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/25' :
+                  isMessage ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' :
                   'bg-secondary text-muted-foreground border-border/80'
                 )}>
                   {isMentorship ? <GraduationCap className="h-4 w-4" /> :
@@ -13687,21 +16370,24 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
                    isResearch ? <Sparkles className="h-4 w-4" /> :
                    isHelp ? <CheckCircle2 className="h-4 w-4" /> :
                    isBuddy ? <Compass className="h-4 w-4" /> :
+                   isComment ? <MessageSquare className="h-4 w-4" /> :
                    isLike ? <ThumbsUp className="h-4 w-4" /> :
+                   isSave ? <Bookmark className="h-4 w-4" /> :
+                   isMessage ? <MessageSquare className="h-4 w-4" /> :
                    <Bell className="h-4 w-4" />}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xs sm:text-sm font-bold text-foreground">{item.title}</h2>
+                      <h2 className={cx("text-xs sm:text-sm font-bold", isUnread ? "text-foreground" : "text-muted-foreground")}>{item.title}</h2>
                       {isUnread && (
-                        <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
+                        <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0 shadow-xs animate-pulse" />
                       )}
                     </div>
                     <span className="shrink-0 text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.message}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-foreground/80">{item.message}</p>
                 </div>
               </button>
             );
@@ -13775,6 +16461,36 @@ const COVER_PRESETS = [
     title: 'Minimal Geometric Slate',
     url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80',
   },
+  {
+    id: 'western-ghats',
+    title: 'Ettimadai Western Ghats Valley',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'space-ai',
+    title: 'Neural Networks & AI Lab',
+    url: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1600&q=80',
+  },
+  {
+    id: 'coastal-sunrise',
+    title: 'Amritapuri Coastal Horizon',
+    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80',
+  },
+];
+
+const AVATAR_PRESETS = [
+  { id: 'av-tech-1', label: 'Male Scholar', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-tech-2', label: 'Female Scholar', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-tech-3', label: 'AI Engineer', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-tech-4', label: 'Researcher', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-tech-5', label: 'Tech Lead', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-tech-6', label: 'Data Scientist', url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-bot-1', label: 'HuT Labs Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=AmritaBot1' },
+  { id: 'av-bot-2', label: 'bi0s CTF Hacker', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=AmritaBi0sHacker' },
+  { id: 'av-bot-3', label: 'AI Cyber Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=AmritaCyber' },
+  { id: 'av-notion-1', label: 'Minimalist Coder', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=AmritaCoder' },
+  { id: 'av-notion-2', label: 'Creative Designer', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=AmritaCreative' },
+  { id: 'av-notion-3', label: 'Campus Builder', url: 'https://api.dicebear.com/7.x/shapes/svg?seed=AmritaBuilder' },
 ];
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1600&q=80';
@@ -13789,120 +16505,135 @@ function CoverPhotoDialog({
   onClose: () => void;
 }) {
   const [selectedUrl, setSelectedUrl] = useState(currentCover || DEFAULT_COVER);
-  const [customUrl, setCustomUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Banner size exceeds 20MB limit.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          setSelectedUrl(reader.result);
+          const img = new window.Image();
+          img.onload = () => {
+            const maxDim = 1920;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', 0.85);
+              setSelectedUrl(compressed);
+            } else {
+              setSelectedUrl(reader.result as string);
+            }
+          };
+          img.onerror = () => setSelectedUrl(reader.result as string);
+          img.src = reader.result;
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-14 sm:pt-20 pb-8 overflow-y-auto bg-black/80 backdrop-blur-md p-3 sm:p-4 animate-fade-in">
+      <div className="relative w-full max-w-lg max-h-[85vh] rounded-3xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5 shrink-0 bg-card">
           <div>
-            <h3 className="text-base font-bold text-foreground">Update Cover Banner</h3>
-            <p className="text-xs text-muted-foreground">Upload from device, enter a URL, or pick an Amrita preset.</p>
+            <div className="mono text-[10px] font-bold uppercase tracking-wider text-orange-500">Profile Header</div>
+            <h3 className="text-base sm:text-lg font-bold text-foreground">Update Cover Banner</h3>
+            <p className="text-xs text-muted-foreground">Upload a banner from your device or choose a preset.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Live Preview */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Banner Preview</label>
-          <div className="relative h-36 w-full overflow-hidden rounded-xl border border-border bg-muted">
-            <img src={selectedUrl} alt="Cover Preview" className="h-full w-full object-cover" />
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Live Preview */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-foreground flex items-center justify-between">
+              <span>Banner Live Preview</span>
+              <span className="text-[11px] font-normal text-muted-foreground">Visible on your public profile</span>
+            </label>
+            <div className="relative h-28 sm:h-32 w-full overflow-hidden rounded-2xl border border-border bg-muted shadow-inner">
+              <img src={selectedUrl} alt="Cover Preview" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            </div>
           </div>
-        </div>
 
-        {/* Device Upload */}
-        <div className="flex items-center gap-3">
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full text-xs font-bold border-dashed border-2 py-3"
-          >
-            <Upload className="h-4 w-4 text-orange-500" />
-            Upload Image from Device
-          </Button>
-        </div>
-
-        {/* Direct Link Input */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Or Paste Image URL</label>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={customUrl}
-              onChange={(e) => {
-                setCustomUrl(e.target.value);
-                if (e.target.value.startsWith('http')) {
-                  setSelectedUrl(e.target.value);
-                }
-              }}
-              placeholder="https://images.unsplash.com/..."
-              className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
-            />
+          {/* Device Upload */}
+          <div>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                if (customUrl) setSelectedUrl(customUrl);
-              }}
-              className="px-3 py-2 text-xs"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full text-xs font-bold border-dashed border-2 py-3 flex items-center justify-center gap-2 hover:border-orange-500 hover:bg-orange-500/5 transition-all cursor-pointer"
             >
-              Apply
+              <Upload className="h-4 w-4 text-orange-500" />
+              <span>Upload Banner Image from Device</span>
             </Button>
           </div>
-        </div>
 
-        {/* Presets Gallery */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-foreground">Amrita & Tech Presets</label>
-          <div className="grid grid-cols-5 gap-2">
-            {COVER_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => setSelectedUrl(preset.url)}
-                className={cx(
-                  'group relative h-14 overflow-hidden rounded-lg border transition-all',
-                  selectedUrl === preset.url ? 'ring-2 ring-orange-500 border-transparent shadow-sm' : 'border-border hover:opacity-90'
-                )}
-                title={preset.title}
-              >
-                <img src={preset.url} alt={preset.title} className="h-full w-full object-cover" />
-                {selectedUrl === preset.url && (
-                  <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                    <Check className="h-4 w-4 text-white drop-shadow" />
+          {/* Presets Gallery */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+              <span>Amrita Campuses & Tech Presets</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {COVER_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setSelectedUrl(preset.url)}
+                  className={cx(
+                    'group relative h-16 overflow-hidden rounded-xl border transition-all text-left cursor-pointer hover:scale-[1.02]',
+                    selectedUrl === preset.url ? 'ring-2 ring-orange-500 border-transparent shadow-md' : 'border-border hover:border-foreground/30'
+                  )}
+                  title={preset.title}
+                >
+                  <img src={preset.url} alt={preset.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-1.5 flex flex-col justify-end">
+                    <span className="text-[9px] font-bold text-white line-clamp-1 leading-tight">{preset.title}</span>
                   </div>
-                )}
-              </button>
-            ))}
+                  {selectedUrl === preset.url && (
+                    <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md">
+                      <Check className="h-2.5 w-2.5" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        {/* Pinned Footer */}
+        <div className="flex items-center justify-between border-t border-border px-5 py-3.5 shrink-0 bg-muted/30">
           <button
             type="button"
             onClick={() => setSelectedUrl(DEFAULT_COVER)}
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            Reset to Default
+            Reset Default
           </button>
           <div className="flex items-center gap-2">
             <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
@@ -13914,14 +16645,15 @@ function CoverPhotoDialog({
                 onSave(selectedUrl);
                 onClose();
               }}
-              className="text-xs font-bold"
+              className="text-xs font-bold px-5"
             >
               Save Cover Banner
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -13937,95 +16669,159 @@ function AvatarPhotoDialog({
   isPending: boolean;
 }) {
   const [selectedUrl, setSelectedUrl] = useState(currentAvatar || '');
-  const [customUrl, setCustomUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Photo size exceeds 20MB limit.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          setSelectedUrl(reader.result);
+          const img = new window.Image();
+          img.onload = () => {
+            const maxDim = 800;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', 0.88);
+              setSelectedUrl(compressed);
+            } else {
+              setSelectedUrl(reader.result as string);
+            }
+          };
+          img.onerror = () => setSelectedUrl(reader.result as string);
+          img.src = reader.result;
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-14 sm:pt-20 pb-8 overflow-y-auto bg-black/80 backdrop-blur-md p-3 sm:p-4 animate-fade-in">
+      <div className="relative w-full max-w-lg max-h-[85vh] rounded-3xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5 shrink-0 bg-card">
           <div>
-            <h3 className="text-base font-bold text-foreground">Change Profile Photo</h3>
-            <p className="text-xs text-muted-foreground">Upload an image or provide an image link.</p>
+            <div className="mono text-[10px] font-bold uppercase tracking-wider text-orange-500">Profile Picture</div>
+            <h3 className="text-base sm:text-lg font-bold text-foreground">Change Profile Photo</h3>
+            <p className="text-xs text-muted-foreground">Upload from device or choose a suggested avatar.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Live Preview */}
-        <div className="flex flex-col items-center justify-center py-2">
-          {selectedUrl ? (
-            <img src={selectedUrl} alt="Avatar Preview" className="h-32 w-32 rounded-full object-cover ring-4 ring-orange-500 shadow-md" />
-          ) : (
-            <div className="h-32 w-32 rounded-full bg-secondary text-primary flex items-center justify-center text-3xl font-bold ring-4 ring-border shadow-md">
-              <Camera className="h-10 w-10 text-muted-foreground" />
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Live Preview Avatar */}
+          <div className="flex flex-col items-center justify-center">
+            <div className="relative">
+              {selectedUrl ? (
+                <img
+                  src={selectedUrl}
+                  alt="Avatar Preview"
+                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover ring-4 ring-orange-500 shadow-md bg-muted"
+                />
+              ) : (
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-secondary text-primary flex items-center justify-center ring-4 ring-border shadow-md">
+                  <Camera className="h-7 w-7 text-muted-foreground" />
+                </div>
+              )}
+              {selectedUrl && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedUrl('')}
+                  className="absolute -top-1 -right-1 p-1 rounded-full bg-background border border-border text-muted-foreground hover:text-destructive shadow-sm cursor-pointer"
+                  title="Clear picture"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </div>
-          )}
-        </div>
+            <span className="mt-1 text-[11px] text-muted-foreground font-medium">Selected Photo Preview</span>
+          </div>
 
-        {/* Device Upload */}
-        <div>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full text-xs font-bold border-dashed border-2 py-3"
-          >
-            <Upload className="h-4 w-4 text-orange-500" />
-            Upload Photo from Device
-          </Button>
-        </div>
-
-        {/* Direct Link Input */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Or Image URL</label>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={customUrl}
-              onChange={(e) => {
-                setCustomUrl(e.target.value);
-                if (e.target.value.startsWith('http')) {
-                  setSelectedUrl(e.target.value);
-                }
-              }}
-              placeholder="https://example.com/photo.jpg"
-              className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-orange-500"
-            />
+          {/* Device Image Upload Button */}
+          <div>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                if (customUrl) setSelectedUrl(customUrl);
-              }}
-              className="px-3 py-2 text-xs"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full text-xs font-bold border-dashed border-2 py-3 flex items-center justify-center gap-2 hover:border-orange-500 hover:bg-orange-500/5 transition-all cursor-pointer"
             >
-              Apply
+              <Upload className="h-4 w-4 text-orange-500" />
+              <span>Upload Photo from Device (.jpg, .png, .webp)</span>
             </Button>
+          </div>
+
+          {/* Suggested Avatars Gallery */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                <span>Suggested Avatars</span>
+              </label>
+              <span className="text-[11px] text-muted-foreground">1-Tap to pick</span>
+            </div>
+
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {AVATAR_PRESETS.map((preset) => {
+                const isSelected = selectedUrl === preset.url;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setSelectedUrl(preset.url)}
+                    className={cx(
+                      'group relative aspect-square rounded-2xl border overflow-hidden p-1 transition-all cursor-pointer hover:scale-105',
+                      isSelected
+                        ? 'ring-2 ring-orange-500 border-transparent bg-orange-500/10 shadow-sm'
+                        : 'border-border bg-muted/30 hover:border-orange-500/50'
+                    )}
+                    title={preset.label}
+                  >
+                    <img
+                      src={preset.url}
+                      alt={preset.label}
+                      className="h-full w-full object-cover rounded-xl"
+                    />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                        <Check className="h-4 w-4 text-white drop-shadow" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        {/* Pinned Footer Actions */}
+        <div className="flex items-center justify-between border-t border-border px-5 py-3.5 shrink-0 bg-muted/30">
           <button
             type="button"
             onClick={() => setSelectedUrl('')}
-            className="text-xs font-semibold text-destructive hover:underline"
+            className="text-xs font-semibold text-destructive hover:underline cursor-pointer"
           >
             Remove Photo
           </button>
@@ -14039,15 +16835,16 @@ function AvatarPhotoDialog({
               onClick={() => {
                 onSave(selectedUrl);
               }}
-              className="text-xs font-bold"
+              className="text-xs font-bold px-5"
             >
               {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Save Photo
+              Save Profile Photo
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -14083,20 +16880,23 @@ function EditProfileModal({
     onSave(form);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl animate-scale-in">
-        <div className="flex items-center justify-between border-b border-border p-5 sticky top-0 bg-card z-10">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-14 sm:pt-20 pb-8 overflow-y-auto bg-black/80 backdrop-blur-md p-3 sm:p-4 animate-fade-in">
+      <div className="w-full max-w-2xl max-h-[88vh] flex flex-col rounded-3xl border border-border bg-card shadow-2xl animate-scale-in overflow-hidden">
+        {/* Pinned Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0 bg-card">
           <div>
-            <h3 className="text-lg font-bold text-foreground">Edit Intro & Profile</h3>
+            <div className="mono text-[10px] font-bold uppercase tracking-wider text-orange-500">Edit Profile</div>
+            <h3 className="text-base sm:text-lg font-bold text-foreground">Edit Intro & Profile</h3>
             <p className="text-xs text-muted-foreground">Keep your identity, background, and academic presence up to date.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+        {/* Scrollable Form Body */}
+        <form id="edit-profile-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 space-y-4">
           {/* Basic Headline & Bio */}
           <div>
             <Field
@@ -14174,19 +16974,21 @@ function EditProfileModal({
               placeholder="e.g. Research Partner, Mentorship, Team Members"
             />
           </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending} className="text-xs font-bold">
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Save Changes
-            </Button>
-          </div>
         </form>
+
+        {/* Pinned Footer Actions */}
+        <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3.5 sm:px-6 shrink-0 bg-muted/30">
+          <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+            Cancel
+          </Button>
+          <Button form="edit-profile-form" type="submit" disabled={isPending} className="text-xs font-bold px-5">
+            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save Changes
+          </Button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -14217,9 +17019,9 @@ function DeleteAccountDialog({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-14 sm:pt-20 pb-8 overflow-y-auto bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+      <div className="relative w-full max-w-md rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/15 text-destructive font-bold">
@@ -14286,7 +17088,8 @@ function DeleteAccountDialog({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -14306,8 +17109,9 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
   const [newSkillInput, setNewSkillInput] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Cover photo state backed by localStorage
+  // Cover photo state backed by user.coverUrl and localStorage
   const [coverUrl, setCoverUrl] = useState<string>(() => {
+    if (user?.coverUrl) return user.coverUrl;
     if (typeof window !== 'undefined' && user?.id) {
       const stored = localStorage.getItem(`amrita_user_cover_${user.id}`);
       if (stored) return stored;
@@ -14317,19 +17121,35 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
 
   // Re-sync cover on user load
   useEffect(() => {
-    if (user?.id) {
+    if (user?.coverUrl) {
+      setCoverUrl(user.coverUrl);
+    } else if (user?.id) {
       const stored = localStorage.getItem(`amrita_user_cover_${user.id}`);
       if (stored) setCoverUrl(stored);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.coverUrl]);
 
   const handleSaveCover = (newUrl: string) => {
     setCoverUrl(newUrl);
     if (user?.id) {
       localStorage.setItem(`amrita_user_cover_${user.id}`, newUrl);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2400);
+    update.mutate(
+      {
+        data: {
+          coverUrl: newUrl,
+        } as any,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          setShowCoverModal(false);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2400);
+        },
+      }
+    );
   };
 
   const handleSaveAvatar = (newAvatarUrl: string) => {
@@ -14342,6 +17162,8 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          queryClient.invalidateQueries({ queryKey: ['posts'] });
           setShowAvatarModal(false);
           setSaved(true);
           setTimeout(() => setSaved(false), 2400);
@@ -15063,7 +17885,7 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
 
               <div className="mt-6 flex justify-center">
                 <Button onClick={() => setLocation('/feed?tab=discover')} className="rounded-xl px-5 py-2.5 text-xs font-bold shadow-md">
-                  <Sparkles className="h-4 w-4" /> Discover Members
+                  <Sparkles className="h-4 w-4" /> Explore Campus Directory
                 </Button>
               </div>
             </div>
@@ -15091,62 +17913,14 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
               }
 
               return (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden divide-y divide-border/60 animate-rise">
                   {filtered.map(({ id, user, connectedAt }) => (
-                    <div
+                    <LinkedInConnectionRow
                       key={id}
-                      className="surface group flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 shadow-sm hover:shadow-md hover:border-orange-500/40 transition-all animate-rise"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between">
-                          <Avatar user={user} size="md" />
-                          <span className="rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2.5 py-0.5 text-[10px] font-bold">
-                            {roleLabels[user.role] ?? user.role}
-                          </span>
-                        </div>
-                        <Link
-                          href={`/people/${user.id}`}
-                          className="mt-3 block text-base font-bold text-foreground hover:text-orange-500 transition-colors"
-                        >
-                          {user.fullName}
-                        </Link>
-                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                          {user.headline || `${user.department} · Amrita ${user.campus}`}
-                        </p>
-                        <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          <span>Connected {relative(connectedAt || '')}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/messages/${user.id}`}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm active:scale-95 transition-all"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" /> Message
-                          </Link>
-                          <Link
-                            href={`/people/${user.id}`}
-                            className="text-xs font-bold text-muted-foreground hover:text-foreground py-1.5 px-2"
-                          >
-                            Profile
-                          </Link>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`Remove connection with ${user.fullName}?`)) {
-                              removeConnectionMutation.mutate(id);
-                            }
-                          }}
-                          className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          Disconnect
-                        </button>
-                      </div>
-                    </div>
+                      user={user}
+                      isConnected={true}
+                      connectedAt={connectedAt}
+                    />
                   ))}
                 </div>
               );

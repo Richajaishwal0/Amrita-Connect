@@ -42,43 +42,27 @@ import {
 } from "@workspace/db";
 
 import { issueToken, requireAuth, requireRole } from "../middleware/auth";
+import { wsManager } from "../lib/ws";
 
 const router: IRouter = Router();
 
-// Auto-purge hardcoded dummy records so everything is fresh and only user-created content appears
-let hasPurgedDummyData = false;
-async function purgeDummyRecords() {
-  if (hasPurgedDummyData) return;
-  try {
-    await connectDatabase();
-      // Purge all previous user logins / test accounts except platform administrator
-      await UserModel.deleteMany({ email: { $ne: "admin@amrita.edu" } });
-      await Promise.all([
-        PostModel.deleteMany({}),
-        ProjectShowcaseModel.deleteMany({}),
-        ResearchProjectModel.deleteMany({}),
-        OpportunityModel.deleteMany({}),
-        EventModel.deleteMany({}),
-        CollaborationModel.deleteMany({}),
-        InterviewExperienceModel.deleteMany({}),
-        HelpRequestModel.deleteMany({}),
-        CampusBuddyHostModel.deleteMany({}),
-        CampusBuddyRequestModel.deleteMany({}),
-        MessageModel.deleteMany({}),
-        ConnectionModel.deleteMany({}),
-      ]);
-      hasPurgedDummyData = true;
-      console.log("Successfully purged all dummy posts, mock profiles, and initial sample records.");
-    } catch (err) {
-      console.error("Auto-purge error:", err);
-    }
-}
-
-router.use(async (_req, _res, next) => {
-  if (!hasPurgedDummyData) {
-    await purgeDummyRecords();
-  }
-  next();
+// Database maintenance endpoints (manual only)
+router.post("/admin/clean-database", requireAuth, requireRole("admin"), async (_req, res) => {
+  await Promise.all([
+    PostModel.deleteMany({}),
+    ProjectShowcaseModel.deleteMany({}),
+    ResearchProjectModel.deleteMany({}),
+    OpportunityModel.deleteMany({}),
+    EventModel.deleteMany({}),
+    CollaborationModel.deleteMany({}),
+    InterviewExperienceModel.deleteMany({}),
+    HelpRequestModel.deleteMany({}),
+    CampusBuddyHostModel.deleteMany({}),
+    CampusBuddyRequestModel.deleteMany({}),
+    MessageModel.deleteMany({}),
+    ConnectionModel.deleteMany({}),
+  ]);
+  res.json({ success: true, message: "Sample data cleared successfully." });
 });
 
 router.all("/clean-database", async (_req, res) => {
@@ -103,15 +87,78 @@ function serializePost(post: any, currentUserId?: string) {
   if (!post) return null;
   const plain = typeof post.toObject === "function" ? post.toObject() : post;
   const likes = (plain.likes || []).map((id: any) => String(id?._id || id));
+  const reactions = plain.reactions || [];
   const savedBy = (plain.savedBy || []).map((id: any) => String(id?._id || id));
   const author = serializeUser(plain.authorId);
-  const comments = (plain.comments || []).map((c: any) => ({
-    id: String(c._id || c.id),
-    text: c.text,
-    createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-    user: serializeUser(c.userId),
-    isMyComment: currentUserId ? String(c.userId?._id || c.userId?.id || c.userId) === currentUserId : false,
-  }));
+
+  // Determine current user reaction
+  let userReaction: string | null = null;
+  if (currentUserId) {
+    const userReact = reactions.find((r: any) => String(r.userId?._id || r.userId) === currentUserId);
+    if (userReact) {
+      userReaction = userReact.type || "like";
+    } else if (likes.includes(currentUserId)) {
+      userReaction = "like";
+    }
+  }
+
+  // Reactions breakdown
+  const reactionsBreakdown: Record<string, number> = {
+    like: 0,
+    celebrate: 0,
+    support: 0,
+    love: 0,
+    insightful: 0,
+    curious: 0,
+  };
+
+  for (const r of reactions) {
+    const t = r.type || "like";
+    reactionsBreakdown[t] = (reactionsBreakdown[t] || 0) + 1;
+  }
+  if (reactions.length === 0 && likes.length > 0) {
+    reactionsBreakdown.like = likes.length;
+  }
+
+  const totalReactions = Math.max(reactions.length, likes.length);
+
+  const comments = (plain.comments || []).map((c: any) => {
+    const commentLikes = (c.likes || []).map((id: any) => String(id?._id || id));
+    return {
+      id: String(c._id || c.id),
+      text: c.text,
+      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+      user: serializeUser(c.userId),
+      likesCount: commentLikes.length,
+      isLiked: currentUserId ? commentLikes.includes(currentUserId) : false,
+      isMyComment: currentUserId ? String(c.userId?._id || c.userId?.id || c.userId) === currentUserId : false,
+    };
+  });
+
+  const recentReactors: Array<{ id: string; fullName: string; avatarUrl?: string | null; type: string }> = [];
+  for (const r of reactions) {
+    const u = r.userId;
+    if (u && (u._id || u.fullName || u.id)) {
+      recentReactors.push({
+        id: String(u._id || u.id || u),
+        fullName: u.fullName || "Amrita Member",
+        avatarUrl: u.avatarUrl || null,
+        type: r.type || "like",
+      });
+    }
+  }
+  if (recentReactors.length === 0 && plain.likes && plain.likes.length > 0) {
+    for (const l of plain.likes) {
+      if (l && (l._id || l.fullName || l.id)) {
+        recentReactors.push({
+          id: String(l._id || l.id || l),
+          fullName: l.fullName || "Amrita Member",
+          avatarUrl: l.avatarUrl || null,
+          type: "like",
+        });
+      }
+    }
+  }
 
   return {
     id: String(plain._id || plain.id),
@@ -126,9 +173,13 @@ function serializePost(post: any, currentUserId?: string) {
     createdAt: plain.createdAt ? new Date(plain.createdAt).toISOString() : new Date().toISOString(),
     updatedAt: plain.updatedAt ? new Date(plain.updatedAt).toISOString() : new Date().toISOString(),
     author,
-    likesCount: likes.length,
+    likesCount: totalReactions,
+    reactionsCount: totalReactions,
+    userReaction,
+    reactionsBreakdown,
+    recentReactors,
     commentsCount: comments.length,
-    isLiked: currentUserId ? likes.includes(currentUserId) : false,
+    isLiked: !!userReaction,
     isSaved: currentUserId ? savedBy.includes(currentUserId) : false,
     isMyPost: currentUserId ? String(plain.authorId?._id || plain.authorId?.id || plain.authorId) === currentUserId : false,
     comments,
@@ -144,7 +195,15 @@ function parseListParams<T extends object>(parser: { parse: (value: unknown) => 
   return parser.parse(value);
 }
 
-function toObjectId(id: string): mongoose.Types.ObjectId {
+function isValidObjectId(id: unknown): boolean {
+  if (!id || typeof id !== "string") return false;
+  return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === id;
+}
+
+function toObjectId(id: unknown): mongoose.Types.ObjectId {
+  if (!id || typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+    return new mongoose.Types.ObjectId("000000000000000000000000");
+  }
   return new mongoose.Types.ObjectId(id);
 }
 
@@ -241,8 +300,16 @@ router.get("/auth/me", requireAuth, async (req, res, next) => {
 
 router.patch("/users/me", requireAuth, async (req, res, next) => {
   try {
-    const input = UpdateMyProfileBody.parse(req.body);
-    const user = await UserModel.findByIdAndUpdate(getUserId(req), { $set: input }, { new: true });
+    const { coverUrl, avatarUrl, fullName, ...other } = req.body;
+    const updateFields: Record<string, any> = {};
+    if (coverUrl !== undefined) updateFields.coverUrl = coverUrl && typeof coverUrl === "string" ? coverUrl.trim() : null;
+    if (avatarUrl !== undefined) updateFields.avatarUrl = avatarUrl && typeof avatarUrl === "string" ? avatarUrl.trim() : null;
+    if (fullName !== undefined && typeof fullName === "string" && fullName.trim()) {
+      updateFields.fullName = fullName.trim();
+    }
+    Object.assign(updateFields, other);
+
+    const user = await UserModel.findByIdAndUpdate(getUserId(req), { $set: updateFields }, { new: true });
     if (!user) {
       res.status(404).json({ success: false, message: "User not found" });
       return;
@@ -348,8 +415,9 @@ router.get("/users", requireAuth, async (req, res, next) => {
       email: { $ne: "admin@amrita.edu" },
     };
 
-    if (query.search) {
-      const searchRegex = new RegExp(query.search, "i");
+    if (query.search && query.search.trim()) {
+      const escaped = query.search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const searchRegex = new RegExp(escaped, "i");
       filter.$or = [
         { fullName: searchRegex },
         { headline: searchRegex },
@@ -357,6 +425,9 @@ router.get("/users", requireAuth, async (req, res, next) => {
         { company: searchRegex },
         { jobRole: searchRegex },
         { department: searchRegex },
+        { campus: searchRegex },
+        { skills: searchRegex },
+        { interests: searchRegex },
       ];
     }
     if (query.role && query.role !== "admin") filter.role = query.role;
@@ -544,13 +615,18 @@ router.post("/mentorship/requests", requireAuth, async (req, res, next) => {
 router.patch("/mentorship/requests/:id/status", requireAuth, async (req, res, next) => {
   try {
     const { id } = UpdateMentorshipRequestStatusParams.parse(req.params);
-    const { status } = UpdateMentorshipRequestStatusBody.parse(req.body);
+    const { status, bookedDate, bookedTime, meetingPlatform, meetingLink, availableSlots, note } = req.body;
     const existing = await MentorshipRequestModel.findById(id);
     if (!existing || String(existing.mentorId) !== getUserId(req)) {
       res.status(404).json({ success: false, message: "Mentorship request not found" });
       return;
     }
     existing.status = status as any;
+    if (bookedDate) (existing as any).bookedDate = bookedDate;
+    if (bookedTime) (existing as any).bookedTime = bookedTime;
+    if (meetingPlatform) (existing as any).meetingPlatform = meetingPlatform;
+    if (meetingLink) (existing as any).meetingLink = meetingLink;
+    if (note) (existing as any).note = note;
     await existing.save();
 
     const [mentor, requester] = await Promise.all([
@@ -559,28 +635,96 @@ router.patch("/mentorship/requests/:id/status", requireAuth, async (req, res, ne
     ]);
 
     const isAccepted = status === "accepted";
+    const sessionDetailsSnippet = bookedDate && bookedTime
+      ? `${bookedDate} at ${bookedTime} (${meetingPlatform || "Google Meet"})`
+      : availableSlots || "Scheduled Slot";
 
-    await NotificationModel.create({
-      userId: existing.requesterId,
-      type: isAccepted ? "mentorship_accepted" : "mentorship_status",
-      title: isAccepted ? "🎉 Mentorship Request Accepted!" : "Mentorship Request Update",
-      message: isAccepted
-        ? `${mentor?.fullName ?? "Your mentor"} accepted your mentorship request on "${existing.topic || "Guidance"}"! Check your Direct Messages.`
-        : `${mentor?.fullName ?? "The mentor"} was unable to take on mentorship requests at this time.`,
-    });
+    if (isAccepted) {
+      // 1. Notification to Mentee (Requester)
+      await NotificationModel.create({
+        userId: existing.requesterId,
+        type: "mentorship_accepted",
+        title: "📅 Mentorship Session Booked!",
+        message: `Your mentorship session with ${mentor?.fullName ?? "your mentor"} is confirmed for ${sessionDetailsSnippet}. Topic: "${existing.topic || "Guidance"}".`,
+      });
 
-    if (isAccepted && requester && mentor) {
-      // Automatically send a welcome Direct Message from mentor to mentee
-      try {
-        await MessageModel.create({
-          senderId: mentor._id,
-          recipientId: requester._id,
-          content: `🎉 Hi ${requester.fullName}! I have accepted your mentorship request on "${existing.topic || "Guidance"}". Feel free to share your current goals, resume, or any questions you would like to discuss!`,
-          read: false,
-        });
-      } catch {
-        // non-blocking
+      // 2. Notification to Mentor
+      await NotificationModel.create({
+        userId: existing.mentorId,
+        type: "mentorship_accepted",
+        title: "📅 Mentorship Session Scheduled",
+        message: `You scheduled a mentorship session with ${requester?.fullName ?? "your mentee"} for ${sessionDetailsSnippet}. Topic: "${existing.topic || "Guidance"}".`,
+      });
+
+      // 3. Direct Message in Chat from Mentor to Mentee
+      if (requester && mentor) {
+        try {
+          const bookingCard = [
+            `🎉 **Mentorship Session Confirmed!**`,
+            `Hi ${requester.fullName}, I have accepted your request on "${existing.topic || "Guidance"}".`,
+            ``,
+            `📅 **Session Details:**`,
+            `• **Date:** ${bookedDate || "Flexible / Agreed Date"}`,
+            `• **Time:** ${bookedTime || "Flexible / Agreed Time"} (IST)`,
+            `• **Platform:** ${meetingPlatform || "Google Meet"}`,
+            meetingLink ? `• **Meeting Link:** ${meetingLink}` : null,
+            note ? `\n📝 **Mentor Note:**\n${note}` : null,
+            availableSlots && !bookedDate ? `\n📅 **Available Slots:**\n${availableSlots}` : null,
+            ``,
+            `Looking forward to connecting! Reply here directly if you need to adjust anything.`,
+          ].filter(Boolean).join("\n");
+
+          const newMsg = await MessageModel.create({
+            senderId: mentor._id,
+            recipientId: requester._id,
+            content: bookingCard,
+            read: false,
+          });
+
+          // Dispatch real-time WebSocket new_message to mentee and mentor
+          const serializedMsg = {
+            id: String(newMsg._id),
+            senderId: String(newMsg.senderId),
+            recipientId: String(newMsg.recipientId),
+            content: newMsg.content,
+            imageUrl: null,
+            linkUrl: meetingLink || null,
+            isDeletedForEveryone: false,
+            read: false,
+            createdAt: new Date(newMsg.createdAt).toISOString(),
+            updatedAt: new Date(newMsg.updatedAt).toISOString(),
+            isMine: false,
+            sender: {
+              id: String(mentor._id),
+              fullName: mentor.fullName,
+              campus: mentor.campus,
+              role: mentor.role,
+              department: mentor.department,
+              avatarUrl: mentor.avatarUrl,
+            },
+          };
+
+          wsManager.sendToUser(String(requester._id), {
+            type: "new_message",
+            data: { message: serializedMsg },
+          });
+
+          wsManager.sendToUser(String(mentor._id), {
+            type: "new_message",
+            data: { message: { ...serializedMsg, isMine: true } },
+          });
+        } catch {
+          // non-blocking
+        }
       }
+    } else {
+      // Declined notification
+      await NotificationModel.create({
+        userId: existing.requesterId,
+        type: "mentorship_status",
+        title: "Mentorship Request Update",
+        message: `${mentor?.fullName ?? "The mentor"} was unable to take on mentorship requests at this time.`,
+      });
     }
 
     res.json({
@@ -591,6 +735,11 @@ router.patch("/mentorship/requests/:id/status", requireAuth, async (req, res, ne
       reason: existing.reason,
       topic: existing.topic,
       status: existing.status,
+      bookedDate: (existing as any).bookedDate,
+      bookedTime: (existing as any).bookedTime,
+      meetingPlatform: (existing as any).meetingPlatform,
+      meetingLink: (existing as any).meetingLink,
+      note: (existing as any).note,
       createdAt: new Date(existing.createdAt).toISOString(),
     });
   } catch (error) {
@@ -1272,7 +1421,43 @@ router.get("/posts", requireAuth, async (req, res, next) => {
       filter.department = req.query.department;
     }
     if (req.query.search) {
-      filter.content = new RegExp(String(req.query.search), "i");
+      const searchRaw = String(req.query.search).trim();
+      if (searchRaw) {
+        const cleanSearch = searchRaw.startsWith('#') ? searchRaw.slice(1).trim() : searchRaw;
+        const escaped = searchRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedClean = cleanSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(escaped, "i");
+        const cleanRegex = new RegExp(escapedClean, "i");
+
+        // Match authors by name, department, campus, or username
+        const matchingUsers = await UserModel.find({
+          $or: [
+            { fullName: searchRegex },
+            { fullName: cleanRegex },
+            { username: searchRegex },
+            { department: searchRegex },
+            { campus: searchRegex },
+          ],
+        }).select('_id').lean();
+        const matchingAuthorIds = matchingUsers.map((u: any) => u._id);
+
+        const searchConditions: any[] = [
+          { content: searchRegex },
+          { content: cleanRegex },
+          { tags: searchRegex },
+          { tags: cleanRegex },
+          { documentName: searchRegex },
+          { category: searchRegex },
+          { campus: searchRegex },
+          { department: searchRegex },
+        ];
+
+        if (matchingAuthorIds.length > 0) {
+          searchConditions.push({ authorId: { $in: matchingAuthorIds } });
+        }
+
+        filter.$or = searchConditions;
+      }
     }
     if (req.query.filter === "saved") {
       filter.savedBy = userObjId;
@@ -1287,6 +1472,8 @@ router.get("/posts", requireAuth, async (req, res, next) => {
         .limit(pageSize)
         .populate("authorId")
         .populate("comments.userId")
+        .populate("reactions.userId")
+        .populate("likes")
         .lean(),
       PostModel.countDocuments(filter),
     ]);
@@ -1341,9 +1528,10 @@ router.post("/posts", requireAuth, async (req, res, next) => {
       documentName: documentName && typeof documentName === "string" && documentName.trim() ? documentName.trim() : null,
       linkUrl: linkUrl && typeof linkUrl === "string" && linkUrl.trim() ? linkUrl.trim() : null,
       category: postCategory,
-      campus: author.campus,
-      department: author.department,
+      campus: author.campus || "Coimbatore",
+      department: author.department || "General",
       likes: [],
+      reactions: [],
       comments: [],
       savedBy: [],
     });
@@ -1353,9 +1541,15 @@ router.post("/posts", requireAuth, async (req, res, next) => {
       .populate("comments.userId")
       .lean();
 
-    res.status(201).json(serializePost(populated, userId));
-  } catch (error) {
-    next(error);
+    const serialized = serializePost(populated || post, userId);
+    res.status(201).json(serialized);
+  } catch (error: any) {
+    console.error(">>> ERROR in POST /posts:", error);
+    res.status(error.name === "ValidationError" ? 400 : 500).json({
+      success: false,
+      message: error?.message || "Failed to create post",
+      errorName: error?.name,
+    });
   }
 });
 
@@ -1441,33 +1635,208 @@ router.delete("/posts/:id", requireAuth, async (req, res, next) => {
   }
 });
 
-router.post("/posts/:id/like", requireAuth, async (req, res, next) => {
+router.post("/posts/:id/react", requireAuth, async (req, res, next) => {
   try {
     const userId = getUserId(req);
     const userObjId = toObjectId(userId);
+    const { type = "like" } = req.body;
+
+    const validTypes = ["like", "celebrate", "support", "love", "insightful", "curious"];
+    const reactionType = validTypes.includes(type) ? type : "like";
+
     const post = await PostModel.findById(req.params.id);
     if (!post) {
       res.status(404).json({ success: false, message: "Post not found" });
       return;
     }
 
-    const isLiked = post.likes.some((id) => String(id) === userId);
-    if (isLiked) {
-      post.likes = post.likes.filter((id) => String(id) !== userId) as any;
+    if (!post.reactions) post.reactions = [];
+    if (!post.likes) post.likes = [];
+
+    const existingIdx = post.reactions.findIndex((r) => String(r.userId) === userId);
+    let currentReaction: string | null = null;
+
+    if (existingIdx !== -1) {
+      if (post.reactions[existingIdx].type === reactionType) {
+        // Toggle off
+        post.reactions.splice(existingIdx, 1);
+        post.likes = post.likes.filter((id) => String(id) !== userId) as any;
+        currentReaction = null;
+      } else {
+        // Change reaction type
+        post.reactions[existingIdx].type = reactionType as any;
+        post.reactions[existingIdx].createdAt = new Date();
+        currentReaction = reactionType;
+      }
     } else {
-      post.likes.push(userObjId);
+      // Add new reaction
+      post.reactions.push({
+        userId: userObjId,
+        type: reactionType as any,
+        createdAt: new Date(),
+      } as any);
+      if (!post.likes.some((id) => String(id) === userId)) {
+        post.likes.push(userObjId);
+      }
+      currentReaction = reactionType;
+
       if (String(post.authorId) !== userId) {
         const currentUser = await UserModel.findById(userId);
-        await NotificationModel.create({
+        const emojiMap: Record<string, { label: string; icon: string }> = {
+          like: { label: "liked", icon: "👍" },
+          celebrate: { label: "celebrated", icon: "👏" },
+          support: { label: "supported", icon: "💡" },
+          love: { label: "loved", icon: "❤️" },
+          insightful: { label: "found insightful", icon: "🧠" },
+          curious: { label: "is curious about", icon: "🤔" },
+        };
+        const reactionMeta = emojiMap[reactionType] || { label: "reacted to", icon: "👍" };
+        const snippet = post.content ? ` "${post.content.slice(0, 55)}${post.content.length > 55 ? "..." : ""}"` : "";
+
+        const notif = await NotificationModel.create({
           userId: post.authorId,
           type: "post_like",
-          title: "New like on your post",
-          message: `${currentUser?.fullName ?? "A member"} liked your ${post.category.toLowerCase()} post.`,
+          title: `${reactionMeta.icon} New reaction on your ${post.category || "post"}`,
+          message: `${currentUser?.fullName ?? "A member"} ${reactionMeta.label} your post:${snippet}`,
         });
+
+        try {
+          wsManager.sendToUser(String(post.authorId), {
+            type: "notification" as any,
+            data: {
+              id: String(notif._id),
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              read: false,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        } catch {
+          // non-blocking
+        }
+      }
+    }
+
+    await post.save();
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .populate("reactions.userId")
+      .populate("likes")
+      .lean();
+
+    res.json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/posts/:id/reactions", requireAuth, async (req, res, next) => {
+  try {
+    const post = await PostModel.findById(req.params.id)
+      .populate("reactions.userId")
+      .populate("likes")
+      .lean();
+
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const items: Array<{ user: any; type: string; createdAt: string }> = [];
+
+    if (post.reactions && post.reactions.length > 0) {
+      for (const r of post.reactions) {
+        if (r.userId) {
+          items.push({
+            user: serializeUser(r.userId),
+            type: r.type || "like",
+            createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+      }
+    } else if (post.likes && post.likes.length > 0) {
+      for (const u of post.likes) {
+        if (u) {
+          items.push({
+            user: serializeUser(u),
+            type: "like",
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    res.json({ items, total: items.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts/:id/like", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const { type = "like" } = req.body;
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    if (!post.reactions) post.reactions = [];
+    if (!post.likes) post.likes = [];
+
+    const existingIdx = post.reactions.findIndex((r) => String(r.userId) === userId);
+
+    if (existingIdx !== -1) {
+      post.reactions.splice(existingIdx, 1);
+      post.likes = post.likes.filter((id) => String(id) !== userId) as any;
+    } else {
+      post.reactions.push({
+        userId: userObjId,
+        type: (type || "like") as any,
+        createdAt: new Date(),
+      } as any);
+      post.likes.push(userObjId);
+
+      if (String(post.authorId) !== userId) {
+        const currentUser = await UserModel.findById(userId);
+        const snippet = post.content ? ` "${post.content.slice(0, 55)}${post.content.length > 55 ? "..." : ""}"` : "";
+        const notif = await NotificationModel.create({
+          userId: post.authorId,
+          type: "post_like",
+          title: `👍 New like on your ${post.category || "post"}`,
+          message: `${currentUser?.fullName ?? "A member"} liked your post:${snippet}`,
+        });
+
+        try {
+          wsManager.sendToUser(String(post.authorId), {
+            type: "notification" as any,
+            data: {
+              id: String(notif._id),
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              read: false,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        } catch {
+          // non-blocking
+        }
       }
     }
     await post.save();
-    res.json({ id: String(post._id), isLiked: !isLiked, likesCount: post.likes.length });
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.json(serializePost(populated, userId));
   } catch (error) {
     next(error);
   }
@@ -1488,6 +1857,33 @@ router.post("/posts/:id/save", requireAuth, async (req, res, next) => {
       post.savedBy = post.savedBy.filter((id) => String(id) !== userId) as any;
     } else {
       post.savedBy.push(userObjId);
+
+      if (String(post.authorId) !== userId) {
+        const currentUser = await UserModel.findById(userId);
+        const snippet = post.content ? ` "${post.content.slice(0, 50)}${post.content.length > 50 ? "..." : ""}"` : "";
+        const notif = await NotificationModel.create({
+          userId: post.authorId,
+          type: "post_saved",
+          title: "📌 Post Bookmarked",
+          message: `${currentUser?.fullName ?? "A member"} saved your ${post.category || "post"} to their reading list:${snippet}`,
+        });
+
+        try {
+          wsManager.sendToUser(String(post.authorId), {
+            type: "notification" as any,
+            data: {
+              id: String(notif._id),
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              read: false,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        } catch {
+          // non-blocking
+        }
+      }
     }
     await post.save();
     res.json({ id: String(post._id), isSaved: !isSaved, savedCount: post.savedBy.length });
@@ -1515,18 +1911,35 @@ router.post("/posts/:id/comments", requireAuth, async (req, res, next) => {
     post.comments.push({
       userId: userObjId,
       text: text.trim(),
+      likes: [],
       createdAt: new Date(),
-    });
+    } as any);
     await post.save();
 
     if (String(post.authorId) !== userId) {
       const currentUser = await UserModel.findById(userId);
-      await NotificationModel.create({
+      const notif = await NotificationModel.create({
         userId: post.authorId,
         type: "post_comment",
-        title: "New comment on your post",
-        message: `${currentUser?.fullName ?? "A member"} commented: "${text.trim().slice(0, 60)}${text.trim().length > 60 ? "..." : ""}"`,
+        title: `💬 New comment on your ${post.category || "post"}`,
+        message: `${currentUser?.fullName ?? "A member"} commented: "${text.trim().slice(0, 70)}${text.trim().length > 70 ? "..." : ""}"`,
       });
+
+      try {
+        wsManager.sendToUser(String(post.authorId), {
+          type: "notification" as any,
+          data: {
+            id: String(notif._id),
+            title: notif.title,
+            message: notif.message,
+            type: notif.type,
+            read: false,
+            createdAt: new Date().toISOString(),
+          },
+        });
+      } catch {
+        // non-blocking
+      }
     }
 
     const populated = await PostModel.findById(post._id)
@@ -1535,6 +1948,70 @@ router.post("/posts/:id/comments", requireAuth, async (req, res, next) => {
       .lean();
 
     res.status(201).json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/posts/:id/comments/:commentId/like", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const comment = (post.comments as any).id(req.params.commentId);
+    if (!comment) {
+      res.status(404).json({ success: false, message: "Comment not found" });
+      return;
+    }
+
+    if (!comment.likes) comment.likes = [];
+    const isLiked = comment.likes.some((id: any) => String(id) === userId);
+
+    if (isLiked) {
+      comment.likes = comment.likes.filter((id: any) => String(id) !== userId);
+    } else {
+      comment.likes.push(userObjId);
+
+      if (String(comment.userId) !== userId) {
+        const currentUser = await UserModel.findById(userId);
+        const notif = await NotificationModel.create({
+          userId: comment.userId,
+          type: "comment_like",
+          title: "👍 New like on your comment",
+          message: `${currentUser?.fullName ?? "A member"} liked your comment: "${comment.text.slice(0, 60)}${comment.text.length > 60 ? "..." : ""}"`,
+        });
+
+        try {
+          wsManager.sendToUser(String(comment.userId), {
+            type: "notification" as any,
+            data: {
+              id: String(notif._id),
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              read: false,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        } catch {
+          // non-blocking
+        }
+      }
+    }
+
+    await post.save();
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.json(serializePost(populated, userId));
   } catch (error) {
     next(error);
   }
@@ -1565,7 +2042,12 @@ router.delete("/posts/:id/comments/:commentId", requireAuth, async (req, res, ne
     post.comments.pull({ _id: req.params.commentId });
     await post.save();
 
-    res.json({ success: true, message: "Comment deleted" });
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.json(serializePost(populated, userId));
   } catch (error) {
     next(error);
   }
@@ -1928,6 +2410,7 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
 
     const messages = await MessageModel.find({
       $or: [{ senderId: userObjId }, { recipientId: userObjId }],
+      deletedFor: { $ne: userObjId },
     })
       .sort({ createdAt: -1 })
       .populate("senderId")
@@ -1943,12 +2426,24 @@ router.get("/messages/conversations", requireAuth, async (req, res, next) => {
 
       if (!otherUserId || otherUserId === userId) continue;
 
+      let previewContent = msg.content;
+      if (msg.isDeletedForEveryone) {
+        previewContent = "This message was deleted";
+      } else if (!previewContent && msg.imageUrl) {
+        previewContent = "📷 Photo";
+      } else if (!previewContent && msg.linkUrl) {
+        previewContent = "🔗 Link";
+      }
+
       if (!conversationMap.has(otherUserId)) {
         conversationMap.set(otherUserId, {
           otherUser: serializeUser(otherUserRaw),
           lastMessage: {
             id: String(msg._id),
-            content: msg.content,
+            content: previewContent,
+            imageUrl: msg.isDeletedForEveryone ? null : msg.imageUrl,
+            linkUrl: msg.isDeletedForEveryone ? null : msg.linkUrl,
+            isDeletedForEveryone: !!msg.isDeletedForEveryone,
             createdAt: new Date(msg.createdAt).toISOString(),
             isMine: isSender,
             read: msg.read,
@@ -1985,6 +2480,7 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
           { senderId: userObjId, recipientId: recipientObjId },
           { senderId: recipientObjId, recipientId: userObjId },
         ],
+        deletedFor: { $ne: userObjId },
       })
         .sort({ createdAt: 1 })
         .lean(),
@@ -2006,7 +2502,10 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
         id: String(msg._id),
         senderId: String(msg.senderId),
         recipientId: String(msg.recipientId),
-        content: msg.content,
+        content: msg.isDeletedForEveryone ? "This message was deleted" : msg.content,
+        imageUrl: msg.isDeletedForEveryone ? null : msg.imageUrl,
+        linkUrl: msg.isDeletedForEveryone ? null : msg.linkUrl,
+        isDeletedForEveryone: !!msg.isDeletedForEveryone,
         read: msg.read,
         createdAt: new Date(msg.createdAt).toISOString(),
         isMine: String(msg.senderId) === userId,
@@ -2020,15 +2519,19 @@ router.get("/messages/:recipientId", requireAuth, async (req, res, next) => {
 router.post("/messages", requireAuth, async (req, res, next) => {
   try {
     const senderId = getUserId(req);
-    const { recipientId, content } = req.body;
+    const { recipientId, content, imageUrl, linkUrl } = req.body;
 
     if (!recipientId || typeof recipientId !== "string") {
       res.status(400).json({ success: false, message: "Recipient ID is required" });
       return;
     }
 
-    if (!content || typeof content !== "string" || !content.trim()) {
-      res.status(400).json({ success: false, message: "Message content cannot be empty" });
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const cleanImageUrl = typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null;
+    const cleanLinkUrl = typeof linkUrl === "string" && linkUrl.trim() ? linkUrl.trim() : null;
+
+    if (!trimmedContent && !cleanImageUrl && !cleanLinkUrl) {
+      res.status(400).json({ success: false, message: "Message content or photo is required" });
       return;
     }
 
@@ -2050,26 +2553,134 @@ router.post("/messages", requireAuth, async (req, res, next) => {
     const message = await MessageModel.create({
       senderId: toObjectId(senderId),
       recipientId: toObjectId(recipientId),
-      content: content.trim(),
+      content: trimmedContent,
+      imageUrl: cleanImageUrl,
+      linkUrl: cleanLinkUrl,
+      deletedFor: [],
+      isDeletedForEveryone: false,
       read: false,
     });
 
+    const notifSnippet = trimmedContent || (cleanImageUrl ? "Sent a photo" : "Sent a link");
     await NotificationModel.create({
       userId: recipient._id,
       type: "direct_message",
       title: "New direct message",
-      message: `${sender?.fullName ?? "A member"}: "${content.trim().slice(0, 50)}${content.trim().length > 50 ? "..." : ""}"`,
+      message: `${sender?.fullName ?? "A member"}: "${notifSnippet.slice(0, 50)}${notifSnippet.length > 50 ? "..." : ""}"`,
     });
 
-    res.status(201).json({
+    const serializedMsg = {
       id: String(message._id),
       senderId: String(message.senderId),
       recipientId: String(message.recipientId),
       content: message.content,
+      imageUrl: message.imageUrl,
+      linkUrl: message.linkUrl,
+      isDeletedForEveryone: false,
       read: message.read,
       createdAt: new Date(message.createdAt).toISOString(),
+      updatedAt: new Date(message.updatedAt).toISOString(),
+      isMine: false,
+      sender: sender
+        ? {
+            id: String(sender._id),
+            fullName: sender.fullName,
+            campus: sender.campus,
+            role: sender.role,
+            department: sender.department,
+            avatarUrl: sender.avatarUrl,
+          }
+        : undefined,
+    };
+
+    // Real-time WebSocket dispatch to recipient
+    wsManager.sendToUser(recipientId, {
+      type: "new_message",
+      data: { message: serializedMsg },
+    });
+
+    // Real-time WebSocket dispatch to sender other tabs
+    wsManager.sendToUser(senderId, {
+      type: "new_message",
+      data: { message: { ...serializedMsg, isMine: true } },
+    });
+
+    res.status(201).json({
+      ...serializedMsg,
       isMine: true,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete message ("for_me" vs "for_everyone")
+router.delete("/messages/:messageId", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const messageId = req.params.messageId;
+    const mode = (req.query.mode as string) || (req.body?.mode as string) || "for_me";
+
+    const message = await MessageModel.findById(messageId);
+    if (!message) {
+      res.status(404).json({ success: false, message: "Message not found" });
+      return;
+    }
+
+    const isSender = String(message.senderId) === userId;
+    const isRecipient = String(message.recipientId) === userId;
+
+    if (!isSender && !isRecipient) {
+      res.status(403).json({ success: false, message: "You are not authorized to delete this message" });
+      return;
+    }
+
+    if (mode === "for_everyone") {
+      if (!isSender) {
+        res.status(403).json({ success: false, message: "Only the sender can delete a message for everyone" });
+        return;
+      }
+
+      message.isDeletedForEveryone = true;
+      message.content = "This message was deleted";
+      message.imageUrl = null;
+      message.linkUrl = null;
+      await message.save();
+
+      const recipientId = String(message.recipientId);
+
+      // Broadcast real-time deletion event
+      wsManager.sendToUser(recipientId, {
+        type: "message_deleted",
+        data: {
+          messageId: String(message._id),
+          isDeletedForEveryone: true,
+          recipientId,
+          senderId: userId,
+        },
+      });
+
+      wsManager.sendToUser(userId, {
+        type: "message_deleted",
+        data: {
+          messageId: String(message._id),
+          isDeletedForEveryone: true,
+          recipientId,
+          senderId: userId,
+        },
+      });
+
+      res.json({ success: true, mode: "for_everyone", id: messageId });
+      return;
+    }
+
+    // Delete for me
+    await MessageModel.findByIdAndUpdate(messageId, {
+      $addToSet: { deletedFor: userObjId },
+    });
+
+    res.json({ success: true, mode: "for_me", id: messageId });
   } catch (error) {
     next(error);
   }
@@ -2084,6 +2695,15 @@ router.patch("/messages/:recipientId/read", requireAuth, async (req, res, next) 
       { senderId: toObjectId(recipientId), recipientId: toObjectId(userId), read: false },
       { $set: { read: true } }
     );
+
+    // Notify original sender via WS that their messages were read
+    wsManager.sendToUser(recipientId, {
+      type: "messages_read",
+      data: {
+        readerId: userId,
+        readAt: new Date().toISOString(),
+      },
+    });
 
     res.json({ success: true, message: "Messages marked as read" });
   } catch (error) {

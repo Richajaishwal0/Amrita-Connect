@@ -1,9 +1,19 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 
+export type ReactionType = "like" | "celebrate" | "support" | "love" | "insightful" | "curious";
+
+export interface IPostReaction {
+  _id?: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  type: ReactionType;
+  createdAt: Date;
+}
+
 export interface IPostComment {
   _id?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   text: string;
+  likes?: mongoose.Types.ObjectId[];
   createdAt: Date;
 }
 
@@ -23,21 +33,34 @@ export interface IPost extends Document {
     | "Project"
     | "Opportunity"
     | "Interview Experience"
+    | "Research"
     | "Resource"
     | "Question"
     | "Help Needed";
   campus: string;
   department: string;
   likes: mongoose.Types.ObjectId[];
+  reactions?: IPostReaction[];
   comments: IPostComment[];
   savedBy: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
 
+const PostReactionSchema = new Schema<IPostReaction>({
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  type: {
+    type: String,
+    enum: ["like", "celebrate", "support", "love", "insightful", "curious"],
+    default: "like",
+  },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const PostCommentSchema = new Schema<IPostComment>({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   text: { type: String, required: true, trim: true },
+  likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -60,6 +83,7 @@ const PostSchema = new Schema<IPost>(
         "Project",
         "Opportunity",
         "Interview Experience",
+        "Research",
         "Resource",
         "Question",
         "Help Needed",
@@ -67,9 +91,10 @@ const PostSchema = new Schema<IPost>(
       default: "General",
       index: true,
     },
-    campus: { type: String, required: true, index: true },
-    department: { type: String, required: true, index: true },
+    campus: { type: String, default: "Coimbatore", index: true },
+    department: { type: String, default: "General", index: true },
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    reactions: [PostReactionSchema],
     comments: [PostCommentSchema],
     savedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     createdAt: { type: Date, default: Date.now, index: true },

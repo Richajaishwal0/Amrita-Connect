@@ -18,6 +18,7 @@ export interface IUser extends Document {
   helpWith: string[];
   lookingFor: string[];
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   verified: boolean;
   status: "active" | "suspended" | "pending";
   createdAt: Date;
@@ -47,6 +48,7 @@ const UserSchema = new Schema<IUser>(
     helpWith: { type: [String], default: [] },
     lookingFor: { type: [String], default: [] },
     avatarUrl: { type: String, default: null },
+    coverUrl: { type: String, default: null },
     verified: { type: Boolean, default: false },
     status: {
       type: String,

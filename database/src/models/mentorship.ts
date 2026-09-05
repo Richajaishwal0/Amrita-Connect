@@ -8,6 +8,11 @@ export interface IMentorshipRequest extends Document {
   reason: string;
   topic: string;
   status: "pending" | "accepted" | "rejected";
+  bookedDate?: string | null;
+  bookedTime?: string | null;
+  meetingPlatform?: string | null;
+  meetingLink?: string | null;
+  note?: string | null;
   createdAt: Date;
 }
 
@@ -24,6 +29,11 @@ const MentorshipRequestSchema = new Schema<IMentorshipRequest>(
       default: "pending",
       index: true,
     },
+    bookedDate: { type: String, default: null },
+    bookedTime: { type: String, default: null },
+    meetingPlatform: { type: String, default: null },
+    meetingLink: { type: String, default: null },
+    note: { type: String, default: null },
     createdAt: { type: Date, default: Date.now },
   },
   {

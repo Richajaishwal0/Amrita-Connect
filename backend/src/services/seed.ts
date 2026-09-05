@@ -16,9 +16,6 @@ import {
 } from "@workspace/db";
 
 export async function seedDevelopmentData() {
-  // Purge all previous user logins / test accounts except platform administrator
-  await UserModel.deleteMany({ email: { $ne: "admin@amrita.edu" } });
-
   // Ensure default administrator account exists for platform administration
   const adminExists = await UserModel.findOne({ email: "admin@amrita.edu" });
   if (!adminExists) {
@@ -41,20 +38,4 @@ export async function seedDevelopmentData() {
       status: "active",
     });
   }
-
-  // Clear all hardcoded/seeded posts, research projects, showcases, opportunities, events, etc.
-  await Promise.all([
-    ProjectShowcaseModel.deleteMany({}),
-    ResearchProjectModel.deleteMany({}),
-    OpportunityModel.deleteMany({}),
-    EventModel.deleteMany({}),
-    CollaborationModel.deleteMany({}),
-    InterviewExperienceModel.deleteMany({}),
-    HelpRequestModel.deleteMany({}),
-    CampusBuddyHostModel.deleteMany({}),
-    CampusBuddyRequestModel.deleteMany({}),
-    PostModel.deleteMany({}),
-    MessageModel.deleteMany({}),
-    ConnectionModel.deleteMany({}),
-  ]);
 }

@@ -5,6 +5,10 @@ export interface IMessage extends Document {
   senderId: mongoose.Types.ObjectId;
   recipientId: mongoose.Types.ObjectId;
   content: string;
+  imageUrl?: string | null;
+  linkUrl?: string | null;
+  deletedFor: mongoose.Types.ObjectId[];
+  isDeletedForEveryone: boolean;
   read: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -14,7 +18,11 @@ const MessageSchema = new Schema<IMessage>(
   {
     senderId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     recipientId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    content: { type: String, required: true, trim: true },
+    content: { type: String, required: false, default: "", trim: true },
+    imageUrl: { type: String, default: null },
+    linkUrl: { type: String, default: null },
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
+    isDeletedForEveryone: { type: Boolean, default: false },
     read: { type: Boolean, default: false, index: true },
   },
   {
