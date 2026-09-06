@@ -231,7 +231,7 @@ export function SeniorProfilePage() {
             </button>
             <button
               onClick={() => setShowMentorshipModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90 active:scale-95 transition-all"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-4 py-1.5 text-xs font-bold shadow-md shadow-orange-500/20 hover:opacity-95 active:scale-95 transition-all"
             >
               <HeartHandshake className="h-3.5 w-3.5" />
               <span>Ask for Mentorship</span>
@@ -344,7 +344,7 @@ export function SeniorProfilePage() {
 
                 <button
                   onClick={() => setShowMentorshipModal(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-5 py-2.5 text-xs font-bold shadow-lg shadow-orange-500/20 hover:opacity-95 active:scale-95 transition-all"
                 >
                   <HeartHandshake className="h-4 w-4" />
                   <span>Ask for Mentorship</span>
@@ -507,7 +507,7 @@ export function SeniorProfilePage() {
                 </p>
                 <button
                   onClick={() => setShowMentorshipModal(true)}
-                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90 active:scale-95 transition-all"
+                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-4 py-2.5 text-xs font-bold shadow-md shadow-orange-500/20 hover:opacity-95 active:scale-95 transition-all"
                 >
                   <CalendarDays className="h-4 w-4" />
                   <span>Book a Mentorship Slot</span>
@@ -788,7 +788,7 @@ export function SeniorProfilePage() {
                       setSelectedTopic(session.title);
                       setShowMentorshipModal(true);
                     }}
-                    className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90 active:scale-95 transition-all"
+                    className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-4 py-2.5 text-xs font-bold shadow-md shadow-orange-500/20 hover:opacity-95 active:scale-95 transition-all"
                   >
                     <CalendarDays className="h-4 w-4" />
                     <span>Request This Session</span>
@@ -887,7 +887,7 @@ export function SeniorProfilePage() {
                 <button
                   type="submit"
                   disabled={bookingSuccess}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-5 py-2.5 text-xs font-bold shadow-lg shadow-orange-500/20 hover:opacity-95 active:scale-95 transition-all"
                 >
                   {bookingSuccess ? (
                     <>
@@ -948,7 +948,7 @@ export function SeniorProfilePage() {
                 <button
                   type="submit"
                   disabled={messageSent}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-4 py-2 text-xs font-bold shadow-md shadow-orange-500/20 hover:opacity-95"
                 >
                   {messageSent ? (
                     <>
@@ -1045,7 +1045,7 @@ export function SeniorProfilePage() {
                   setSelectedTopic(readingBlog.title);
                   setShowMentorshipModal(true);
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white px-4 py-2.5 text-xs font-bold shadow-md shadow-orange-500/20 hover:opacity-95"
               >
                 <HeartHandshake className="h-4 w-4" />
                 <span>Discuss with {profile.name.split(' ')[0]}</span>

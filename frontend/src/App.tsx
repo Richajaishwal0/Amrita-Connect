@@ -5,7 +5,7 @@ import {
   Building2, CalendarDays, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
   Code, Compass, Copy, CornerDownRight, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Info, Layers,
   Lightbulb, Link2, Linkedin, Github, LoaderCircle, Lock, LogIn, LogOut, Mail, MapPin, Menu, MessageSquare, Moon,
-  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
+  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, RotateCw, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
   Star, Sun, Terminal, ThumbsUp, Trash2, TrendingUp, Trophy, Upload, UserCheck, UserCircle, UserPlus, UserRoundPlus, Users, Users2, UserX, Video, X, Zap,
 } from 'lucide-react';
 import { useWebSocketChat } from './hooks/useWebSocketChat';
@@ -245,8 +245,23 @@ function Avatar({ user, size = 'md', className }: { user?: Partial<User> | null;
     </div>
   );
 }
-function Button({ children, variant = 'primary', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'quiet' | 'outline' | 'danger' }) {
-  return <button {...props} className={cx('inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50', variant === 'primary' && 'bg-primary text-primary-foreground hover:opacity-90', variant === 'quiet' && 'text-muted-foreground hover:bg-muted hover:text-foreground', variant === 'outline' && 'border border-border bg-card text-foreground hover:bg-muted', variant === 'danger' && 'border border-destructive/30 text-destructive hover:bg-destructive/10', className)}>{children}</button>;
+function Button({ children, variant = 'primary', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'quiet' | 'outline' | 'danger' | 'brand' }) {
+  return (
+    <button
+      {...props}
+      className={cx(
+        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',
+        variant === 'primary' && 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 !text-white shadow-sm shadow-orange-500/20',
+        variant === 'brand' && 'bg-orange-500 hover:bg-orange-600 !text-white shadow-sm shadow-orange-500/25',
+        variant === 'quiet' && 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+        variant === 'outline' && 'border border-border/80 bg-card hover:bg-secondary/50 text-foreground',
+        variant === 'danger' && 'border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20',
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 function Tag({ children, warm = false }: { children: string; warm?: boolean }) { return <span className={cx('rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide', warm ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground')}>{children}</span>; }
 function PageTitle({ eyebrow, title, detail, action }: { eyebrow?: string; title: string; detail?: string; action?: React.ReactNode }) {
@@ -3555,6 +3570,9 @@ function PostCard({
         return old;
       });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_my_posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_saved_posts'] });
       if (typeof onRefresh === 'function') onRefresh();
     },
   });
@@ -3571,6 +3589,8 @@ function PostCard({
         syncPostCache(updatedPost);
       } else {
         queryClient.invalidateQueries({ queryKey: ['posts'] });
+        queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+        queryClient.invalidateQueries({ queryKey: ['profile_my_posts'] });
       }
     },
   });
@@ -3579,6 +3599,26 @@ function PostCard({
     mutationFn: (commentId: string) =>
       apiFetch<PostItem>(`/posts/${post.id}/comments/${commentId}/like`, { method: 'POST' }),
     onSuccess: (updatedPost) => {
+      if (updatedPost && updatedPost.id) {
+        syncPostCache(updatedPost);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+      }
+    },
+  });
+
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+
+  const editCommentMutation = useMutation({
+    mutationFn: ({ commentId, text }: { commentId: string; text: string }) =>
+      apiFetch<PostItem>(`/posts/${post.id}/comments/${commentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ text }),
+      }),
+    onSuccess: (updatedPost) => {
+      setEditingCommentId(null);
+      setEditingCommentText('');
       if (updatedPost && updatedPost.id) {
         syncPostCache(updatedPost);
       } else {
@@ -3599,12 +3639,30 @@ function PostCard({
     },
   });
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/feed?post=${post.id}` : `https://connect.amrita.edu/feed?post=${post.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${post.author?.fullName ?? 'Amrita Member'} on Amrita Connect`,
+          text: post.content.slice(0, 120),
+          url,
+        });
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2200);
+        return;
+      } catch {
+        // User cancelled or share failed; fallback to clipboard below
+      }
+    }
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2200);
+      } catch {
+        // fallback ignored
+      }
     }
   };
 
@@ -3667,6 +3725,12 @@ function PostCard({
     }
   };
 
+  const isAuthor = Boolean(
+    post.isMyPost ||
+    (post.author?.id && currentUser?.id && String(post.author.id) === String(currentUser.id))
+  );
+  const canDeletePost = isAuthor || currentUser?.role === 'admin';
+
   return (
     <article className="surface relative rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs transition-all hover:border-border hover:shadow-md animate-rise">
       {/* Author Header */}
@@ -3704,7 +3768,7 @@ function PostCard({
             {post.category}
           </span>
 
-          {post.isMyPost && (
+          {canDeletePost && (
             <div className="relative">
               <button
                 type="button"
@@ -3717,16 +3781,18 @@ function PostCard({
 
               {actionMenuOpen && (
                 <div className="absolute right-0 top-full z-20 mt-1 w-32 rounded-xl border border-border bg-card p-1 shadow-lg animate-rise">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActionMenuOpen(false);
-                      onEdit(post);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted cursor-pointer"
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Edit post
-                  </button>
+                  {isAuthor && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionMenuOpen(false);
+                        onEdit(post);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted cursor-pointer"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit post
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -3798,58 +3864,60 @@ function PostCard({
 
       {/* Attached Link */}
       {post.linkUrl && (
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3.5 hover:border-orange-500/40 transition-all">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-500">
-              <Link2 className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-foreground hover:text-orange-500">
-                {post.linkUrl}
-              </p>
-              <span className="text-[10px] text-muted-foreground">External Resource</span>
-            </div>
-          </div>
+        <div className="mt-4">
           <a
-            href={post.linkUrl.startsWith('http') ? post.linkUrl : `https://${post.linkUrl}`}
+            href={post.linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-orange-500 hover:underline shrink-0"
+            className="flex items-center gap-3 rounded-2xl border border-border/80 bg-secondary/30 p-3 hover:border-orange-500/40 hover:bg-secondary/50 transition-all group"
           >
-            <span>Visit</span>
-            <ExternalLink className="h-3 w-3" />
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400">
+              <ExternalLink className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground truncate group-hover:text-orange-500 transition-colors">
+                {post.linkUrl}
+              </p>
+              <span className="text-[10px] text-muted-foreground">External Link</span>
+            </div>
           </a>
         </div>
       )}
 
       {/* Reaction & Comments Count Bar (LinkedIn Style) */}
       {(totalReactions > 0 || post.commentsCount > 0) && (
-        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground border-b border-border/60 pb-2.5 px-1">
+        <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground">
+          {/* Active Reaction Icons & Summary */}
           {totalReactions > 0 ? (
             <button
               type="button"
               onClick={() => setShowReactionsModal(true)}
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer group text-left"
-              title="Click to view all who reacted"
+              className="flex items-center gap-1.5 hover:underline cursor-pointer group/summary"
             >
-              <span className="flex items-center -space-x-1 shrink-0">
-                {activeEmojis.map((emoji, i) => (
-                  <span key={i} className="inline-grid place-items-center text-sm ring-2 ring-card rounded-full bg-card">
+              <div className="flex -space-x-1">
+                {activeEmojis.map((emoji, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-grid h-5 w-5 place-items-center rounded-full bg-card ring-2 ring-card shadow-2xs text-[11px] select-none group-hover/summary:scale-110 transition-transform"
+                  >
                     {emoji}
                   </span>
                 ))}
-              </span>
-              <span className="group-hover:underline font-semibold text-foreground/80 text-xs">
+              </div>
+              <span className="font-semibold text-foreground/80 group-hover/summary:text-orange-500 transition-colors">
                 {getReactionSummaryText()}
               </span>
             </button>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
 
+          {/* Comments count */}
           {post.commentsCount > 0 && (
             <button
               type="button"
               onClick={() => setShowComments((prev) => !prev)}
-              className="hover:underline hover:text-foreground transition-colors cursor-pointer text-xs"
+              className="hover:underline cursor-pointer hover:text-foreground font-semibold"
             >
               {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
             </button>
@@ -3857,29 +3925,32 @@ function PostCard({
         </div>
       )}
 
-      {/* Interactions Action Bar (LinkedIn Style with Rich Reaction Popover) */}
-      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground pt-1">
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Reaction Button with Hover Picker */}
+      {/* Reactions breakdown modal */}
+      {showReactionsModal && (
+        <PostReactionsModal
+          postId={post.id}
+          onClose={() => setShowReactionsModal(false)}
+        />
+      )}
+
+      {/* Interaction Buttons Bar (Like / React Picker, Comment, Save, Share) */}
+      <div className="mt-3 flex items-center justify-between border-t border-border/80 pt-2 text-xs text-muted-foreground relative">
+        <div className="flex items-center gap-1">
+          {/* LinkedIn Floating Reaction Hover Picker */}
           <div
             className="relative"
             onMouseEnter={() => {
-              clearTimeout(pickerTimeoutRef.current);
+              if (pickerTimeoutRef.current) clearTimeout(pickerTimeoutRef.current);
               setShowPicker(true);
             }}
             onMouseLeave={() => {
-              pickerTimeoutRef.current = setTimeout(() => setShowPicker(false), 300);
+              pickerTimeoutRef.current = setTimeout(() => setShowPicker(false), 350);
             }}
           >
-            {/* Reaction Hover Picker */}
             {showPicker && (
-              <div
-                className="absolute bottom-full left-0 mb-2 z-30 flex items-center gap-1.5 rounded-full border border-border/90 bg-card p-1.5 shadow-2xl animate-scale-in"
-                onMouseEnter={() => clearTimeout(pickerTimeoutRef.current)}
-                onMouseLeave={() => setShowPicker(false)}
-              >
-                {(['like', 'celebrate', 'support', 'love', 'insightful', 'curious'] as PostReactionType[]).map((type) => {
-                  const conf = REACTION_CONFIG[type];
+              <div className="absolute -top-13 left-0 z-30 flex items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 shadow-2xl backdrop-blur-md animate-scale-in">
+                {(Object.entries(REACTION_CONFIG) as [PostReactionType, typeof REACTION_CONFIG.like][]).map(([type, conf]) => {
+                  const isSelected = userReaction === type;
                   return (
                     <button
                       key={type}
@@ -3982,59 +4053,131 @@ function PostCard({
 
           {/* Comments List */}
           <div className="space-y-2.5 pt-1">
-            {post.comments?.map((comment) => (
-              <div
-                key={comment.id}
-                className="group/comment flex items-start justify-between gap-3 rounded-2xl bg-secondary/35 p-3.5 text-xs transition-colors hover:bg-secondary/50"
-              >
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <Avatar user={comment.user} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/people/${comment.user?.id}`} className="font-bold text-foreground hover:text-orange-500 hover:underline">
-                        {comment.user?.fullName ?? 'Member'}
-                      </Link>
-                      <span className="text-[10px] text-muted-foreground">
-                        {relative(comment.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-foreground/90 font-normal leading-relaxed whitespace-pre-line">
-                      {comment.text}
-                    </p>
+            {post.comments?.map((comment) => {
+              const isMyComment = Boolean(
+                comment.isMyComment ||
+                (comment.user?.id && currentUser?.id && String(comment.user.id) === String(currentUser.id))
+              );
+              const canDeleteComment = isMyComment || post.isMyPost || currentUser?.role === 'admin';
+              const isEditing = editingCommentId === comment.id;
 
-                    {/* Comment like reaction button */}
-                    <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                      <button
-                        type="button"
-                        onClick={() => commentLikeMutation.mutate(comment.id)}
-                        className={cx(
-                          'inline-flex items-center gap-1 font-bold hover:text-foreground transition-colors cursor-pointer',
-                          comment.isLiked ? 'text-rose-500 font-bold' : ''
+              return (
+                <div
+                  key={comment.id}
+                  className="group/comment flex items-start justify-between gap-3 rounded-2xl bg-secondary/35 p-3.5 text-xs transition-colors hover:bg-secondary/50"
+                >
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <Avatar user={comment.user} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/people/${comment.user?.id}`} className="font-bold text-foreground hover:text-orange-500 hover:underline">
+                          {comment.user?.fullName ?? 'Member'}
+                        </Link>
+                        <span className="text-[10px] text-muted-foreground">
+                          {relative(comment.createdAt)}
+                        </span>
+                        {comment.updatedAt && (
+                          <span className="text-[9px] text-muted-foreground italic">(edited)</span>
                         )}
-                      >
-                        <Heart className={cx('h-3 w-3', comment.isLiked && 'fill-rose-500 text-rose-500')} />
-                        <span>{(comment.likesCount ?? 0) > 0 ? `${comment.likesCount} Like` : 'Like'}</span>
-                      </button>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="mt-2 space-y-2">
+                          <textarea
+                            value={editingCommentText}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            rows={2}
+                            className="w-full rounded-xl border border-orange-500 bg-card p-2.5 text-xs outline-none text-foreground focus:ring-1 focus:ring-orange-500"
+                            autoFocus
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={editCommentMutation.isPending || !editingCommentText.trim()}
+                              onClick={() => {
+                                if (editingCommentText.trim()) {
+                                  editCommentMutation.mutate({ commentId: comment.id, text: editingCommentText.trim() });
+                                }
+                              }}
+                              className="rounded-lg bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                            >
+                              {editCommentMutation.isPending ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingCommentText('');
+                              }}
+                              className="rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-all cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mt-1 text-foreground/90 font-normal leading-relaxed whitespace-pre-line">
+                            {comment.text}
+                          </p>
+
+                          {/* Comment like reaction button */}
+                          <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                            <button
+                              type="button"
+                              onClick={() => commentLikeMutation.mutate(comment.id)}
+                              className={cx(
+                                'inline-flex items-center gap-1 font-bold hover:text-foreground transition-colors cursor-pointer',
+                                comment.isLiked ? 'text-rose-500 font-bold' : ''
+                              )}
+                            >
+                              <Heart className={cx('h-3 w-3', comment.isLiked && 'fill-rose-500 text-rose-500')} />
+                              <span>{(comment.likesCount ?? 0) > 0 ? `${comment.likesCount} Like` : 'Like'}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                {(comment.isMyComment || post.isMyPost) && (
-                  <button
-                    type="button"
-                    aria-label="Delete comment"
-                    onClick={() => {
-                      if (confirm('Delete this comment?')) {
-                        deleteCommentMutation.mutate(comment.id);
-                      }
-                    }}
-                    className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg opacity-80 hover:opacity-100 hover:bg-destructive/10 transition-all cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
+                  {!isEditing && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* ONLY AUTHOR can edit comment */}
+                      {isMyComment && (
+                        <button
+                          type="button"
+                          aria-label="Edit comment"
+                          title="Edit your comment"
+                          onClick={() => {
+                            setEditingCommentId(comment.id);
+                            setEditingCommentText(comment.text);
+                          }}
+                          className="text-muted-foreground hover:text-orange-500 p-1.5 rounded-lg opacity-80 hover:opacity-100 hover:bg-orange-500/10 transition-all cursor-pointer"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+
+                      {canDeleteComment && (
+                        <button
+                          type="button"
+                          aria-label="Delete comment"
+                          title="Delete comment"
+                          onClick={() => {
+                            if (confirm('Delete this comment?')) {
+                              deleteCommentMutation.mutate(comment.id);
+                            }
+                          }}
+                          className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg opacity-80 hover:opacity-100 hover:bg-destructive/10 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {!post.comments?.length && (
               <p className="text-center py-2 text-xs text-muted-foreground">
                 No comments yet. Start the conversation!
@@ -4042,14 +4185,6 @@ function PostCard({
             )}
           </div>
         </div>
-      )}
-
-      {/* See Who Reacted Modal */}
-      {showReactionsModal && (
-        <PostReactionsModal
-          postId={post.id}
-          onClose={() => setShowReactionsModal(false)}
-        />
       )}
     </article>
   );
@@ -4064,11 +4199,20 @@ function EditPostModal({
   onClose: () => void;
   onUpdated: () => void;
 }) {
-  const [content, setContent] = useState(post.content);
-  const [category, setCategory] = useState<PostCategory>(post.category);
+  const [content, setContent] = useState(post.content || '');
+  const [category, setCategory] = useState<PostCategory>(post.category || 'General');
+  const [imageUrl, setImageUrl] = useState(post.imageUrl || '');
+  const [linkUrl, setLinkUrl] = useState(post.linkUrl || '');
+  const [error, setError] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
-    mutationFn: (data: { content: string; category: PostCategory; imageUrl?: string | null }) =>
+    mutationFn: (data: {
+      content: string;
+      category: PostCategory;
+      imageUrl?: string | null;
+      linkUrl?: string | null;
+    }) =>
       apiFetch<PostItem>(`/posts/${post.id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -4092,7 +4236,7 @@ function EditPostModal({
       onClose();
     },
     onError: (err: any) => {
-      setError(err.message || 'Could not update post');
+      setError(err?.message || 'Could not update post');
     },
   });
 
@@ -4103,6 +4247,7 @@ function EditPostModal({
       content: content.trim(),
       category,
       imageUrl: imageUrl.trim() || null,
+      linkUrl: linkUrl.trim() || null,
     });
   };
 
@@ -4160,6 +4305,17 @@ function EditPostModal({
               type="url"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-accent"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-foreground">Link / Resource URL (optional)</label>
+            <input
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
               placeholder="https://..."
               className="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs outline-none focus:border-accent"
             />
@@ -4796,6 +4952,59 @@ function formatFileSize(bytes?: number | null): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+function getFileTypeLabel(fileName?: string | null, fileType?: string | null): string {
+  if (!fileName && !fileType) return 'Document';
+  const ext = fileName ? fileName.split('.').pop()?.toLowerCase() : '';
+  if (ext === 'pdf' || fileType?.includes('pdf')) return 'PDF Resume';
+  if (ext === 'doc' || ext === 'docx' || fileType?.includes('word')) return 'Word Document';
+  if (ext === 'xls' || ext === 'xlsx' || ext === 'csv' || fileType?.includes('spreadsheet')) return 'Spreadsheet';
+  if (ext === 'ppt' || ext === 'pptx') return 'Presentation';
+  if (ext === 'zip' || ext === 'rar' || ext === '7z' || ext === 'tar') return 'Archive';
+  if (ext === 'txt') return 'Text File';
+  if (fileType?.startsWith('image/')) return 'Image';
+  return ext ? `${ext.toUpperCase()} File` : 'Document';
+}
+
+async function handleDownloadAttachment(msg: DirectMessage) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('amrita_token') : null;
+    const res = await fetch(`/api/messages/${msg.id}/attachment`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      if (msg.fileUrl) {
+        const a = document.createElement('a');
+        a.href = msg.fileUrl;
+        a.download = msg.fileName || 'attachment';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+      throw new Error('Failed to download attachment');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = msg.fileName || 'attachment';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.warn('Fallback direct download for attachment:', err);
+    if (msg.fileUrl) {
+      const a = document.createElement('a');
+      a.href = msg.fileUrl;
+      a.download = msg.fileName || 'attachment';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+
 // Helper to render text with rich auto-detected links
 function renderRichMessageText(text: string, isMine: boolean) {
   if (!text) return null;
@@ -5017,18 +5226,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
     // Clear previous error
     setSendError(null);
 
-    // Dispatch via WS for instant real-time delivery
-    sendDirectMessage(
-      activeRecipientId,
-      trimmed,
-      photoToSend,
-      null,
-      fileToSend?.url || null,
-      fileToSend?.name || null,
-      fileToSend?.size || null,
-      fileToSend?.type || null
-    );
-    // Also persist via REST for hybrid resilience
+    // Persist via REST as single source of truth (backend broadcasts real-time WS event to recipient and sender)
     sendMutation.mutate({
       content: trimmed,
       imageUrl: photoToSend,
@@ -5071,7 +5269,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
     }
 
     // Validate extension / dangerous executables
-    const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif)$/i;
+    const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif|jar|php|py|js|cgi|pl|ps1|dll|so|app|vbe|jse|hta)$/i;
     if (dangerousExtRegex.test(file.name)) {
       setSendError('Executable and script file types are blocked for security.');
       if (docFileInputRef.current) docFileInputRef.current.value = '';
@@ -5674,15 +5872,23 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                                         </div>
                                         <div className="min-w-0 flex-1">
                                           <p className="text-xs font-bold truncate">{msg.fileName || 'Attachment'}</p>
-                                          <p className={cx('text-[10px]', msg.isMine ? 'text-white/75' : 'text-muted-foreground')}>
-                                            {msg.fileSize ? formatFileSize(msg.fileSize) : 'Document'}
-                                          </p>
+                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className={cx('text-[10px]', msg.isMine ? 'text-white/80 font-medium' : 'text-muted-foreground')}>
+                                              {msg.fileSize ? formatFileSize(msg.fileSize) : 'Document'}
+                                            </span>
+                                            <span
+                                              className={cx(
+                                                'text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0',
+                                                msg.isMine ? 'bg-white/20 text-white' : 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                                              )}
+                                            >
+                                              {getFileTypeLabel(msg.fileName, msg.fileType)}
+                                            </span>
+                                          </div>
                                         </div>
-                                        <a
-                                          href={msg.fileUrl}
-                                          download={msg.fileName || 'attachment'}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDownloadAttachment(msg)}
                                           className={cx(
                                             'grid h-8 w-8 shrink-0 place-items-center rounded-lg cursor-pointer transition-all shadow-xs active:scale-95',
                                             msg.isMine
@@ -5692,7 +5898,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                                           title={`Download ${msg.fileName || 'file'}`}
                                         >
                                           <Download className="h-4 w-4" />
-                                        </a>
+                                        </button>
                                       </div>
                                     )}
 
@@ -5765,15 +5971,17 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                                       )}
 
                                       {msg.fileUrl && (
-                                        <a
-                                          href={msg.fileUrl}
-                                          download={msg.fileName || 'attachment'}
-                                          onClick={() => setActiveActionMenuId(null)}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleDownloadAttachment(msg);
+                                            setActiveActionMenuId(null);
+                                          }}
                                           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-secondary cursor-pointer transition-colors"
                                         >
                                           <Download className="h-3.5 w-3.5 text-muted-foreground" />
                                           <span>Download file</span>
-                                        </a>
+                                        </button>
                                       )}
 
                                       {msg.imageUrl && (
@@ -5879,6 +6087,9 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                         <div className="flex items-center gap-1.5 text-xs font-bold text-foreground truncate">
                           <Paperclip className="h-3.5 w-3.5 text-orange-500 shrink-0" />
                           <span className="truncate">{selectedFile.name}</span>
+                          <span className="rounded-md bg-orange-500/20 px-1.5 py-0.5 text-[9px] font-extrabold text-orange-700 dark:text-orange-300 shrink-0">
+                            {getFileTypeLabel(selectedFile.name, selectedFile.type)}
+                          </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground">
                           {formatFileSize(selectedFile.size)} · Ready to send
@@ -5922,7 +6133,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                   <input
                     ref={docFileInputRef}
                     type="file"
-                    accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.csv"
+                    accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.ppt,.pptx,.zip,.csv"
                     onChange={handleDocFileChange}
                     className="hidden"
                   />
@@ -5951,7 +6162,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                     {/* Document Attachment Button (Paperclip) */}
                     <button
                       type="button"
-                      title="Attach document (PDF, Doc, Zip, etc.)"
+                      title="Attach document or resume (PDF, DOC, DOCX, ZIP, etc.)"
                       disabled={isCompressingImage || isReadingFile}
                       onClick={() => docFileInputRef.current?.click()}
                       className={cx(
@@ -6018,7 +6229,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                 <div className="relative z-10 border-t border-border/80 bg-card/95 dark:bg-[#0c1220]/95 p-4 shrink-0 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                   <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                     <Lock className="h-4 w-4 text-amber-500 shrink-0" />
-                    <span>Message available after connecting with {currentRecipient.fullName.split(' ')[0]}.</span>
+                    <span className="font-semibold text-foreground">Connect with this user to start messaging.</span>
                   </div>
                   <ConnectActionButton targetUser={currentRecipient} size="sm" />
                 </div>
@@ -6697,12 +6908,6 @@ function MatchmakerPage() {
                   >
                     <Send className="h-3.5 w-3.5" /> Pitch Project
                   </Button>
-                  <Link
-                    href={`/messages/${user.id}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-muted transition-colors"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                  </Link>
                   <ConnectActionButton targetUser={user} size="sm" />
                 </div>
               </div>
@@ -11338,13 +11543,14 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     }
   ], [activeView, selectedCategory, selectedCampus, search]);
 
-  const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
+  const { data: postsData, isLoading: postsLoading, isFetching: postsFetching, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: postsQueryKey,
     enabled: activeView === 'feed',
     queryFn: async () => {
       const q = new URLSearchParams();
       if (selectedCategory) q.set('category', selectedCategory);
       if (selectedCampus) q.set('campus', selectedCampus);
+      q.set('pageSize', '50');
       return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
     },
   });
@@ -11414,6 +11620,8 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
         });
       }
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile_my_posts'] });
       refetchPosts();
     },
   });
@@ -11754,21 +11962,37 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   )}
                 </div>
 
-                {/* Campus Filter Dropdown */}
-                <div className="relative shrink-0">
-                  <select
-                    value={selectedCampus}
-                    onChange={(e) => setSelectedCampus(e.target.value)}
-                    className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
+                {/* Campus Filter Dropdown & Refresh Button */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative shrink-0">
+                    <select
+                      value={selectedCampus}
+                      onChange={(e) => setSelectedCampus(e.target.value)}
+                      className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
+                    >
+                      <option value="">All Campuses</option>
+                      {campuses.map((c) => (
+                        <option key={c} value={c}>
+                          Amrita {c}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      refetchPosts();
+                      queryClient.invalidateQueries({ queryKey: ['posts'] });
+                    }}
+                    disabled={postsFetching}
+                    title="Refresh community feed"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/50 px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0 active:scale-95 disabled:opacity-60 shadow-2xs"
                   >
-                    <option value="">All Campuses</option>
-                    {campuses.map((c) => (
-                      <option key={c} value={c}>
-                        Amrita {c}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <RotateCw className={cx('h-3.5 w-3.5 text-orange-500', postsFetching && 'animate-spin')} />
+                    <span className="hidden sm:inline font-bold">Refresh</span>
+                  </button>
                 </div>
               </div>
 
@@ -12826,7 +13050,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
       {/* Edit Post Modal */}
       {editingPost && (
-        <EditPostDialog
+        <EditPostModal
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onUpdated={() => {
@@ -12995,14 +13219,16 @@ function LinkedInConnectionRow({
                 <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>View Full Profile</span>
               </Link>
-              <Link
-                href={`/messages/${user.id}`}
-                onClick={() => setDropdownOpen(false)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
-              >
-                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>Direct Message</span>
-              </Link>
+              {isConnected && (
+                <Link
+                  href={`/messages/${user.id}`}
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Direct Message</span>
+                </Link>
+              )}
               {isConnected && connStatus?.connectionId && (
                 <button
                   type="button"
@@ -18657,19 +18883,28 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
     }
   }, [initialTab]);
 
-  // Fetch posts for my_posts or saved
-  const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
-    queryKey: ['profile_posts', activeTab],
-    enabled: activeTab === 'my_posts' || activeTab === 'saved' || activeTab === 'profile',
+  // Dedicated query for authored posts
+  const { data: myPostsData, isLoading: myPostsLoading, isError: myPostsError, refetch: refetchMyPosts } = useQuery({
+    queryKey: ['profile_my_posts', user?.id],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
-      const q = new URLSearchParams();
-      if (activeTab === 'saved') q.set('filter', 'saved');
-      else q.set('filter', 'my_posts');
-      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>(`/posts?${q.toString()}`);
+      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>('/posts?filter=my_posts');
     },
   });
 
-  const posts = postsData?.items ?? [];
+  // Dedicated query for saved posts
+  const { data: savedPostsData, isLoading: savedPostsLoading, isError: savedPostsError, refetch: refetchSavedPosts } = useQuery({
+    queryKey: ['profile_saved_posts', user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      return apiFetch<{ items: PostItem[]; total: number; page: number; pageSize: number }>('/posts?filter=saved');
+    },
+  });
+
+  const myPosts = myPostsData?.items ?? [];
+  const savedPosts = savedPostsData?.items ?? [];
+  const myPostsCount = myPostsData?.total ?? myPosts.length;
+  const savedPostsCount = savedPostsData?.total ?? savedPosts.length;
 
   if (isLoading) return <LoadingState rows={3} />;
   if (isError || !user) return <ErrorState onRetry={() => refetch()} />;
@@ -18705,8 +18940,8 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
           {[
             { id: 'profile', label: 'Profile Overview', icon: UserCircle },
             { id: 'connections', label: `Network & Connections (${connData?.totalConnected ?? 0})`, icon: Users },
-            { id: 'my_posts', label: `My Posts (${posts.length})`, icon: Rss },
-            { id: 'saved', label: 'Saved Posts', icon: Bookmark },
+            { id: 'my_posts', label: `My Posts (${myPostsCount})`, icon: Rss },
+            { id: 'saved', label: `Saved Posts (${savedPostsCount})`, icon: Bookmark },
           ].map((t) => {
             const Icon = t.icon;
             return (
@@ -19167,7 +19402,7 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-foreground">Activity & Published Blogs</h2>
-                  <p className="text-xs text-muted-foreground">{posts.length} articles and updates shared</p>
+                  <p className="text-xs text-muted-foreground">{myPostsCount} articles and updates shared</p>
                 </div>
                 <button
                   type="button"
@@ -19178,7 +19413,7 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
                 </button>
               </div>
 
-              {posts.length === 0 ? (
+              {myPosts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/80 p-6 text-center">
                   <Rss className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                   <p className="text-xs font-medium text-muted-foreground">You haven't posted any updates or blogs yet.</p>
@@ -19188,7 +19423,7 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {posts.slice(0, 2).map((post) => (
+                  {myPosts.slice(0, 2).map((post) => (
                     <div key={post.id} className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2">
                       <p className="text-xs text-muted-foreground font-medium">{relative(post.createdAt)}</p>
                       <p className="text-sm font-bold text-foreground line-clamp-2">{post.content}</p>
@@ -19410,39 +19645,72 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
         </div>
       )}
 
-      {/* My Posts & Saved Posts Tab Views */}
-      {(activeTab === 'my_posts' || activeTab === 'saved') && (
+      {/* My Posts Tab View */}
+      {activeTab === 'my_posts' && (
         <div className="space-y-4 max-w-3xl">
-          {postsLoading ? (
+          {myPostsLoading ? (
             <LoadingState rows={4} />
-          ) : postsError ? (
-            <ErrorState onRetry={() => refetchPosts()} />
-          ) : posts.length === 0 ? (
+          ) : myPostsError ? (
+            <ErrorState onRetry={() => refetchMyPosts()} />
+          ) : myPosts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
-                {activeTab === 'saved' ? <Bookmark className="h-7 w-7" /> : <Rss className="h-7 w-7" />}
+                <Rss className="h-7 w-7" />
               </div>
               <h3 className="text-base sm:text-lg font-bold text-foreground">
-                {activeTab === 'saved' ? 'No saved posts' : 'No posts published yet'}
+                No posts published yet
               </h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                {activeTab === 'saved'
-                  ? 'Posts you bookmark in the community feed will appear here for quick access.'
-                  : 'Share your blogs, project updates, achievements, or interview experiences in the Community Feed!'}
+                Share your blogs, articles, project updates, achievements, or interview experiences in the Community Feed!
               </p>
-              {activeTab === 'my_posts' && (
-                <Button onClick={() => setLocation('/feed')} className="mt-5 text-xs font-bold">
-                  Go to Feed & Post
-                </Button>
-              )}
+              <Button onClick={() => setLocation('/feed')} className="mt-5 text-xs font-bold">
+                Go to Feed & Post
+              </Button>
             </div>
           ) : (
-            posts.map((post) => (
+            myPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
                 onEdit={(p) => setEditingPost(p)}
                 onRefresh={() => {
+                  queryClient.invalidateQueries({ queryKey: ['profile_my_posts'] });
+                  queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
+                  queryClient.invalidateQueries({ queryKey: ['posts'] });
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Saved Posts Tab View */}
+      {activeTab === 'saved' && (
+        <div className="space-y-4 max-w-3xl">
+          {savedPostsLoading ? (
+            <LoadingState rows={4} />
+          ) : savedPostsError ? (
+            <ErrorState onRetry={() => refetchSavedPosts()} />
+          ) : savedPosts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 sm:p-12 text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/10 text-orange-500 mb-3">
+                <Bookmark className="h-7 w-7" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-foreground">
+                No saved posts
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                Posts you bookmark in the community feed will appear here for quick access.
+              </p>
+            </div>
+          ) : (
+            savedPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onEdit={(p) => setEditingPost(p)}
+                onRefresh={() => {
+                  queryClient.invalidateQueries({ queryKey: ['profile_saved_posts'] });
                   queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
                   queryClient.invalidateQueries({ queryKey: ['posts'] });
                 }}
@@ -19454,10 +19722,12 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
 
       {/* Edit Post Modal */}
       {editingPost && (
-        <EditPostDialog
+        <EditPostModal
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ['profile_my_posts'] });
+            queryClient.invalidateQueries({ queryKey: ['profile_saved_posts'] });
             queryClient.invalidateQueries({ queryKey: ['profile_posts'] });
             queryClient.invalidateQueries({ queryKey: ['posts'] });
             setEditingPost(null);

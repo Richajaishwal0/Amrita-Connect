@@ -137,14 +137,21 @@ function serializePost(post: any, currentUserId?: string) {
 
   const comments = (plain.comments || []).map((c: any) => {
     const commentLikes = (c.likes || []).map((id: any) => String(id?._id || id));
+    const commentAuthorId = String(c.userId?._id || c.userId?.id || c.userId || "");
+    const commentUser = serializeUser(c.userId);
+    const isMyComment = Boolean(
+      currentUserId &&
+        (commentAuthorId === String(currentUserId) ||
+          (commentUser && commentUser.id && String(commentUser.id) === String(currentUserId)))
+    );
     return {
       id: String(c._id || c.id),
       text: c.text,
       createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-      user: serializeUser(c.userId),
+      user: commentUser,
       likesCount: commentLikes.length,
       isLiked: currentUserId ? commentLikes.includes(currentUserId) : false,
-      isMyComment: currentUserId ? String(c.userId?._id || c.userId?.id || c.userId) === currentUserId : false,
+      isMyComment,
     };
   });
 
@@ -173,6 +180,14 @@ function serializePost(post: any, currentUserId?: string) {
     }
   }
 
+  const authorIdStr = String(plain.authorId?._id || plain.authorId?.id || plain.authorId || "");
+  const currentUserIdStr = currentUserId ? String(currentUserId) : "";
+  const isMyPost = Boolean(
+    currentUserIdStr &&
+      (authorIdStr === currentUserIdStr ||
+        (author && author.id && String(author.id) === currentUserIdStr))
+  );
+
   return {
     id: String(plain._id || plain.id),
     content: plain.content,
@@ -194,7 +209,7 @@ function serializePost(post: any, currentUserId?: string) {
     commentsCount: comments.length,
     isLiked: !!userReaction,
     isSaved: currentUserId ? savedBy.includes(currentUserId) : false,
-    isMyPost: currentUserId ? String(plain.authorId?._id || plain.authorId?.id || plain.authorId) === currentUserId : false,
+    isMyPost,
     comments,
   };
 }
@@ -1604,7 +1619,7 @@ router.get("/posts", requireAuth, async (req, res, next) => {
     const userId = getUserId(req);
     const userObjId = toObjectId(userId);
     const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
-    const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize || "20"), 10) || 20));
+    const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || "50"), 10) || 50));
     const filter: Record<string, any> = {};
 
     if (req.query.category) {
@@ -1630,7 +1645,7 @@ router.get("/posts", requireAuth, async (req, res, next) => {
           $or: [
             { fullName: searchRegex },
             { fullName: cleanRegex },
-            { username: searchRegex },
+            { handle: searchRegex },
             { department: searchRegex },
             { campus: searchRegex },
           ],
@@ -1659,8 +1674,9 @@ router.get("/posts", requireAuth, async (req, res, next) => {
       filter.savedBy = userObjId;
     } else if (req.query.filter === "my_posts") {
       filter.authorId = userObjId;
-    } else if (req.query.authorId && mongoose.Types.ObjectId.isValid(String(req.query.authorId))) {
-      filter.authorId = toObjectId(String(req.query.authorId));
+    } else if (req.query.authorId) {
+      const rawAuthorId = String(req.query.authorId);
+      filter.authorId = toObjectId(rawAuthorId);
     }
 
     const [rows, total] = await Promise.all([
@@ -1676,10 +1692,12 @@ router.get("/posts", requireAuth, async (req, res, next) => {
       PostModel.countDocuments(filter),
     ]);
 
-    const validRows = rows.filter((post: any) => post.authorId);
+    const serializedItems = rows
+      .map((post: any) => serializePost(post, userId))
+      .filter(Boolean);
 
     res.json({
-      items: validRows.map((post) => serializePost(post, userId)),
+      items: serializedItems,
       page,
       pageSize,
       total,
@@ -1760,7 +1778,8 @@ router.patch("/posts/:id", requireAuth, async (req, res, next) => {
       res.status(404).json({ success: false, message: "Post not found" });
       return;
     }
-    if (String(post.authorId) !== userId) {
+    const authorIdStr = String(post.authorId?._id || post.authorId || "");
+    if (authorIdStr !== String(userId)) {
       res.status(403).json({ success: false, message: "You can only edit your own posts" });
       return;
     }
@@ -1822,7 +1841,8 @@ router.delete("/posts/:id", requireAuth, async (req, res, next) => {
     }
     const user = await UserModel.findById(userId);
     const isAdmin = user?.role === "admin";
-    if (String(post.authorId) !== userId && !isAdmin) {
+    const authorIdStr = String(post.authorId?._id || post.authorId || "");
+    if (authorIdStr !== String(userId) && !isAdmin) {
       res.status(403).json({ success: false, message: "You are not authorized to delete this post" });
       return;
     }
@@ -2202,6 +2222,47 @@ router.post("/posts/:id/comments/:commentId/like", requireAuth, async (req, res,
       }
     }
 
+    await post.save();
+
+    const populated = await PostModel.findById(post._id)
+      .populate("authorId")
+      .populate("comments.userId")
+      .lean();
+
+    res.json(serializePost(populated, userId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/posts/:id/comments/:commentId", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { text } = req.body;
+    if (!text || typeof text !== "string" || !text.trim()) {
+      res.status(400).json({ success: false, message: "Comment text cannot be empty" });
+      return;
+    }
+
+    const post = await PostModel.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ success: false, message: "Post not found" });
+      return;
+    }
+
+    const comment = (post.comments as any).id(req.params.commentId);
+    if (!comment) {
+      res.status(404).json({ success: false, message: "Comment not found" });
+      return;
+    }
+
+    if (String(comment.userId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own comments" });
+      return;
+    }
+
+    comment.text = text.trim();
+    comment.updatedAt = new Date();
     await post.save();
 
     const populated = await PostModel.findById(post._id)
@@ -2792,9 +2853,9 @@ router.post("/messages", requireAuth, async (req, res, next) => {
 
     // Security validation on file attachments
     if (cleanFileName) {
-      const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif)$/i;
+      const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif|jar|php|py|js|cgi|pl|ps1|dll|so|app|vbe|jse|hta)$/i;
       if (dangerousExtRegex.test(cleanFileName)) {
-        res.status(400).json({ success: false, message: "Executable and script attachments are not permitted." });
+        res.status(400).json({ success: false, message: "Executable and script attachments are not permitted for security." });
         return;
       }
     }
@@ -2830,7 +2891,7 @@ router.post("/messages", requireAuth, async (req, res, next) => {
     if (!connection) {
       res.status(403).json({
         success: false,
-        message: "You must be connected with this user before sending messages. Please send a connection request first.",
+        message: "You must be connected with this user before sending messages. Connect with this user to start messaging.",
       });
       return;
     }
@@ -2893,6 +2954,67 @@ router.post("/messages", requireAuth, async (req, res, next) => {
     res.status(201).json({
       ...serializedMsg,
       isMine: true,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Secure endpoint to access/download private message attachments
+router.get("/messages/:messageId/attachment", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const messageId = req.params.messageId;
+
+    const message = await MessageModel.findById(messageId);
+    if (!message) {
+      res.status(404).json({ success: false, message: "Message not found" });
+      return;
+    }
+
+    const isSender = String(message.senderId) === userId;
+    const isRecipient = String(message.recipientId) === userId;
+
+    if (!isSender && !isRecipient) {
+      res.status(403).json({
+        success: false,
+        message: "You are not authorized to access this private message attachment.",
+      });
+      return;
+    }
+
+    const fileUrl = (message as any).fileUrl || message.imageUrl;
+    if (!fileUrl) {
+      res.status(404).json({ success: false, message: "No attachment found on this message" });
+      return;
+    }
+
+    const rawFileName = (message as any).fileName || (message.imageUrl ? "photo_attachment.jpg" : "attachment");
+    const sanitizedFileName = rawFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileType = (message as any).fileType || (message.imageUrl ? "image/jpeg" : "application/octet-stream");
+
+    // If stored as base64 data URL, decode and stream securely
+    if (typeof fileUrl === "string" && fileUrl.startsWith("data:")) {
+      const match = fileUrl.match(/^data:([^;]+);base64,(.*)$/s);
+      if (match) {
+        const mime = match[1] || fileType;
+        const base64Data = match[2];
+        const buffer = Buffer.from(base64Data, "base64");
+
+        res.setHeader("Content-Type", mime);
+        res.setHeader("Content-Disposition", `attachment; filename="${sanitizedFileName}"`);
+        res.setHeader("Content-Length", buffer.length.toString());
+        res.end(buffer);
+        return;
+      }
+    }
+
+    res.json({
+      success: true,
+      fileName: sanitizedFileName,
+      fileType,
+      fileSize: (message as any).fileSize,
+      fileUrl,
     });
   } catch (error) {
     next(error);
@@ -3490,6 +3612,36 @@ router.post("/interviews/:id/save", requireAuth, async (req, res, next) => {
   }
 });
 
+router.patch("/interviews/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const item = await InterviewExperienceModel.findById(req.params.id);
+    if (!item) {
+      res.status(404).json({ success: false, message: "Interview experience not found" });
+      return;
+    }
+
+    if (String(item.authorId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own interview experiences" });
+      return;
+    }
+
+    const { company, role, outcome, rounds, tips, difficulty, packageOffered } = req.body;
+    if (company !== undefined && typeof company === "string" && company.trim()) item.company = company.trim();
+    if (role !== undefined && typeof role === "string" && role.trim()) item.role = role.trim();
+    if (outcome !== undefined && typeof outcome === "string" && outcome.trim()) item.outcome = outcome.trim();
+    if (rounds !== undefined && Array.isArray(rounds)) item.rounds = rounds;
+    if (tips !== undefined && typeof tips === "string" && tips.trim()) item.tips = tips.trim();
+    if (difficulty !== undefined && typeof difficulty === "string" && difficulty.trim()) item.difficulty = difficulty.trim();
+    if (packageOffered !== undefined) item.packageOffered = packageOffered ? String(packageOffered).trim() : null;
+
+    await item.save();
+    res.json({ success: true, message: "Interview experience updated", item });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.delete("/interviews/:id", requireAuth, async (req, res, next) => {
   try {
     const userId = getUserId(req);
@@ -3995,6 +4147,70 @@ router.post("/help-requests/:id/replies/:replyId/upvote", requireAuth, async (re
       isUpvoted: !alreadyUpvoted,
       upvotesCount: reply.upvotes.length,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/help-requests/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const item = await HelpRequestModel.findById(req.params.id);
+    if (!item) {
+      res.status(404).json({ success: false, message: "Help request not found" });
+      return;
+    }
+
+    if (String(item.authorId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own help requests" });
+      return;
+    }
+
+    const { title, description, category, urgency, tags } = req.body;
+    if (title !== undefined && typeof title === "string" && title.trim()) item.title = title.trim();
+    if (description !== undefined && typeof description === "string" && description.trim()) item.description = description.trim();
+    if (category !== undefined && typeof category === "string" && category.trim()) item.category = category.trim();
+    if (urgency !== undefined && typeof urgency === "string" && urgency.trim()) item.urgency = urgency.trim();
+    if (tags !== undefined && Array.isArray(tags)) item.tags = tags;
+
+    await item.save();
+    res.json({ success: true, message: "Help request updated", item });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/help-requests/:id/replies/:replyId", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { text } = req.body;
+    if (!text || typeof text !== "string" || !text.trim()) {
+      res.status(400).json({ success: false, message: "Answer text cannot be empty" });
+      return;
+    }
+
+    const item = await HelpRequestModel.findById(req.params.id);
+    if (!item) {
+      res.status(404).json({ success: false, message: "Help request not found" });
+      return;
+    }
+
+    const reply = (item.replies || []).find((r: any) => String(r._id) === req.params.replyId);
+    if (!reply) {
+      res.status(404).json({ success: false, message: "Answer not found" });
+      return;
+    }
+
+    if (String(reply.authorId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own answers" });
+      return;
+    }
+
+    reply.text = text.trim();
+    reply.updatedAt = new Date();
+    await item.save();
+
+    res.json({ success: true, message: "Answer updated successfully" });
   } catch (error) {
     next(error);
   }
@@ -5195,6 +5411,38 @@ router.post("/showcase/:id/comments", requireAuth, async (req, res, next) => {
       message: "Comment added!",
       commentsCount: project.comments.length,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/showcase/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const project = await ProjectShowcaseModel.findById(req.params.id);
+    if (!project) {
+      res.status(404).json({ success: false, message: "Showcase project not found" });
+      return;
+    }
+
+    if (String(project.authorId) !== userId) {
+      res.status(403).json({ success: false, message: "You can only edit your own projects" });
+      return;
+    }
+
+    const { title, tagline, description, category, techStack, githubUrl, liveDemoUrl, videoUrl, award } = req.body;
+    if (title !== undefined && typeof title === "string" && title.trim()) project.title = title.trim();
+    if (tagline !== undefined && typeof tagline === "string") project.tagline = tagline.trim();
+    if (description !== undefined && typeof description === "string" && description.trim()) project.description = description.trim();
+    if (category !== undefined && typeof category === "string" && category.trim()) project.category = category.trim();
+    if (techStack !== undefined && Array.isArray(techStack)) project.techStack = techStack;
+    if (githubUrl !== undefined) project.githubUrl = githubUrl ? String(githubUrl).trim() : null;
+    if (liveDemoUrl !== undefined) project.liveDemoUrl = liveDemoUrl ? String(liveDemoUrl).trim() : null;
+    if (videoUrl !== undefined) project.videoUrl = videoUrl ? String(videoUrl).trim() : null;
+    if (award !== undefined) project.award = award ? String(award).trim() : null;
+
+    await project.save();
+    res.json({ success: true, message: "Showcase project updated", project });
   } catch (error) {
     next(error);
   }

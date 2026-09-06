@@ -16,7 +16,8 @@ export interface WSMessagePayload {
     | 'mark_read'
     | 'messages_read'
     | 'add_reaction'
-    | 'reaction_updated';
+    | 'reaction_updated'
+    | 'error';
   data?: any;
 }
 
@@ -24,6 +25,7 @@ export function useWebSocketChat(activeRecipientId?: string) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingMap, setTypingMap] = useState<Record<string, boolean>>({});
+  const [socketError, setSocketError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
   const reconnectTimeoutRef = useRef<any>(null);
@@ -167,6 +169,12 @@ export function useWebSocketChat(activeRecipientId?: string) {
               });
               queryClient.invalidateQueries({ queryKey: ['messages'] });
             }
+          } else if (payload.type === 'error') {
+            const errorMsg = payload.data?.message;
+            if (errorMsg) {
+              setSocketError(errorMsg);
+              setTimeout(() => setSocketError(null), 5000);
+            }
           }
         } catch {
           // ignore
@@ -269,6 +277,7 @@ export function useWebSocketChat(activeRecipientId?: string) {
     isConnected,
     onlineUsers,
     typingMap,
+    socketError,
     sendDirectMessage,
     deleteDirectMessage,
     sendTyping,

@@ -2,7 +2,7 @@ import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Socket } from "node:net";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { MessageModel, UserModel } from "@workspace/db";
+import { ConnectionModel, MessageModel, UserModel } from "@workspace/db";
 import { logger } from "./logger";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -382,11 +382,11 @@ class WebSocketManager {
 
         // Security validation on file attachments
         if (cleanFileName) {
-          const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif)$/i;
+          const dangerousExtRegex = /\.(exe|bat|cmd|sh|bin|msi|vbs|wsf|scr|com|pif|jar|php|py|js|cgi|pl|ps1|dll|so|app|vbe|jse|hta)$/i;
           if (dangerousExtRegex.test(cleanFileName)) {
             client.send({
               type: "error" as any,
-              data: { message: "Executable and script attachments are not permitted.", recipientId: data.recipientId },
+              data: { message: "Executable and script attachments are not permitted for security.", recipientId: data.recipientId },
             });
             return;
           }
@@ -426,7 +426,7 @@ class WebSocketManager {
             client.send({
               type: "error" as any,
               data: {
-                message: "You must be connected with this user before sending messages.",
+                message: "You must be connected with this user before sending messages. Connect with this user to start messaging.",
                 recipientId: data.recipientId,
               },
             });
