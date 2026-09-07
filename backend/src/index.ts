@@ -35,8 +35,9 @@ async function startServer() {
   const server = http.createServer(app);
   wsManager.init(server);
 
-  server.listen(port, () => {
-    logger.info({ port }, `Server listening on http://localhost:${port} (with WebSockets enabled on /ws)`);
+  const host = process.env["HOST"] || "0.0.0.0";
+  server.listen(port, host, () => {
+    logger.info({ port, host }, `Server listening on http://${host}:${port} (with WebSockets enabled on /ws)`);
   });
 }
 

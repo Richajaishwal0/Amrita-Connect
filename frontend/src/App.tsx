@@ -2555,7 +2555,7 @@ function LoginPage() {
         onError: (err: any) => {
           setError(
             err?.message ||
-              'Those details did not work. Please check your password, reset it using the link below, or register if you haven\'t created this account yet.'
+            'Those details did not work. Please check your password, reset it using the link below, or register if you haven\'t created this account yet.'
           );
         },
       }
@@ -3525,6 +3525,62 @@ function PostCard({
         method: 'POST',
         body: JSON.stringify({ type }),
       }),
+    onMutate: async (newReactionType) => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousPosts = queryClient.getQueriesData({ queryKey: ['posts'] });
+
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        const updateItem = (p: PostItem) => {
+          if (p.id !== post.id) return p;
+          const currentReaction = p.userReaction || (p.isLiked ? 'like' : null);
+          const breakdown = { ...(p.reactionsBreakdown || {}) };
+          let newTotal = p.reactionsCount ?? p.likesCount ?? 0;
+          let nextReaction: PostReactionType | null = newReactionType;
+
+          if (currentReaction === newReactionType) {
+            // Toggling off
+            nextReaction = null;
+            newTotal = Math.max(0, newTotal - 1);
+            if (breakdown[newReactionType]) {
+              breakdown[newReactionType] = Math.max(0, breakdown[newReactionType] - 1);
+            }
+          } else {
+            // Adding or switching
+            if (currentReaction && breakdown[currentReaction]) {
+              breakdown[currentReaction] = Math.max(0, breakdown[currentReaction] - 1);
+            } else if (!currentReaction) {
+              newTotal += 1;
+            }
+            breakdown[newReactionType] = (breakdown[newReactionType] || 0) + 1;
+          }
+
+          return {
+            ...p,
+            userReaction: nextReaction,
+            isLiked: !!nextReaction,
+            reactionsCount: newTotal,
+            likesCount: newTotal,
+            reactionsBreakdown: breakdown,
+          };
+        };
+
+        if (Array.isArray(old)) return old.map(updateItem);
+        if (old.items && Array.isArray(old.items)) {
+          return { ...old, items: old.items.map(updateItem) };
+        }
+        return old;
+      });
+
+      return { previousPosts };
+    },
+    onError: (_err, _newReaction, context) => {
+      if (context?.previousPosts) {
+        context.previousPosts.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
     onSuccess: (updatedPost) => {
       if (updatedPost && updatedPost.id) {
         syncPostCache(updatedPost);
@@ -3536,14 +3592,17 @@ function PostCard({
 
   const saveMutation = useMutation({
     mutationFn: () => apiFetch<{ id: string; isSaved: boolean; savedCount: number }>(`/posts/${post.id}/save`, { method: 'POST' }),
-    onSuccess: (saveRes) => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousPosts = queryClient.getQueriesData({ queryKey: ['posts'] });
+
       queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
         if (!old) return old;
         const updateItem = (p: PostItem) => {
           if (p.id !== post.id) return p;
           return {
             ...p,
-            isSaved: saveRes.isSaved,
+            isSaved: !p.isSaved,
           };
         };
         if (Array.isArray(old)) return old.map(updateItem);
@@ -3552,6 +3611,17 @@ function PostCard({
         }
         return old;
       });
+
+      return { previousPosts };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousPosts) {
+        context.previousPosts.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSuccess: (saveRes) => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       if (typeof onRefresh === 'function') onRefresh();
     },
@@ -3583,8 +3653,59 @@ function PostCard({
         method: 'POST',
         body: JSON.stringify({ text }),
       }),
-    onSuccess: (updatedPost) => {
+    onMutate: async (newCommentText) => {
       setCommentText('');
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousPosts = queryClient.getQueriesData({ queryKey: ['posts'] });
+
+      const tempCommentId = `temp-${Date.now()}`;
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        const updateItem = (p: PostItem) => {
+          if (p.id !== post.id) return p;
+          const newComments = [
+            ...(p.comments || []),
+            {
+              id: tempCommentId,
+              text: newCommentText,
+              createdAt: new Date().toISOString(),
+              likes: [],
+              likesCount: 0,
+              isLiked: false,
+              isMyComment: true,
+              user: currentUser
+                ? {
+                  id: currentUser.id,
+                  fullName: currentUser.fullName,
+                  role: currentUser.role,
+                  avatarUrl: currentUser.avatarUrl,
+                }
+                : undefined,
+            },
+          ];
+          return {
+            ...p,
+            comments: newComments,
+            commentsCount: (p.commentsCount || 0) + 1,
+          };
+        };
+        if (Array.isArray(old)) return old.map(updateItem);
+        if (old.items && Array.isArray(old.items)) {
+          return { ...old, items: old.items.map(updateItem) };
+        }
+        return old;
+      });
+
+      return { previousPosts };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousPosts) {
+        context.previousPosts.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSuccess: (updatedPost) => {
       if (updatedPost && updatedPost.id) {
         syncPostCache(updatedPost);
       } else {
@@ -3598,6 +3719,43 @@ function PostCard({
   const commentLikeMutation = useMutation({
     mutationFn: (commentId: string) =>
       apiFetch<PostItem>(`/posts/${post.id}/comments/${commentId}/like`, { method: 'POST' }),
+    onMutate: async (commentId) => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousPosts = queryClient.getQueriesData({ queryKey: ['posts'] });
+
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+        if (!old) return old;
+        const updateItem = (p: PostItem) => {
+          if (p.id !== post.id || !p.comments) return p;
+          return {
+            ...p,
+            comments: p.comments.map((c) => {
+              if (c.id !== commentId) return c;
+              const willBeLiked = !c.isLiked;
+              return {
+                ...c,
+                isLiked: willBeLiked,
+                likesCount: willBeLiked ? (c.likesCount || 0) + 1 : Math.max(0, (c.likesCount || 1) - 1),
+              };
+            }),
+          };
+        };
+        if (Array.isArray(old)) return old.map(updateItem);
+        if (old.items && Array.isArray(old.items)) {
+          return { ...old, items: old.items.map(updateItem) };
+        }
+        return old;
+      });
+
+      return { previousPosts };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousPosts) {
+        context.previousPosts.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
     onSuccess: (updatedPost) => {
       if (updatedPost && updatedPost.id) {
         syncPostCache(updatedPost);
@@ -3948,7 +4106,7 @@ function PostCard({
             }}
           >
             {showPicker && (
-              <div className="absolute -top-13 left-0 z-30 flex items-center gap-1 rounded-full border border-border bg-card/95 px-3 py-1.5 shadow-2xl backdrop-blur-md animate-scale-in">
+              <div className="absolute -top-13 left-0 z-30 flex items-center gap-1.5 rounded-full border border-border/80 bg-card/95 px-3 py-1.5 shadow-2xl backdrop-blur-md animate-float-picker">
                 {(Object.entries(REACTION_CONFIG) as [PostReactionType, typeof REACTION_CONFIG.like][]).map(([type, conf]) => {
                   const isSelected = userReaction === type;
                   return (
@@ -3959,11 +4117,14 @@ function PostCard({
                         reactMutation.mutate(type);
                         setShowPicker(false);
                       }}
-                      className="group/btn relative grid h-9 w-9 place-items-center rounded-full hover:scale-130 transition-transform cursor-pointer"
+                      className={cx(
+                        "group/btn relative grid h-9 w-9 place-items-center rounded-full transition-transform active:scale-90 hover:scale-130 cursor-pointer",
+                        isSelected && "bg-secondary scale-110"
+                      )}
                       title={conf.label}
                     >
-                      <span className="text-xl leading-none select-none">{conf.emoji}</span>
-                      <span className="pointer-events-none absolute -top-7 rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white opacity-0 group-hover/btn:opacity-100 transition-opacity backdrop-blur-xs">
+                      <span className="text-xl leading-none select-none transition-transform duration-150">{conf.emoji}</span>
+                      <span className="pointer-events-none absolute -top-7 rounded-md bg-black/85 px-2 py-0.5 text-[10px] font-bold text-white opacity-0 group-hover/btn:opacity-100 transition-opacity backdrop-blur-xs whitespace-nowrap shadow-md">
                         {conf.label}
                       </span>
                     </button>
@@ -3976,15 +4137,16 @@ function PostCard({
               type="button"
               data-testid={`button-like-post-${post.id}`}
               onClick={() => reactMutation.mutate(userReaction || 'like')}
-              disabled={reactMutation.isPending}
               className={cx(
-                'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 cursor-pointer',
+                'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-[0.93] cursor-pointer select-none',
                 currentReactionConf
                   ? `${currentReactionConf.bg} ${currentReactionConf.color}`
                   : 'hover:bg-secondary/70 hover:text-foreground'
               )}
             >
-              <span className="text-sm select-none">{currentReactionConf?.emoji || '👍'}</span>
+              <span key={userReaction || 'default-like'} className={cx("text-sm select-none inline-block", userReaction && "animate-heart-pop")}>
+                {currentReactionConf?.emoji || '👍'}
+              </span>
               <span>{currentReactionConf?.label || 'Like'}</span>
             </button>
           </div>
@@ -5096,7 +5258,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
   useEffect(() => {
     if (activeRecipientId) {
       markAsRead(activeRecipientId);
-      apiFetch(`/messages/${activeRecipientId}/read`, { method: 'PATCH' }).catch(() => {});
+      apiFetch(`/messages/${activeRecipientId}/read`, { method: 'PATCH' }).catch(() => { });
     }
   }, [activeRecipientId, threadData?.messages?.length, markAsRead]);
 
@@ -5818,8 +5980,8 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                                   isDeleted
                                     ? 'bg-secondary/60 text-muted-foreground border border-dashed border-border italic'
                                     : msg.isMine
-                                    ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white rounded-tr-xs font-medium shadow-orange-500/20'
-                                    : 'bg-card text-foreground border border-border/80 rounded-tl-xs shadow-xs'
+                                      ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white rounded-tr-xs font-medium shadow-orange-500/20'
+                                      : 'bg-card text-foreground border border-border/80 rounded-tl-xs shadow-xs'
                                 )}
                               >
                                 {isDeleted ? (
@@ -11557,6 +11719,31 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
   const posts = postsData?.items ?? [];
 
+  // Real Database Queries for Live Sidebar Widgets
+  const { data: dashboardSummary } = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: () => apiFetch<any>('/dashboard/summary'),
+    staleTime: 30000,
+  });
+
+  const { data: dbEventsData } = useQuery({
+    queryKey: ['sidebar-events'],
+    queryFn: () => apiFetch<{ items: any[]; total: number }>('/events?pageSize=4'),
+    staleTime: 45000,
+  });
+
+  const { data: dbOpportunitiesData } = useQuery({
+    queryKey: ['sidebar-opportunities'],
+    queryFn: () => apiFetch<{ items: any[]; total: number }>('/opportunities?pageSize=4'),
+    staleTime: 45000,
+  });
+
+  const { data: dbMentorsData } = useQuery({
+    queryKey: ['sidebar-alumni-mentors'],
+    queryFn: () => apiFetch<{ items: PublicUser[]; total: number }>('/users?role=alumni&pageSize=4'),
+    staleTime: 45000,
+  });
+
   // Instant reactive client-side post filtering
   const filteredPosts = useMemo(() => {
     let list = posts;
@@ -11877,127 +12064,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
               </div>
             )}
 
-            {/* Optimized Clean Category, Campus & In-Feed Search Filter Bar */}
-            <div className="rounded-2xl border border-border/80 bg-card/90 p-3 shadow-xs backdrop-blur-sm space-y-2.5">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-                {/* Search input with live upper-side floating dropdown */}
-                <div ref={feedSearchContainerRef} className="relative flex-1">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={search}
-                    onFocus={() => setShowFeedSearchDropdown(true)}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setShowFeedSearchDropdown(true);
-                    }}
-                    placeholder="Search feed by keywords, author name, #tags..."
-                    className="w-full rounded-xl border border-border/80 bg-secondary/40 py-2 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-orange-500 focus:bg-background transition-all shadow-inner"
-                  />
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('');
-                        setShowFeedSearchDropdown(false);
-                      }}
-                      className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-secondary cursor-pointer"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-
-                  {/* Upper-side live floating autocomplete dropdown (LinkedIn Style) */}
-                  {showFeedSearchDropdown && search.trim().length >= 1 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border border-border/80 bg-card/98 shadow-2xl backdrop-blur-xl p-2.5 space-y-2 animate-scale-in">
-                      <div className="flex items-center justify-between px-2 pt-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                          <Users className="h-3 w-3 text-orange-500" />
-                          <span>People Matching "{search}"</span>
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-semibold">
-                          {matchingPeople.length} found
-                        </span>
-                      </div>
-
-                      {matchingPeople.length === 0 ? (
-                        <div className="p-2.5 text-center text-xs text-muted-foreground">
-                          No people matching "{search}"
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border/60">
-                          {matchingPeople.map((person) => (
-                            <Link
-                              key={person.id}
-                              href={`/people/${person.id}`}
-                              onClick={() => setShowFeedSearchDropdown(false)}
-                              className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-secondary/70 transition-all group"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <Avatar user={person} size="sm" className="ring-1 ring-border group-hover:ring-orange-500/40 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
-                                      {person.fullName}
-                                    </span>
-                                    {person.verified && <Check className="h-3 w-3 text-orange-500 shrink-0" />}
-                                    <span className="rounded-md bg-secondary px-1.5 py-0.2 text-[9px] font-extrabold text-muted-foreground uppercase">
-                                      {roleLabels[person.role] ?? person.role}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-muted-foreground truncate">
-                                    {person.headline || `${person.department || 'Amrita'} · ${person.campus || ''}`}
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="shrink-0 rounded-lg bg-orange-500/15 text-orange-600 dark:text-orange-400 px-2 py-1 text-[11px] font-bold group-hover:bg-orange-500 group-hover:text-white transition-all flex items-center gap-0.5">
-                                <span>Profile</span>
-                                <ChevronRight className="h-3 w-3" />
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Campus Filter Dropdown & Refresh Button */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="relative shrink-0">
-                    <select
-                      value={selectedCampus}
-                      onChange={(e) => setSelectedCampus(e.target.value)}
-                      className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-2 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
-                    >
-                      <option value="">All Campuses</option>
-                      {campuses.map((c) => (
-                        <option key={c} value={c}>
-                          Amrita {c}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      refetchPosts();
-                      queryClient.invalidateQueries({ queryKey: ['posts'] });
-                    }}
-                    disabled={postsFetching}
-                    title="Refresh community feed"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/50 px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0 active:scale-95 disabled:opacity-60 shadow-2xs"
-                  >
-                    <RotateCw className={cx('h-3.5 w-3.5 text-orange-500', postsFetching && 'animate-spin')} />
-                    <span className="hidden sm:inline font-bold">Refresh</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Clean Category Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
+            {/* Clean Category Pills & Campus Filter Toolbar */}
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-3.5 shadow-xs backdrop-blur-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-1 min-w-0">
                 {[
                   { id: '', label: 'All Feed' },
                   { id: 'Blog', label: 'Blogs' },
@@ -12015,9 +12085,9 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                       type="button"
                       onClick={() => setSelectedCategory(cat.id)}
                       className={cx(
-                        'rounded-full px-3.5 py-1.5 text-xs transition-all shrink-0 font-medium cursor-pointer',
+                        'rounded-full px-3.5 py-1.5 text-xs transition-all shrink-0 font-semibold cursor-pointer active:scale-95 shadow-2xs',
                         isSelected
-                          ? 'bg-orange-500 text-white font-bold shadow-xs'
+                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-orange-500/20'
                           : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'
                       )}
                     >
@@ -12025,6 +12095,39 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Campus Filter Dropdown & Refresh Button */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <div className="relative shrink-0">
+                  <select
+                    value={selectedCampus}
+                    onChange={(e) => setSelectedCampus(e.target.value)}
+                    className="appearance-none rounded-xl border border-border/80 bg-secondary/50 pl-3.5 pr-8 py-1.5 text-xs font-semibold text-foreground outline-none shadow-2xs hover:bg-secondary/80 transition-colors cursor-pointer"
+                  >
+                    <option value="">All Campuses</option>
+                    {campuses.map((c) => (
+                      <option key={c} value={c}>
+                        Amrita {c}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    refetchPosts();
+                    queryClient.invalidateQueries({ queryKey: ['posts'] });
+                  }}
+                  disabled={postsFetching}
+                  title="Refresh community feed"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-all cursor-pointer shrink-0 active:scale-95 disabled:opacity-60 shadow-2xs"
+                >
+                  <RotateCw className={cx('h-3.5 w-3.5 text-orange-500', postsFetching && 'animate-spin')} />
+                  <span className="hidden sm:inline font-bold">Refresh</span>
+                </button>
               </div>
             </div>
 
@@ -12119,98 +12222,332 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             </div>
           </div>
 
-          {/* Right Sidebar (Desktop only) */}
+          {/* Right Sidebar (Desktop only) - High Utility Live Database Widgets */}
           <div className="hidden lg:flex flex-col gap-5 sticky top-6">
 
-            {/* 1. Search & Trending Topics Card */}
+            {/* 1. Live Campus Deadlines & Events Tracker (Fetched from Database) */}
             <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3.5">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search posts or #tags..."
-                  className="w-full rounded-xl border border-input bg-secondary/30 py-2 pl-9 pr-8 text-xs outline-none focus:border-orange-500 shadow-2xs"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="absolute right-2.5 top-2.5 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Popular Topics
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {trendingTags.map((tag) => {
-                    const isActive = search === tag;
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => setSearch(isActive ? '' : tag)}
-                        className={cx(
-                          'rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all',
-                          isActive
-                            ? 'bg-orange-500 text-white font-bold'
-                            : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
-                        )}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
+              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <CalendarDays className="h-4 w-4 text-orange-500" />
+                  <h4 className="text-xs font-extrabold text-foreground">
+                    Campus Deadlines & Events
+                  </h4>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                    Live
+                  </span>
                 </div>
               </div>
+
+              <div className="space-y-2.5">
+                {(() => {
+                  // Merge live database events and opportunities
+                  const liveDbItems: Array<{
+                    id: string;
+                    title: string;
+                    sub: string;
+                    badge: string;
+                    badgeColor: string;
+                    tag: string;
+                    icon: any;
+                    linkUrl?: string;
+                  }> = [];
+
+                  if (dbEventsData?.items && dbEventsData.items.length > 0) {
+                    dbEventsData.items.slice(0, 2).forEach((ev: any) => {
+                      let badge = 'Upcoming';
+                      if (ev.date) {
+                        try {
+                          const d = new Date(ev.date);
+                          const diff = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                          badge = diff > 0 && diff <= 7 ? `${diff}d left` : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        } catch {
+                          badge = 'Upcoming';
+                        }
+                      }
+                      liveDbItems.push({
+                        id: String(ev.id || ev._id),
+                        title: ev.title,
+                        sub: ev.organizer ? `${ev.organizer} · ${ev.campus || 'Amrita'}` : ev.campus || 'Amrita Campus',
+                        badge,
+                        badgeColor: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
+                        tag: `#${ev.campus || 'Events'}`,
+                        icon: CalendarDays,
+                        linkUrl: ev.registrationUrl,
+                      });
+                    });
+                  }
+
+                  if (dbOpportunitiesData?.items && dbOpportunitiesData.items.length > 0) {
+                    dbOpportunitiesData.items.slice(0, 2).forEach((op: any) => {
+                      let badge = 'Open';
+                      if (op.deadline) {
+                        try {
+                          const d = new Date(op.deadline);
+                          const diff = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                          badge = diff > 0 && diff <= 7 ? `${diff}d left` : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        } catch {
+                          badge = 'Active';
+                        }
+                      }
+                      liveDbItems.push({
+                        id: String(op.id || op._id),
+                        title: op.title,
+                        sub: op.organization ? `${op.organization} · ${op.category || 'Career'}` : op.category || 'Placement',
+                        badge,
+                        badgeColor: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+                        tag: '#Placements',
+                        icon: Briefcase,
+                        linkUrl: op.applicationUrl,
+                      });
+                    });
+                  }
+
+                  // Default curated Amrita deadlines if database items are fewer than 3
+                  const fallbackEvents = [
+                    {
+                      id: 'sih-curated',
+                      title: 'SIH 2026 Internal Hackathon',
+                      sub: 'Team registration & synopsis',
+                      badge: '3 Days Left',
+                      badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+                      tag: '#SIH2026',
+                      icon: Trophy,
+                    },
+                    {
+                      id: 'placement-curated',
+                      title: 'Microsoft & Cisco Drives',
+                      sub: 'SDE & Cloud shortlist release',
+                      badge: 'Sep 18',
+                      badgeColor: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+                      tag: '#Placements',
+                      icon: Briefcase,
+                    },
+                    {
+                      id: 'hut-curated',
+                      title: 'HuT Labs AI Fellowship',
+                      sub: 'Robotics & CV lab openings',
+                      badge: 'Oct 02',
+                      badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+                      tag: '#Research',
+                      icon: Rocket,
+                    },
+                  ];
+
+                  const displayItems = liveDbItems.length >= 2 ? liveDbItems.slice(0, 4) : [...liveDbItems, ...fallbackEvents].slice(0, 4);
+
+                  return displayItems.map((event) => {
+                    const Icon = event.icon;
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => {
+                          if (event.linkUrl) {
+                            window.open(event.linkUrl, '_blank');
+                          } else {
+                            setSearch(search === event.tag ? '' : event.tag);
+                          }
+                        }}
+                        className="group flex w-full items-start justify-between gap-2 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 text-left transition-all cursor-pointer hover:border-orange-500/40"
+                      >
+                        <div className="flex items-start gap-2 min-w-0">
+                          <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-500">
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                              {event.title}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground truncate">{event.sub}</p>
+                          </div>
+                        </div>
+                        <span className={cx('shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider', event.badgeColor)}>
+                          {event.badge}
+                        </span>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
             </div>
 
-            {/* 2. Discover Amrita Members Shortcut */}
-            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-foreground">
-                  Amrita Directory
+            {/* 2. Top Senior Mentors & Verified Alumni (Live Database Records) */}
+            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-orange-500" />
+                  <span>Featured Senior Mentors</span>
                 </h4>
-                <span className="text-[10px] text-muted-foreground font-medium">7 Campuses</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('discover');
+                    setNetworkTab('all');
+                  }}
+                  className="text-[11px] font-bold text-orange-500 hover:text-orange-600 hover:underline cursor-pointer"
+                >
+                  View All
+                </button>
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Find alumni mentors, student peers, and faculty across departments.
-              </p>
+              <div className="space-y-2.5">
+                {(() => {
+                  const dbAlumni = dbMentorsData?.items || [];
+                  if (dbAlumni.length > 0) {
+                    return dbAlumni.slice(0, 3).map((mentor) => (
+                      <Link
+                        key={mentor.id}
+                        href={`/profile/${mentor.id}`}
+                        className="group flex items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 transition-all hover:border-orange-500/40 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {mentor.avatarUrl ? (
+                            <img
+                              src={mentor.avatarUrl}
+                              alt={mentor.fullName}
+                              className="h-9 w-9 rounded-full object-cover border border-orange-500/30 shrink-0"
+                            />
+                          ) : (
+                            <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white font-black text-xs shrink-0">
+                              {mentor.fullName?.slice(0, 2).toUpperCase() || 'AM'}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="text-xs font-extrabold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                                {mentor.fullName}
+                              </p>
+                              <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
+                            </div>
+                            <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 truncate">
+                              {mentor.headline || (mentor as any).jobRole || `${mentor.department || 'Alumni'} Mentor`}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground truncate">
+                              {mentor.campus ? `Amrita ${mentor.campus}` : 'Amrita University'} · {mentor.department || 'Alumni'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                          Profile
+                        </span>
+                      </Link>
+                    ));
+                  }
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveView('discover');
-                  setNetworkTab('all');
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-secondary/50 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-all active:scale-95"
-              >
-                <Users className="h-3.5 w-3.5 text-orange-500" />
-                <span>Explore Directory</span>
-              </button>
+                  // Fallback to placed seniors directory
+                  return PLACED_SENIORS.slice(0, 3).map((senior) => (
+                    <Link
+                      key={senior.slug}
+                      href={`/seniors/${senior.slug}`}
+                      className="group flex items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 transition-all hover:border-orange-500/40 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={senior.avatar}
+                          alt={senior.name}
+                          className="h-9 w-9 rounded-full object-cover border border-orange-500/30 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-extrabold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                              {senior.name}
+                            </p>
+                            <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
+                          </div>
+                          <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 truncate">
+                            {senior.role}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground truncate">
+                            {senior.campus} · {senior.department}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                        Profile
+                      </span>
+                    </Link>
+                  ));
+                })()}
+              </div>
             </div>
 
-            {/* 3. Invite Batchmates */}
-            <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-orange-500/10 via-card to-card p-4 shadow-2xs flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-foreground">Invite Batchmates</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Grow your campus network</p>
+            {/* 3. University Resource Quick Vault & Database Stats */}
+            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                  <Zap className="h-4 w-4 text-orange-500" />
+                  <span>Campus Quick Vault</span>
+                </h4>
+                {dashboardSummary?.peopleCount ? (
+                  <span className="text-[10px] font-bold text-muted-foreground">
+                    {dashboardSummary.peopleCount} members
+                  </span>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowInviteModal(true)}
-                className="rounded-xl border border-border/80 bg-card p-2 text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all shrink-0"
-                title="Invite to Amrita Connect"
-              >
-                <UserPlus className="h-4 w-4 text-orange-500" />
-              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSearch('#Academics')}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                >
+                  <BookOpen className="h-4 w-4 text-blue-500" />
+                  <span className="text-xs font-bold text-foreground">PyQ & Notes</span>
+                  <span className="text-[9px] text-muted-foreground">Study Material</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('Interview')}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                >
+                  <BriefcaseBusiness className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs font-bold text-foreground">Interview Logs</span>
+                  <span className="text-[9px] text-muted-foreground">Company archive</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('Showcase')}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                >
+                  <Code className="h-4 w-4 text-purple-500" />
+                  <span className="text-xs font-bold text-foreground">HuT Projects</span>
+                  <span className="text-[9px] text-muted-foreground">Research collabs</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenCreateWithCategory('General');
+                  }}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                >
+                  <Users2 className="h-4 w-4 text-orange-500" />
+                  <span className="text-xs font-bold text-foreground">Find Team</span>
+                  <span className="text-[9px] text-muted-foreground">Hackathon squad</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Multi-Campus Network Pulse */}
+            <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-orange-500/10 via-card to-card p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-orange-500/15 text-orange-500">
+                <Globe className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-foreground">7 Campuses Live Network</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {dashboardSummary?.peopleCount ? `${dashboardSummary.peopleCount} verified students & faculty` : 'Coimbatore · Amritapuri · Bengaluru · Kochi · Chennai'}
+                </p>
+              </div>
             </div>
 
           </div>
@@ -12645,9 +12982,9 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                               ? 'Share an opportunity, hiring alert, internship or placement preparation tip...'
                               : createCategory === 'Project'
                                 ? 'Describe your project, stack, architecture, live demo link or GitHub repository...'
-                              : createCategory === 'Question'
-                                ? 'Ask a question to students, professors, or alumni across campuses...'
-                                : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
+                                : createCategory === 'Question'
+                                  ? 'Ask a question to students, professors, or alumni across campuses...'
+                                  : 'What do you want to talk about? (e.g. project update, opportunity, question)...'
                       }
                       rows={5}
                       className="w-full resize-none rounded-xl border border-transparent bg-transparent p-1 text-sm sm:text-base outline-none focus:ring-0 leading-relaxed placeholder:text-muted-foreground/70"
@@ -12940,11 +13277,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                           if (!createImageUrl) imageInputRef.current?.click();
                           else setActiveAttachmentTab('photo');
                         }}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                          createImageUrl || activeAttachmentTab === 'photo'
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${createImageUrl || activeAttachmentTab === 'photo'
                             ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
+                          }`}
                         title="Attach Photo"
                       >
                         <Image className="h-4 w-4 text-blue-500" />
@@ -12957,11 +13293,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                           if (!createDocumentUrl) docInputRef.current?.click();
                           else setActiveAttachmentTab('document');
                         }}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                          createDocumentUrl || activeAttachmentTab === 'document'
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${createDocumentUrl || activeAttachmentTab === 'document'
                             ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
+                          }`}
                         title="Attach PDF or Document"
                       >
                         <FileText className="h-4 w-4 text-red-500" />
@@ -12973,11 +13308,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                         onClick={() =>
                           setActiveAttachmentTab((prev) => (prev === 'link' ? 'none' : 'link'))
                         }
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                          createLinkUrl || activeAttachmentTab === 'link'
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${createLinkUrl || activeAttachmentTab === 'link'
                             ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
+                          }`}
                         title="Add Web Link"
                       >
                         <Link2 className="h-4 w-4 text-indigo-500" />
@@ -12989,11 +13323,10 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                         onClick={() =>
                           setActiveAttachmentTab((prev) => (prev === 'milestone' ? 'none' : 'milestone'))
                         }
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                          activeAttachmentTab === 'milestone'
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${activeAttachmentTab === 'milestone'
                             ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
+                          }`}
                         title="Celebrate Milestone"
                       >
                         <PartyPopper className="h-4 w-4 text-amber-500" />
@@ -13959,10 +14292,10 @@ function MentorshipPage() {
             tab === 'sent'
               ? 'No sent mentorship requests'
               : tab === 'received'
-              ? 'No incoming mentorship requests'
-              : filter === 'all'
-              ? 'No mentorship requests yet'
-              : `No ${filter} requests`
+                ? 'No incoming mentorship requests'
+                : filter === 'all'
+                  ? 'No mentorship requests yet'
+                  : `No ${filter} requests`
           }
           detail={
             tab === 'sent'
@@ -17322,28 +17655,28 @@ function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
                   <div className={cx(
                     'grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-sm shadow-2xs border transition-transform group-hover:scale-105',
                     isMentorship ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25' :
-                    isConnection ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25' :
-                    isEvent ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/25' :
-                    isCollab ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/25' :
-                    isResearch ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/25' :
-                    isHelp ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' :
-                    isBuddy ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25' :
-                    isComment ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/25' :
-                    isLike ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/25' :
-                    isSave ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/25' :
-                    'bg-secondary text-muted-foreground border-border/80'
+                      isConnection ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25' :
+                        isEvent ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/25' :
+                          isCollab ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/25' :
+                            isResearch ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/25' :
+                              isHelp ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' :
+                                isBuddy ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25' :
+                                  isComment ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/25' :
+                                    isLike ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/25' :
+                                      isSave ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/25' :
+                                        'bg-secondary text-muted-foreground border-border/80'
                   )}>
                     {isMentorship ? <GraduationCap className="h-4 w-4" /> :
-                     isConnection ? <UserCheck className="h-4 w-4" /> :
-                     isEvent ? <CalendarDays className="h-4 w-4" /> :
-                     isCollab ? <Users className="h-4 w-4" /> :
-                     isResearch ? <Sparkles className="h-4 w-4" /> :
-                     isHelp ? <CheckCircle2 className="h-4 w-4" /> :
-                     isBuddy ? <Compass className="h-4 w-4" /> :
-                     isComment ? <MessageSquare className="h-4 w-4" /> :
-                     isLike ? <ThumbsUp className="h-4 w-4" /> :
-                     isSave ? <Bookmark className="h-4 w-4" /> :
-                     <Bell className="h-4 w-4" />}
+                      isConnection ? <UserCheck className="h-4 w-4" /> :
+                        isEvent ? <CalendarDays className="h-4 w-4" /> :
+                          isCollab ? <Users className="h-4 w-4" /> :
+                            isResearch ? <Sparkles className="h-4 w-4" /> :
+                              isHelp ? <CheckCircle2 className="h-4 w-4" /> :
+                                isBuddy ? <Compass className="h-4 w-4" /> :
+                                  isComment ? <MessageSquare className="h-4 w-4" /> :
+                                    isLike ? <ThumbsUp className="h-4 w-4" /> :
+                                      isSave ? <Bookmark className="h-4 w-4" /> :
+                                        <Bell className="h-4 w-4" />}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -17869,30 +18202,30 @@ function LinkedInImportModal({
       const sampleExperiences = (user as any).experiences?.length
         ? (user as any).experiences
         : [
-            {
-              title: user.jobRole || 'Research Scholar / Specialist',
-              company: user.company || 'Amrita Center for Computational Engineering & Networking',
-              location: `${user.campus} Campus, India`,
-              startDate: '2023-08',
-              endDate: '',
-              current: true,
-              description: 'Conducting advanced research in distributed intelligent systems and applied algorithms.',
-            },
-          ];
+          {
+            title: user.jobRole || 'Research Scholar / Specialist',
+            company: user.company || 'Amrita Center for Computational Engineering & Networking',
+            location: `${user.campus} Campus, India`,
+            startDate: '2023-08',
+            endDate: '',
+            current: true,
+            description: 'Conducting advanced research in distributed intelligent systems and applied algorithms.',
+          },
+        ];
 
       const sampleEducation = (user as any).education?.length
         ? (user as any).education
         : [
-            {
-              school: 'Amrita Vishwa Vidyapeetham',
-              degree: 'Bachelor of Technology',
-              fieldOfStudy: user.department || 'Computer Science & Engineering',
-              startYear: user.graduationYear ? user.graduationYear - 4 : 2022,
-              endYear: user.graduationYear || 2026,
-              grade: 'First Class with Distinction',
-              activities: 'ACM Student Chapter, bi0s Cyber Security Club',
-            },
-          ];
+          {
+            school: 'Amrita Vishwa Vidyapeetham',
+            degree: 'Bachelor of Technology',
+            fieldOfStudy: user.department || 'Computer Science & Engineering',
+            startYear: user.graduationYear ? user.graduationYear - 4 : 2022,
+            endYear: user.graduationYear || 2026,
+            grade: 'First Class with Distinction',
+            activities: 'ACM Student Chapter, bi0s Cyber Security Club',
+          },
+        ];
 
       const importedSkills = Array.from(
         new Set([
