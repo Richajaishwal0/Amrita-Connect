@@ -2,14 +2,62 @@
 # Environment Variables & Secrets (CRITICAL: Never commit credentials)
 # ==============================================================================
 .env
-.env.local
-.env.development
-.env.test
-.env.production
-.env.*.local
+.env.*
+*.env
+!.env.example
+!.env.template
+
+# Firebase Configuration & Admin SDK Secrets
+firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
+*service-account*.json
+*service_account*.json
+google-services.json
+GoogleService-Info.plist
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# SSL / TLS Certificates & Private Keys
 *.pem
 *.key
 *.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+*.asc
+*.gpg
+*.keystore
+*.jks
+
+# Cloud & Third-Party Credentials
+client_secret*.json
+credentials.json
+*credential*.json
+*credentials*.json
+.aws/
+.gcloud/
+gcloud/
+
+# SSH Keys & Auth Tokens
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.token
+token.json
+.auth/
+jwt*.key
+
+# Database Dumps & Local Data
+*.sqlite
+*.sqlite3
+*.db
+dump.rdb
+*.dump
+*.seed.sql
 
 # ==============================================================================
 # Dependencies
