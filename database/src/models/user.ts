@@ -24,8 +24,8 @@ export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   fullName: string;
   handle?: string | null;
-  email: string;
-  passwordHash: string;
+  passwordHash?: string;
+  firebaseUid?: string | null;
   role: "student" | "alumni" | "faculty" | "researcher" | "admin";
   campus: string;
   department: string;
@@ -55,7 +55,8 @@ const UserSchema = new Schema<IUser>(
     fullName: { type: String, required: true, trim: true },
     handle: { type: String, unique: true, sparse: true, lowercase: true, trim: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, default: "" },
+    firebaseUid: { type: String, sparse: true, index: true, default: null },
     role: {
       type: String,
       required: true,

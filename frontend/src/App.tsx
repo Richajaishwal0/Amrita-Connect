@@ -5,7 +5,7 @@ import {
   Building2, CalendarDays, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
   Code, Compass, Copy, CornerDownRight, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Info, Layers,
   Lightbulb, Link2, Linkedin, Github, LoaderCircle, Lock, LogIn, LogOut, Mail, MapPin, Menu, MessageSquare, Moon,
-  MoreHorizontal, Network, PanelLeft, PanelLeftClose, PanelLeftOpen, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, RotateCw, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
+  MoreHorizontal, MoreVertical, Network, PanelLeft, PanelLeftClose, PanelLeftOpen, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, RotateCw, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
   Star, Sun, Terminal, ThumbsUp, Trash2, TrendingUp, Trophy, Upload, UserCheck, UserCircle, UserPlus, UserRoundPlus, Users, Users2, UserX, Video, X, Zap,
 } from 'lucide-react';
 import { useWebSocketChat } from './hooks/useWebSocketChat';
@@ -36,6 +36,14 @@ import maneeshaPhoto from '@photos/maneesha.png';
 import santikumarPhoto from '@photos/santikumar.png';
 import jayakumarPhoto from '@photos/jayakumar.png';
 import krishnakumarPhoto from '@photos/krishnakumar.png';
+import {
+  firebaseLogin,
+  firebaseRegister,
+  firebaseSendPasswordReset,
+  firebaseSignInWithGoogle,
+  firebaseLogout,
+  getFirebaseErrorMessage,
+} from './lib/firebase';
 
 const queryClient = new QueryClient();
 setAuthTokenGetter(() => typeof localStorage === 'undefined' ? null : localStorage.getItem('amrita_token'));
@@ -43,6 +51,7 @@ function setAuthSession(token: string) {
   localStorage.setItem('amrita_token', token);
 }
 function clearAuthSession() {
+  firebaseLogout().catch(() => {});
   localStorage.removeItem('amrita_token');
   queryClient.clear();
 }
@@ -2419,48 +2428,30 @@ function AuthLayout({ children, title, detail, mode }: { children: React.ReactNo
 function ResetPasswordDialog({
   initialEmail,
   onClose,
-  onSuccess,
 }: {
   initialEmail?: string;
   onClose: () => void;
-  onSuccess: (token: string) => void;
 }) {
   const [email, setEmail] = useState(initialEmail || '');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSent, setIsSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!email.trim()) {
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
       setError('Please enter your registered email address.');
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters long.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match. Please re-enter.');
       return;
     }
 
     setIsPending(true);
     try {
-      const res = await apiFetch<{ success: boolean; token: string; message: string }>('/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: email.trim(),
-          newPassword,
-        }),
-      });
-      if (res.token) {
-        onSuccess(res.token);
-      }
+      await firebaseSendPasswordReset(cleanEmail);
+      setIsSent(true);
     } catch (err: any) {
-      setError(err?.message || 'Failed to reset password. Please verify your email.');
+      setError(getFirebaseErrorMessage(err));
     } finally {
       setIsPending(false);
     }
@@ -2472,157 +2463,277 @@ function ResetPasswordDialog({
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div>
             <h3 className="text-base font-bold text-foreground">Reset Your Password</h3>
-            <p className="text-xs text-muted-foreground">Enter your registered email and choose a new password.</p>
+            <p className="text-xs text-muted-foreground">Secure password recovery via Firebase Authentication.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Field
-            id="reset-email"
-            label="Registered email address"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your.name@amrita.edu"
-            required
-          />
-
-          <Field
-            id="reset-new-password"
-            label="New password (min 8 characters)"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Choose a strong password"
-            minLength={8}
-            required
-          />
-
-          <Field
-            id="reset-confirm-password"
-            label="Confirm new password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Re-type your new password"
-            minLength={8}
-            required
-          />
-
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending} className="text-xs font-bold">
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Update Password & Sign In
-            </Button>
+        {isSent ? (
+          <div className="space-y-4 py-2 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Mail className="h-7 w-7" />
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-base font-bold text-foreground">Check your inbox!</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                We have sent a secure password reset link to <strong className="text-foreground">{email}</strong>.
+              </p>
+              <div className="rounded-xl bg-muted/60 p-3.5 text-left text-xs text-muted-foreground space-y-1.5 border border-border/50">
+                <p className="font-semibold text-foreground">Next steps:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Open the email sent from Amrita Connect (Firebase Auth).</li>
+                  <li>Click the password reset link to enter your new password.</li>
+                  <li>Return here and sign in with your updated password.</li>
+                </ol>
+                <p className="text-[11px] text-muted-foreground/80 pt-1">
+                  💡 Didn't receive the email? Check your Spam or Promotions folder.
+                </p>
+              </div>
+            </div>
+            <div className="pt-2">
+              <Button type="button" onClick={onClose} className="w-full font-bold cursor-pointer">
+                Got it, Return to Sign In
+              </Button>
+            </div>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Enter your registered university or personal email. Firebase will send you a verified link to safely update your password.
+            </p>
+
+            {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+            <Field
+              id="reset-email"
+              label="Registered email address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.name@amrita.edu"
+              required
+            />
+
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <Button type="button" variant="quiet" onClick={onClose} className="text-xs cursor-pointer">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending} className="text-xs font-bold cursor-pointer">
+                {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Send Reset Link
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
 }
 
 function LoginPage() {
-  const login = useLogin();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isPending, setIsPending] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const handleLoginSuccess = (token: string) => {
+    setAuthSession(token);
+    queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') || '/feed';
+    setLocation(redirect);
+  };
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
-    login.mutate(
-      { data: { email: email.trim(), password } },
-      {
-        onSuccess: (data) => {
-          setAuthSession(data.token);
-          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-          const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/feed';
-          setLocation(redirect);
-        },
-        onError: (err: any) => {
-          setError(
-            err?.message ||
-            'Those details did not work. Please check your password, reset it using the link below, or register if you haven\'t created this account yet.'
-          );
-        },
+    setIsPending(true);
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    try {
+      // 1. Authenticate with Firebase
+      let firebaseUser: any = null;
+      try {
+        const cred = await firebaseLogin(cleanEmail, password);
+        firebaseUser = cred.user;
+      } catch (fbErr: any) {
+        // Check if legacy user in MongoDB or Firebase Auth is not yet toggled in console
+        if (
+          fbErr?.code === 'auth/user-not-found' ||
+          fbErr?.code === 'auth/invalid-credential' ||
+          fbErr?.code === 'auth/configuration-not-found' ||
+          fbErr?.code === 'auth/operation-not-allowed'
+        ) {
+          try {
+            const legacyRes = await apiFetch<{ token: string; user: any }>('/auth/login', {
+              method: 'POST',
+              body: JSON.stringify({ email: cleanEmail, password }),
+            });
+            if (legacyRes?.token) {
+              handleLoginSuccess(legacyRes.token);
+              return;
+            }
+          } catch {
+            // Legacy check failed, proceed to throw original Firebase error
+          }
+        }
+        throw fbErr;
       }
-    );
+
+      // 2. Sync with Backend
+      const syncRes = await apiFetch<{ success: boolean; token: string; user: any }>('/auth/firebase-sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: firebaseUser.email || cleanEmail,
+          firebaseUid: firebaseUser.uid,
+          fullName: firebaseUser.displayName || undefined,
+          avatarUrl: firebaseUser.photoURL || undefined,
+        }),
+      });
+
+      if (syncRes.token) {
+        handleLoginSuccess(syncRes.token);
+      } else {
+        throw new Error('Could not establish user session');
+      }
+    } catch (err: any) {
+      setError(getFirebaseErrorMessage(err));
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  const handleResetSuccess = (token: string) => {
-    setShowResetDialog(false);
-    setAuthSession(token);
-    queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-    setSuccessMsg('Password updated successfully! Signing you in...');
-    setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/feed';
-      setLocation(redirect);
-    }, 1200);
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setSuccessMsg('');
+    setIsGooglePending(true);
+    try {
+      const cred = await firebaseSignInWithGoogle();
+      const user = cred.user;
+      const syncRes = await apiFetch<{ success: boolean; token: string; user: any }>('/auth/firebase-sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: user.email,
+          firebaseUid: user.uid,
+          fullName: user.displayName || user.email?.split('@')[0],
+          avatarUrl: user.photoURL || undefined,
+        }),
+      });
+      if (syncRes.token) {
+        handleLoginSuccess(syncRes.token);
+      }
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        setError(getFirebaseErrorMessage(err));
+      }
+    } finally {
+      setIsGooglePending(false);
+    }
   };
 
   return (
-    <AuthLayout mode="login" title="Good to see you." detail="Sign in to pick up where you left off.">
-      <form onSubmit={submit} className="mt-8 space-y-5">
-        <Field id="email" label="University or personal email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Field id="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <div className="flex justify-end">
-          <button
-            data-testid="button-forgot-password"
-            type="button"
-            className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
-            onClick={() => setShowResetDialog(true)}
-          >
-            Forgot password? Reset here
-          </button>
-        </div>
-        {successMsg && (
-          <p className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2">
-            <Check className="h-4 w-4" /> {successMsg}
-          </p>
-        )}
-        {error && (
-          <div data-testid="status-auth-error" className="rounded-xl bg-destructive/10 border border-destructive/20 p-3.5 text-xs text-destructive space-y-1.5">
-            <p className="font-semibold">{error}</p>
-            <div className="flex items-center gap-3 pt-1 text-[11px] font-bold">
-              <button
-                type="button"
-                onClick={() => setShowResetDialog(true)}
-                className="text-orange-500 hover:underline cursor-pointer"
-              >
-                Reset Password →
-              </button>
-              <span className="text-muted-foreground/50">·</span>
-              <Link href="/register" className="text-orange-500 hover:underline">
-                Create new account →
-              </Link>
-            </div>
-          </div>
-        )}
-        <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5 cursor-pointer" disabled={login.isPending}>
-          {login.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-          Sign in
+    <AuthLayout mode="login" title="Good to see you." detail="Sign in with your verified Amrita account to pick up where you left off.">
+      <div className="mt-8 space-y-5">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGoogleSignIn}
+          disabled={isGooglePending || isPending}
+          className="w-full py-3 flex items-center justify-center gap-3 border-border hover:bg-muted/70 transition-all font-semibold text-sm cursor-pointer shadow-xs"
+        >
+          {isGooglePending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+          )}
+          <span>Continue with Google</span>
         </Button>
-      </form>
+
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            or with email
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <Field id="email" label="University or personal email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Field id="password" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          
+          <div className="flex justify-end">
+            <button
+              data-testid="button-forgot-password"
+              type="button"
+              className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+              onClick={() => setShowResetDialog(true)}
+            >
+              Forgot password? Reset here
+            </button>
+          </div>
+
+          {successMsg && (
+            <p className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2">
+              <Check className="h-4 w-4" /> {successMsg}
+            </p>
+          )}
+
+          {error && (
+            <div data-testid="status-auth-error" className="rounded-xl bg-destructive/10 border border-destructive/20 p-3.5 text-xs text-destructive space-y-1.5">
+              <p className="font-semibold">{error}</p>
+              <div className="flex items-center gap-3 pt-1 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setShowResetDialog(true)}
+                  className="text-orange-500 hover:underline cursor-pointer"
+                >
+                  Reset Password via Email →
+                </button>
+                <span className="text-muted-foreground/50">·</span>
+                <Link href="/register" className="text-orange-500 hover:underline">
+                  Create new account →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          <Button data-testid="button-submit-login" type="submit" className="w-full py-3.5 cursor-pointer font-bold" disabled={isPending || isGooglePending}>
+            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+            Sign in
+          </Button>
+        </form>
+      </div>
 
       {showResetDialog && (
         <ResetPasswordDialog
           initialEmail={email}
           onClose={() => setShowResetDialog(false)}
-          onSuccess={handleResetSuccess}
         />
       )}
     </AuthLayout>
@@ -2630,49 +2741,180 @@ function LoginPage() {
 }
 
 function RegisterPage() {
-  const register = useRegister();
   const [, setLocation] = useLocation();
   const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'student' as 'student' | 'alumni' | 'faculty' | 'researcher', campus: campuses[0], department: departments[0], graduationYear: '' });
   const [error, setError] = useState('');
+  const [isPending, setIsPending] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
 
   const update = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
-  const submit = (e: React.FormEvent) => {
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    register.mutate(
-      { data: { ...form, graduationYear: form.graduationYear ? Number(form.graduationYear) : null } },
-      {
-        onSuccess: (data) => {
-          setAuthSession(data.token);
-          queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-          const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/feed';
-          setLocation(redirect);
-        },
-        onError: () => setError('We could not create your account. Please review the details and try again.'),
+    setIsPending(true);
+
+    try {
+      // 1. Create account in Firebase Auth
+      let firebaseUid: string | null = null;
+      try {
+        const cred = await firebaseRegister(form.email, form.password, form.fullName);
+        firebaseUid = cred.user.uid;
+      } catch (fbErr: any) {
+        // If Firebase Auth provider is not enabled in Firebase console yet, fall back to registering directly in database
+        if (fbErr?.code === 'auth/configuration-not-found' || fbErr?.code === 'auth/operation-not-allowed') {
+          console.warn('Firebase Auth is not yet enabled in Firebase Console. Registering directly in database.', fbErr);
+          const directRes = await apiFetch<{ token: string; user: any }>('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({
+              fullName: form.fullName.trim(),
+              email: form.email.trim().toLowerCase(),
+              password: form.password,
+              role: form.role,
+              campus: form.campus,
+              department: form.department,
+              graduationYear: form.graduationYear ? Number(form.graduationYear) : null,
+            }),
+          });
+          if (directRes?.token) {
+            setAuthSession(directRes.token);
+            queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect') || '/feed';
+            setLocation(redirect);
+            return;
+          }
+        }
+        throw fbErr;
       }
-    );
+
+      // 2. Sync user profile with Backend database
+      const syncRes = await apiFetch<{ success: boolean; token: string; user: any }>('/auth/firebase-sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: form.email.trim().toLowerCase(),
+          firebaseUid,
+          fullName: form.fullName.trim(),
+          role: form.role,
+          campus: form.campus,
+          department: form.department,
+          graduationYear: form.graduationYear ? Number(form.graduationYear) : null,
+        }),
+      });
+
+      if (syncRes.token) {
+        setAuthSession(syncRes.token);
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect') || '/feed';
+        setLocation(redirect);
+      } else {
+        throw new Error('Failed to create user session');
+      }
+    } catch (err: any) {
+      setError(getFirebaseErrorMessage(err));
+    } finally {
+      setIsPending(false);
+    }
   };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setIsGooglePending(true);
+    try {
+      const cred = await firebaseSignInWithGoogle();
+      const user = cred.user;
+      const syncRes = await apiFetch<{ success: boolean; token: string; user: any }>('/auth/firebase-sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: user.email,
+          firebaseUid: user.uid,
+          fullName: user.displayName || user.email?.split('@')[0],
+          avatarUrl: user.photoURL || undefined,
+          role: form.role,
+          campus: form.campus,
+          department: form.department,
+        }),
+      });
+      if (syncRes.token) {
+        setAuthSession(syncRes.token);
+        queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect') || '/feed';
+        setLocation(redirect);
+      }
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        setError(getFirebaseErrorMessage(err));
+      }
+    } finally {
+      setIsGooglePending(false);
+    }
+  };
+
   return (
     <AuthLayout mode="register" title="Make your place." detail="Create a profile that helps the right people understand what you are building toward.">
-      <form onSubmit={submit} className="mt-8 space-y-4">
-        <Field id="full-name" label="Full name" value={form.fullName} onChange={(e) => update('fullName', e.target.value)} required />
-        <Field id="register-email" label="Email address" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} required />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField id="role" label="I am a" value={form.role} onChange={(e) => update('role', e.target.value)} options={Object.entries(roleLabels).filter(([key]) => key !== 'admin').map(([value, label]) => ({ value, label }))} />
-          <SelectField id="campus" label="Campus" value={form.campus} onChange={(e) => update('campus', e.target.value)} options={campuses.map((value) => ({ value, label: value }))} />
-        </div>
-        <SelectField id="department" label="Department" value={form.department} onChange={(e) => update('department', e.target.value)} options={departments.map((value) => ({ value, label: value }))} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="graduation-year" label="Graduation year" type="number" placeholder="Optional" value={form.graduationYear} onChange={(e) => update('graduationYear', e.target.value)} />
-          <Field id="register-password" label="Create password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} minLength={8} required />
-        </div>
-        {error && <p data-testid="status-register-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-        <Button data-testid="button-submit-register" type="submit" className="mt-3 w-full py-3.5" disabled={register.isPending}>
-          {register.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-          Create my profile
+      <div className="mt-8 space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGoogleSignIn}
+          disabled={isGooglePending || isPending}
+          className="w-full py-3 flex items-center justify-center gap-3 border-border hover:bg-muted/70 transition-all font-semibold text-sm cursor-pointer shadow-xs"
+        >
+          {isGooglePending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+          )}
+          <span>Sign up with Google</span>
         </Button>
-      </form>
+
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            or register with email
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <Field id="full-name" label="Full name" value={form.fullName} onChange={(e) => update('fullName', e.target.value)} required />
+          <Field id="register-email" label="Email address" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} required />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField id="role" label="I am a" value={form.role} onChange={(e) => update('role', e.target.value)} options={Object.entries(roleLabels).filter(([key]) => key !== 'admin').map(([value, label]) => ({ value, label }))} />
+            <SelectField id="campus" label="Campus" value={form.campus} onChange={(e) => update('campus', e.target.value)} options={campuses.map((value) => ({ value, label: value }))} />
+          </div>
+          <SelectField id="department" label="Department" value={form.department} onChange={(e) => update('department', e.target.value)} options={departments.map((value) => ({ value, label: value }))} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="graduation-year" label="Graduation year" type="number" placeholder="Optional" value={form.graduationYear} onChange={(e) => update('graduationYear', e.target.value)} />
+            <Field id="register-password" label="Create password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} minLength={8} required />
+          </div>
+          {error && <p data-testid="status-register-error" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+          <Button data-testid="button-submit-register" type="submit" className="mt-3 w-full py-3.5 cursor-pointer font-bold" disabled={isPending || isGooglePending}>
+            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            Create my profile
+          </Button>
+        </form>
+      </div>
     </AuthLayout>
   );
 }
@@ -5298,12 +5540,21 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [showDeleteEntireChatModal, setShowDeleteEntireChatModal] = useState(false);
+  const [deleteTargetUser, setDeleteTargetUser] = useState<any | null>(null);
+  const [isDeletingEntireChat, setIsDeletingEntireChat] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+  const [showSidebarMenu, setShowSidebarMenu] = useState(false);
 
   const chatStreamRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docFileInputRef = useRef<HTMLInputElement>(null);
+  const chatMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -5315,11 +5566,17 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
     }
   }, [params.recipientId]);
 
-  // Close message action menu on outside clicks
+  // Close message action menu, chat 3-dots, and sidebar menu on outside clicks
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('.msg-action-menu-wrapper')) {
         setActiveActionMenuId(null);
+      }
+      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target as Node)) {
+        setShowChatMenu(false);
+      }
+      if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(e.target as Node)) {
+        setShowSidebarMenu(false);
       }
     };
     window.addEventListener('click', handleOutsideClick);
@@ -5451,6 +5708,163 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
       console.warn('Backend REST delete synced via WS fallback:', err);
     }
     refetchThread();
+  };
+
+  const handleDeleteEntireChat = async (mode: 'for_me' | 'for_everyone' = 'for_me') => {
+    const targetId =
+      deleteTargetUser?.id ||
+      activeRecipientId ||
+      currentRecipient?.id ||
+      (isSelectionMode && selectedChatIds[0]) ||
+      undefined;
+
+    if (!targetId) {
+      setShowDeleteEntireChatModal(false);
+      return;
+    }
+
+    setIsDeletingEntireChat(true);
+
+    // 1. Immediately persist message IDs to localStorage so sanitizeDirectMessages filters them out
+    const msgIds = messages.map((m) => m.id);
+    if (msgIds.length > 0) {
+      const storedMe = localStorage.getItem('amrita_deleted_for_me');
+      const setMe = storedMe ? new Set(JSON.parse(storedMe)) : new Set();
+      msgIds.forEach((id) => setMe.add(id));
+      localStorage.setItem('amrita_deleted_for_me', JSON.stringify(Array.from(setMe)));
+
+      if (mode === 'for_everyone') {
+        const storedEv = localStorage.getItem('amrita_deleted_for_everyone');
+        const setEv = storedEv ? new Set(JSON.parse(storedEv)) : new Set();
+        messages.filter((m) => m.isMine).forEach((m) => setEv.add(m.id));
+        localStorage.setItem('amrita_deleted_for_everyone', JSON.stringify(Array.from(setEv)));
+      }
+    }
+
+    // 2. Clear query caches immediately
+    const threadKey = ['messages', 'thread', targetId];
+    queryClient.setQueryData(threadKey, (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        messages: [],
+      };
+    });
+
+    queryClient.setQueryData(['messages', 'conversations'], (old: any) => {
+      if (!old?.items) return old;
+      return {
+        ...old,
+        items: old.items.filter((c: any) => String(c.otherUser?.id) !== String(targetId)),
+      };
+    });
+
+    queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+    // 3. Immediately dismiss modal and menus
+    setShowDeleteEntireChatModal(false);
+    setShowChatMenu(false);
+    setShowSidebarMenu(false);
+
+    // 4. Send background sync to backend
+    try {
+      await Promise.allSettled([
+        apiFetch(`/messages/thread/${targetId}?mode=${mode}`, { method: 'DELETE' }),
+        apiFetch(`/conversations/${targetId}?mode=${mode}`, { method: 'DELETE' }),
+        apiFetch(`/messages/clear/${targetId}?mode=${mode}`, { method: 'DELETE' }),
+        ...messages.map((m) =>
+          apiFetch(`/messages/${m.id}?mode=${mode === 'for_everyone' && m.isMine ? 'for_everyone' : 'for_me'}`, {
+            method: 'DELETE',
+          })
+        ),
+      ]);
+      refetchThread();
+    } catch (err) {
+      console.warn('Background delete sync completed with fallback:', err);
+    } finally {
+      setIsDeletingEntireChat(false);
+      setDeleteTargetUser(null);
+    }
+  };
+
+  const toggleSelectChat = (id: string) => {
+    setSelectedChatIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllChats = () => {
+    const allIds = conversations.map((c) => c.otherUser?.id).filter(Boolean);
+    if (selectedChatIds.length === allIds.length) {
+      setSelectedChatIds([]);
+    } else {
+      setSelectedChatIds(allIds);
+    }
+  };
+
+  const handleDeleteSelectedChats = async (mode: 'for_me' | 'for_everyone' = 'for_me') => {
+    const idsToDelete =
+      isSelectionMode && selectedChatIds.length > 0
+        ? selectedChatIds
+        : [deleteTargetUser?.id || activeRecipientId || currentRecipient?.id].filter(Boolean) as string[];
+
+    if (idsToDelete.length === 0) {
+      setShowDeleteEntireChatModal(false);
+      return;
+    }
+
+    setIsDeletingEntireChat(true);
+
+    // Optimistically update localStorage
+    const msgIds = messages.map((m) => m.id);
+    if (msgIds.length > 0) {
+      const storedMe = localStorage.getItem('amrita_deleted_for_me');
+      const setMe = storedMe ? new Set(JSON.parse(storedMe)) : new Set();
+      msgIds.forEach((id) => setMe.add(id));
+      localStorage.setItem('amrita_deleted_for_me', JSON.stringify(Array.from(setMe)));
+    }
+
+    // Optimistically clear query caches
+    idsToDelete.forEach((id) => {
+      queryClient.setQueryData(['messages', 'thread', id], (old: any) => {
+        if (!old) return old;
+        return { ...old, messages: [] };
+      });
+    });
+
+    queryClient.setQueryData(['messages', 'conversations'], (old: any) => {
+      if (!old?.items) return old;
+      return {
+        ...old,
+        items: old.items.filter((c: any) => !idsToDelete.includes(String(c.otherUser?.id))),
+      };
+    });
+
+    if (activeRecipientId && idsToDelete.includes(activeRecipientId)) {
+      setActiveRecipientId(undefined);
+      setLocation('/messages');
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['messages'] });
+    setIsSelectionMode(false);
+    setSelectedChatIds([]);
+    setShowDeleteEntireChatModal(false);
+
+    try {
+      await Promise.allSettled(
+        idsToDelete.flatMap((id) => [
+          apiFetch(`/messages/thread/${id}?mode=${mode}`, { method: 'DELETE' }),
+          apiFetch(`/conversations/${id}?mode=${mode}`, { method: 'DELETE' }),
+          apiFetch(`/messages/clear/${id}?mode=${mode}`, { method: 'DELETE' }),
+        ])
+      );
+      refetchThread();
+    } catch (err) {
+      console.warn('Background delete selected chats fallback:', err);
+    } finally {
+      setIsDeletingEntireChat(false);
+      setDeleteTargetUser(null);
+    }
   };
 
   const handleSelectRecipient = (id: string) => {
@@ -5664,27 +6078,131 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
         {/* Left Sidebar: Conversations & Filters */}
         <div className={cx('relative z-10 flex h-full min-h-0 flex-col border-r border-border/80 bg-card/75 dark:bg-[#070b14]/75 backdrop-blur-xl', activeRecipientId ? 'hidden md:flex' : 'flex')}>
           {/* Top Header */}
-          <div className="flex items-center justify-between border-b border-border/70 p-4 shrink-0 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-base font-extrabold tracking-tight text-foreground">Inbox</h2>
-              {totalUnread > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white shadow-xs animate-pulse">
-                  {totalUnread}
+          {isSelectionMode ? (
+            /* WhatsApp Style Selection Mode Header */
+            <div className="flex items-center justify-between border-b border-border/70 p-3.5 shrink-0 bg-secondary/80 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  data-testid="button-cancel-selection"
+                  onClick={() => {
+                    setIsSelectionMode(false);
+                    setSelectedChatIds([]);
+                  }}
+                  className="rounded-lg p-1 text-muted-foreground hover:bg-card hover:text-foreground cursor-pointer"
+                  title="Cancel selection"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <span className="text-xs font-extrabold text-foreground">
+                  {selectedChatIds.length} selected
                 </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/80 dark:border-emerald-800/60 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 shadow-2xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {isConnected ? 'Live' : 'Syncing'}
-              </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="button-select-all-chats"
+                  onClick={selectAllChats}
+                  className="rounded-lg px-2.5 py-1 text-[11px] font-bold text-muted-foreground hover:bg-card hover:text-foreground transition-colors cursor-pointer"
+                >
+                  {selectedChatIds.length === conversations.length ? 'Deselect all' : 'Select all'}
+                </button>
+                <button
+                  type="button"
+                  data-testid="button-delete-selected-chats"
+                  disabled={selectedChatIds.length === 0 || isDeletingEntireChat}
+                  onClick={() => setShowDeleteEntireChatModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3 py-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowNewChat(true)}
-              className="px-3 py-1.5 text-xs font-bold border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white hover:border-orange-500 dark:hover:bg-orange-600 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
-            >
-              <UserPlus className="h-3.5 w-3.5 mr-1" /> New Chat
-            </Button>
-          </div>
+          ) : (
+            /* Normal Header: Inbox on left, New Chat & 3-dots Menu on right */
+            <div className="flex items-center justify-between border-b border-border/70 p-4 shrink-0 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent">
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-base font-extrabold tracking-tight text-foreground">Inbox</h2>
+                {totalUnread > 0 && (
+                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white shadow-xs animate-pulse">
+                    {totalUnread}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/80 dark:border-emerald-800/60 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {isConnected ? 'Live' : 'Syncing'}
+                </span>
+              </div>
+
+              {/* Right Corner: WhatsApp Style 3-dots Menu */}
+              <div className="relative" ref={sidebarMenuRef}>
+                <button
+                  type="button"
+                  data-testid="button-sidebar-more-options"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSidebarMenu((prev) => !prev);
+                  }}
+                  title="Menu"
+                  className="rounded-xl border border-border/80 bg-card p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer shadow-2xs active:scale-95 flex items-center justify-center"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+
+                {showSidebarMenu && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl border border-border bg-card p-1.5 shadow-2xl backdrop-blur-xl z-50 animate-scale-in text-xs"
+                  >
+                    {activeRecipientId && currentRecipient && (
+                      <button
+                        type="button"
+                        data-testid="button-delete-active-chat-menu"
+                        onClick={() => {
+                          setShowSidebarMenu(false);
+                          setDeleteTargetUser(currentRecipient);
+                          setShowDeleteEntireChatModal(true);
+                        }}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold text-destructive hover:bg-destructive/10 transition-colors w-full text-left cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive shrink-0" />
+                        <span className="truncate">Delete chat with {currentRecipient.fullName.split(' ')[0]}</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      data-testid="button-select-chats-menu"
+                      onClick={() => {
+                        setShowSidebarMenu(false);
+                        setIsSelectionMode(true);
+                        if (activeRecipientId) {
+                          setSelectedChatIds([activeRecipientId]);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold text-foreground hover:bg-muted transition-colors w-full text-left cursor-pointer"
+                    >
+                      <CheckCheck className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span>Select chats to delete</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSidebarMenu(false);
+                        setShowNewChat(true);
+                      }}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold text-foreground hover:bg-muted transition-colors w-full text-left cursor-pointer"
+                    >
+                      <UserPlus className="h-4 w-4 text-orange-500 shrink-0" />
+                      <span>New chat</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Search bar */}
           <div className="p-3 border-b border-border/60 bg-card/40 shrink-0">
@@ -5793,19 +6311,60 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                 const isActive = activeRecipientId === conv.otherUser?.id;
                 const isOnline = onlineUsers.has(String(conv.otherUser?.id));
                 const isTyping = !!typingMap[String(conv.otherUser?.id)];
+                const isSelected = selectedChatIds.includes(conv.otherUser?.id);
 
                 return (
-                  <button
+                  <div
                     key={conv.otherUser?.id}
-                    type="button"
-                    onClick={() => handleSelectRecipient(conv.otherUser.id)}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (isSelectionMode) {
+                        toggleSelectChat(conv.otherUser?.id);
+                      } else {
+                        handleSelectRecipient(conv.otherUser?.id);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        if (isSelectionMode) {
+                          toggleSelectChat(conv.otherUser?.id);
+                        } else {
+                          handleSelectRecipient(conv.otherUser?.id);
+                        }
+                      }
+                    }}
                     className={cx(
-                      'flex w-full items-start gap-3.5 p-3.5 text-left transition-all relative cursor-pointer',
-                      isActive
+                      'group flex w-full items-start gap-3 p-3.5 text-left transition-all relative cursor-pointer select-none',
+                      isSelected
+                        ? 'bg-orange-500/15 border-l-4 border-l-orange-500 shadow-xs'
+                        : isActive
                         ? 'bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-transparent border-l-4 border-l-orange-500 shadow-sm'
                         : 'hover:bg-secondary/40'
                     )}
                   >
+                    {/* Checkbox when in Selection Mode */}
+                    {isSelectionMode && (
+                      <div
+                        className="shrink-0 mt-2.5 mr-0.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelectChat(conv.otherUser?.id);
+                        }}
+                      >
+                        <div
+                          className={cx(
+                            'h-4 w-4 rounded-md border flex items-center justify-center transition-all',
+                            isSelected
+                              ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
+                              : 'border-border/90 bg-card hover:border-orange-500/60'
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Avatar with Presence Indicator */}
                     <div className="relative shrink-0 mt-0.5">
                       <Avatar user={conv.otherUser} size="md" />
@@ -5815,14 +6374,31 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      {/* Name & Time */}
+                      {/* Name & Time & Hover Delete */}
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-extrabold text-xs sm:text-sm text-foreground truncate">
                           {conv.otherUser?.fullName}
                         </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
-                          {relative(conv.lastMessage?.createdAt || '')}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {!isSelectionMode && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTargetUser(conv.otherUser);
+                                setActiveRecipientId(conv.otherUser?.id);
+                                setShowDeleteEntireChatModal(true);
+                              }}
+                              title={`Delete chat with ${conv.otherUser?.fullName}`}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {relative(conv.lastMessage?.createdAt || '')}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Role & Campus subtitle */}
@@ -5878,7 +6454,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
@@ -5895,7 +6471,7 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
           {activeRecipientId && currentRecipient ? (
             <>
               {/* WhatsApp / LinkedIn Style Chat Header */}
-              <div className="relative z-10 flex items-center justify-between border-b border-border/80 bg-card/95 dark:bg-[#0c1220]/95 px-4 py-3 shrink-0 shadow-xs backdrop-blur-md">
+              <div className="relative z-40 flex items-center justify-between border-b border-border/80 bg-card/95 dark:bg-[#0c1220]/95 px-4 py-3 shrink-0 shadow-xs backdrop-blur-md">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
@@ -5961,6 +6537,51 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
                     <span>View Profile</span>
                     <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
                   </Link>
+
+                  {/* Three-dot WhatsApp style menu */}
+                  <div className="relative" ref={chatMenuRef}>
+                    <button
+                      type="button"
+                      data-testid="button-chat-more-options"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowChatMenu((prev) => !prev);
+                      }}
+                      className="rounded-xl border border-border/80 bg-card p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shadow-2xs transition-all cursor-pointer flex items-center justify-center"
+                      title="Chat options"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+
+                    {showChatMenu && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-full mt-1.5 w-48 rounded-2xl border border-border bg-card p-1.5 shadow-2xl backdrop-blur-xl z-50 animate-scale-in text-xs"
+                      >
+                        <Link
+                          href={`/people/${currentRecipient.id}`}
+                          onClick={() => setShowChatMenu(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold text-foreground hover:bg-muted transition-colors w-full text-left"
+                        >
+                          <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>View profile</span>
+                        </Link>
+                        <button
+                          type="button"
+                          data-testid="button-delete-entire-chat"
+                          onClick={() => {
+                            setShowChatMenu(false);
+                            setDeleteTargetUser(currentRecipient);
+                            setShowDeleteEntireChatModal(true);
+                          }}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold text-destructive hover:bg-destructive/10 transition-colors w-full text-left cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          <span>Delete entire chat</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -6635,6 +7256,103 @@ function MessagesPage({ embedded = false }: { embedded?: boolean } = {}) {
               <button
                 type="button"
                 onClick={() => setDeletingMessage(null)}
+                className="w-full rounded-2xl border border-border/80 bg-card py-2.5 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer mt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Entire Chat Confirmation Modal (WhatsApp Style) */}
+      {showDeleteEntireChatModal && ((isSelectionMode && selectedChatIds.length > 0) || deleteTargetUser || currentRecipient || activeRecipientId) && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] grid place-items-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl animate-rise space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">
+                    {isSelectionMode && selectedChatIds.length > 0
+                      ? `Delete ${selectedChatIds.length} selected chat${selectedChatIds.length > 1 ? 's' : ''}?`
+                      : `Delete entire chat with ${deleteTargetUser?.fullName || currentRecipient?.fullName || conversations.find((c) => c.otherUser?.id === activeRecipientId)?.otherUser?.fullName || 'this user'}?`}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isSelectionMode && selectedChatIds.length > 0
+                      ? 'Choose how to delete selected conversations'
+                      : 'Choose how you want to clear this conversation'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteEntireChatModal(false)}
+                className="rounded-xl p-1.5 text-muted-foreground hover:bg-secondary cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {isSelectionMode && selectedChatIds.length > 0
+                ? `Are you sure you want to delete ${selectedChatIds.length} conversation(s)? This will remove message history.`
+                : 'Are you sure you want to delete this entire chat? This will remove all messages from this conversation.'}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                data-testid="button-delete-chat-for-everyone"
+                disabled={isDeletingEntireChat}
+                onClick={() => {
+                  if (isSelectionMode && selectedChatIds.length > 0) {
+                    handleDeleteSelectedChats('for_everyone');
+                  } else {
+                    handleDeleteEntireChat('for_everyone');
+                  }
+                }}
+                className="flex w-full items-center justify-between rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-500/10 hover:bg-red-500/20 px-4 py-3 text-xs font-bold text-red-600 dark:text-red-400 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <div className="text-left">
+                  <p className="font-extrabold">Delete for everyone</p>
+                  <p className="text-[11px] font-normal text-red-500/80">
+                    Permanently delete all messages for both participants
+                  </p>
+                </div>
+                {isDeletingEntireChat ? <LoaderCircle className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
+              </button>
+
+              <button
+                type="button"
+                data-testid="button-delete-chat-for-me"
+                disabled={isDeletingEntireChat}
+                onClick={() => {
+                  if (isSelectionMode && selectedChatIds.length > 0) {
+                    handleDeleteSelectedChats('for_me');
+                  } else {
+                    handleDeleteEntireChat('for_me');
+                  }
+                }}
+                className="flex w-full items-center justify-between rounded-2xl border border-border bg-secondary/50 hover:bg-secondary px-4 py-3 text-xs font-bold text-foreground transition-all cursor-pointer disabled:opacity-50"
+              >
+                <div className="text-left">
+                  <p className="font-extrabold">Delete for me</p>
+                  <p className="text-[11px] font-normal text-muted-foreground">
+                    Clear chat history from your view only
+                  </p>
+                </div>
+                {isDeletingEntireChat ? <LoaderCircle className="h-4 w-4 animate-spin shrink-0" /> : <UserX className="h-4 w-4 text-muted-foreground shrink-0" />}
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeletingEntireChat}
+                onClick={() => setShowDeleteEntireChatModal(false)}
                 className="w-full rounded-2xl border border-border/80 bg-card py-2.5 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer mt-1"
               >
                 Cancel

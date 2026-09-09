@@ -284,6 +284,103 @@ router.post("/auth/login", async (req, res, next) => {
   }
 });
 
+router.post("/auth/firebase-sync", async (req, res, next) => {
+  try {
+    const rawEmail = req.body.email;
+    if (!rawEmail || typeof rawEmail !== "string") {
+      res.status(400).json({ success: false, message: "Valid email is required" });
+      return;
+    }
+    const email = rawEmail.toLowerCase().trim();
+    const { firebaseUid, fullName, role, campus, department, graduationYear, avatarUrl } = req.body;
+
+    let user = await UserModel.findOne({ email });
+    if (user) {
+      if (user.status !== "active") {
+        res.status(403).json({ success: false, message: "This account is not active" });
+        return;
+      }
+      let modified = false;
+      if (firebaseUid && user.firebaseUid !== firebaseUid) {
+        user.firebaseUid = firebaseUid;
+        modified = true;
+      }
+      if (avatarUrl && !user.avatarUrl) {
+        user.avatarUrl = avatarUrl;
+        modified = true;
+      }
+      if (fullName && (!user.fullName || user.fullName === email.split("@")[0])) {
+        user.fullName = fullName.trim();
+        modified = true;
+      }
+      if (modified) {
+        await user.save();
+      }
+      res.json({
+        success: true,
+        token: issueToken(user._id, user.role),
+        user: serializeUser(user, true),
+      });
+      return;
+    }
+
+    // New user creation synced from Firebase Auth
+    const userRole = ["student", "alumni", "faculty", "researcher"].includes(role) ? role : "student";
+    const userFullName = (fullName && typeof fullName === "string" && fullName.trim()) ? fullName.trim() : email.split("@")[0];
+    const userCampus = (campus && typeof campus === "string") ? campus : "Coimbatore";
+    const userDept = (department && typeof department === "string") ? department : "Computer Science & Engineering";
+    const gradYear = graduationYear ? Number(graduationYear) : null;
+
+    user = await UserModel.create({
+      fullName: userFullName,
+      email,
+      role: userRole,
+      campus: userCampus,
+      department: userDept,
+      graduationYear: gradYear,
+      firebaseUid: firebaseUid || null,
+      avatarUrl: avatarUrl || null,
+      passwordHash: "",
+      skills: [],
+      interests: [],
+      helpWith: [],
+      lookingFor: [],
+      status: "active",
+      verified: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      token: issueToken(user._id, user.role),
+      user: serializeUser(user, true),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/auth/legacy-verify", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ success: false, message: "Email and password are required" });
+      return;
+    }
+    const user = await UserModel.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+      res.status(401).json({ success: false, message: "Invalid credentials" });
+      return;
+    }
+    res.json({
+      success: true,
+      user: serializeUser(user, true),
+      token: issueToken(user._id, user.role),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/auth/reset-password", async (req, res, next) => {
   try {
     const { email, newPassword } = req.body;
@@ -3423,6 +3520,58 @@ router.delete("/messages/:messageId", requireAuth, async (req, res, next) => {
     next(error);
   }
 });
+
+// Delete entire chat thread ("for_me" vs "for_everyone")
+const deleteChatThreadHandler = async (req: any, res: any, next: any) => {
+  try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
+    const recipientId = req.params.recipientId;
+    const recipientObjId = toObjectId(recipientId);
+    const mode = (req.query.mode as string) || (req.body?.mode as string) || "for_me";
+
+    const match = {
+      $or: [
+        { senderId: userObjId, recipientId: recipientObjId },
+        { senderId: recipientObjId, recipientId: userObjId },
+      ],
+    };
+
+    if (mode === "for_everyone") {
+      await MessageModel.deleteMany(match);
+
+      wsManager.sendToUser(recipientId, {
+        type: "chat_cleared",
+        data: {
+          recipientId,
+          clearedBy: userId,
+          mode: "for_everyone",
+        },
+      });
+    } else {
+      await MessageModel.updateMany(match, {
+        $addToSet: { deletedFor: userObjId },
+      });
+    }
+
+    wsManager.sendToUser(userId, {
+      type: "chat_cleared",
+      data: {
+        recipientId,
+        clearedBy: userId,
+        mode,
+      },
+    });
+
+    res.json({ success: true, message: "Chat deleted successfully", mode });
+  } catch (error) {
+    next(error);
+  }
+};
+
+router.delete("/messages/thread/:recipientId", requireAuth, deleteChatThreadHandler);
+router.delete("/conversations/:recipientId", requireAuth, deleteChatThreadHandler);
+router.delete("/messages/clear/:recipientId", requireAuth, deleteChatThreadHandler);
 
 router.patch("/messages/:recipientId/read", requireAuth, async (req, res, next) => {
   try {
