@@ -2,6 +2,7 @@ import mongoose, { Schema, type Document, type Model } from "mongoose";
 
 export interface IEvent extends Document {
   _id: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
   title: string;
   description: string;
   date: Date;
@@ -15,6 +16,7 @@ export interface IEvent extends Document {
 
 const EventSchema = new Schema<IEvent>(
   {
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: false, index: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     date: { type: Date, required: true, index: true },

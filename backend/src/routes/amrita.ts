@@ -27,6 +27,7 @@ import {
   ConnectionModel,
   EventModel,
   EventRegistrationModel,
+  FlagshipEventModel,
   HelpRequestModel,
   InterviewExperienceModel,
   MentorshipRequestModel,
@@ -1312,6 +1313,112 @@ router.patch("/collaborations/:id/status", requireAuth, async (req, res, next) =
   }
 });
 
+router.patch("/collaborations/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const collab = await CollaborationModel.findById(req.params.id);
+    if (!collab) {
+      res.status(404).json({ success: false, message: "Collaboration not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    if (String(collab.creatorId) !== userId && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the project lead or admin can edit this project" });
+      return;
+    }
+
+    const { title, description, requiredSkills, rolesNeeded, teamSize, deadline, category, status } = req.body;
+    if (title !== undefined) collab.title = title.trim();
+    if (description !== undefined) collab.description = description.trim();
+    if (requiredSkills !== undefined) {
+      collab.requiredSkills = Array.isArray(requiredSkills)
+        ? requiredSkills
+        : String(requiredSkills).split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (rolesNeeded !== undefined) {
+      collab.rolesNeeded = Array.isArray(rolesNeeded)
+        ? rolesNeeded
+        : String(rolesNeeded).split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (teamSize !== undefined) collab.teamSize = Number(teamSize);
+    if (deadline !== undefined) collab.deadline = deadline;
+    if (category !== undefined) collab.category = category;
+    if (status !== undefined && ["open", "closed", "completed"].includes(status)) {
+      collab.status = status;
+    }
+
+    await collab.save();
+    res.json({ success: true, message: "Project updated successfully", collaboration: collab });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/collaborations/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const collab = await CollaborationModel.findById(req.params.id);
+    if (!collab) {
+      res.status(404).json({ success: false, message: "Collaboration not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    if (String(collab.creatorId) !== userId && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the project lead or admin can edit this project" });
+      return;
+    }
+
+    const { title, description, requiredSkills, rolesNeeded, teamSize, deadline, category, status } = req.body;
+    if (title !== undefined) collab.title = title.trim();
+    if (description !== undefined) collab.description = description.trim();
+    if (requiredSkills !== undefined) {
+      collab.requiredSkills = Array.isArray(requiredSkills)
+        ? requiredSkills
+        : String(requiredSkills).split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (rolesNeeded !== undefined) {
+      collab.rolesNeeded = Array.isArray(rolesNeeded)
+        ? rolesNeeded
+        : String(rolesNeeded).split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (teamSize !== undefined) collab.teamSize = Number(teamSize);
+    if (deadline !== undefined) collab.deadline = deadline;
+    if (category !== undefined) collab.category = category;
+    if (status !== undefined && ["open", "closed", "completed"].includes(status)) {
+      collab.status = status;
+    }
+
+    await collab.save();
+    res.json({ success: true, message: "Project updated successfully", collaboration: collab });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/collaborations/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const collab = await CollaborationModel.findById(req.params.id);
+    if (!collab) {
+      res.status(404).json({ success: false, message: "Collaboration not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    if (String(collab.creatorId) !== userId && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the project lead or admin can delete this project" });
+      return;
+    }
+
+    await CollaborationModel.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Project deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 router.get("/opportunities", requireAuth, async (req, res, next) => {
   try {
@@ -1339,9 +1446,11 @@ router.get("/opportunities", requireAuth, async (req, res, next) => {
     const savedIds = new Set(savedRows.map((r) => String(r.opportunityId)));
 
     res.json({
-      items: items.map((item) => ({
+      items: items.map((item: any) => ({
         ...item,
         id: String(item._id),
+        postedBy: item.postedBy ? String(item.postedBy) : null,
+        isOwner: item.postedBy ? String(item.postedBy) === userId : false,
         saved: savedIds.has(String(item._id)),
       })),
       page: query.page,
@@ -1355,12 +1464,15 @@ router.get("/opportunities", requireAuth, async (req, res, next) => {
 
 router.post("/opportunities", requireAuth, async (req, res, next) => {
   try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
     const { title, description, category, organization, requiredSkills, eligibility, deadline, applicationUrl } = req.body;
     if (!title || !description || !category || !organization || !deadline) {
       res.status(400).json({ success: false, message: "Missing required fields" });
       return;
     }
     const created = await OpportunityModel.create({
+      postedBy: userObjId,
       title,
       description,
       category,
@@ -1373,8 +1485,119 @@ router.post("/opportunities", requireAuth, async (req, res, next) => {
     res.status(201).json({
       ...created.toObject(),
       id: String(created._id),
+      postedBy: userId,
+      isOwner: true,
       saved: false,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/opportunities/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const opp = await OpportunityModel.findById(req.params.id);
+    if (!opp) {
+      res.status(404).json({ success: false, message: "Opportunity not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = opp.postedBy ? String(opp.postedBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the author or admin can edit this opportunity" });
+      return;
+    }
+
+    if (!opp.postedBy) {
+      opp.postedBy = toObjectId(userId);
+    }
+
+    const { title, description, category, organization, requiredSkills, eligibility, deadline, applicationUrl } = req.body;
+    if (title !== undefined) opp.title = title.trim();
+    if (description !== undefined) opp.description = description.trim();
+    if (category !== undefined) opp.category = category;
+    if (organization !== undefined) opp.organization = organization.trim();
+    if (requiredSkills !== undefined) {
+      opp.requiredSkills = Array.isArray(requiredSkills)
+        ? requiredSkills
+        : String(requiredSkills).split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (eligibility !== undefined) opp.eligibility = eligibility.trim();
+    if (deadline !== undefined) opp.deadline = deadline;
+    if (applicationUrl !== undefined) opp.applicationUrl = applicationUrl.trim();
+
+    await opp.save();
+    res.json({ success: true, message: "Opportunity updated successfully", opportunity: opp });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/opportunities/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const opp = await OpportunityModel.findById(req.params.id);
+    if (!opp) {
+      res.status(404).json({ success: false, message: "Opportunity not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = opp.postedBy ? String(opp.postedBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the author or admin can edit this opportunity" });
+      return;
+    }
+
+    if (!opp.postedBy) {
+      opp.postedBy = toObjectId(userId);
+    }
+
+    const { title, description, category, organization, requiredSkills, eligibility, deadline, applicationUrl } = req.body;
+    if (title !== undefined) opp.title = title.trim();
+    if (description !== undefined) opp.description = description.trim();
+    if (category !== undefined) opp.category = category;
+    if (organization !== undefined) opp.organization = organization.trim();
+    if (requiredSkills !== undefined) {
+      opp.requiredSkills = Array.isArray(requiredSkills)
+        ? requiredSkills
+        : String(requiredSkills).split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (eligibility !== undefined) opp.eligibility = eligibility.trim();
+    if (deadline !== undefined) opp.deadline = deadline;
+    if (applicationUrl !== undefined) opp.applicationUrl = applicationUrl.trim();
+
+    await opp.save();
+    res.json({ success: true, message: "Opportunity updated successfully", opportunity: opp });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/opportunities/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const opp = await OpportunityModel.findById(req.params.id);
+    if (!opp) {
+      res.status(404).json({ success: false, message: "Opportunity not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = opp.postedBy ? String(opp.postedBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the author or admin can delete this opportunity" });
+      return;
+    }
+
+    await Promise.all([
+      OpportunityModel.findByIdAndDelete(req.params.id),
+      SavedOpportunityModel.deleteMany({ opportunityId: toObjectId(req.params.id) }),
+    ]);
+
+    res.json({ success: true, message: "Opportunity deleted successfully" });
   } catch (error) {
     next(error);
   }
@@ -1413,12 +1636,15 @@ router.delete("/opportunities/:id/save", requireAuth, async (req, res, next) => 
 
 router.post("/events", requireAuth, async (req, res, next) => {
   try {
+    const userId = getUserId(req);
+    const userObjId = toObjectId(userId);
     const { title, description, date, campus, venue, organizer, registrationUrl, capacity } = req.body;
     if (!title || !description || !date || !campus || !venue || !organizer) {
       res.status(400).json({ success: false, message: "Missing required fields" });
       return;
     }
     const created = await EventModel.create({
+      createdBy: userObjId,
       title,
       description,
       date: new Date(date),
@@ -1431,6 +1657,8 @@ router.post("/events", requireAuth, async (req, res, next) => {
     res.status(201).json({
       ...created.toObject(),
       id: String(created._id),
+      createdBy: userId,
+      isOwner: true,
       date: new Date(created.date).toISOString(),
       registered: false,
     });
@@ -1461,9 +1689,11 @@ router.get("/events", requireAuth, async (req, res, next) => {
     const registeredIds = new Set(registrationRows.map((r) => String(r.eventId)));
 
     res.json({
-      items: items.map((item) => ({
+      items: items.map((item: any) => ({
         ...item,
         id: String(item._id),
+        createdBy: item.createdBy ? String(item.createdBy) : null,
+        isOwner: item.createdBy ? String(item.createdBy) === userId : false,
         date: new Date(item.date).toISOString(),
         registered: registeredIds.has(String(item._id)),
       })),
@@ -1471,6 +1701,107 @@ router.get("/events", requireAuth, async (req, res, next) => {
       pageSize: query.pageSize,
       total,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/events/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const event = await EventModel.findById(req.params.id);
+    if (!event) {
+      res.status(404).json({ success: false, message: "Event not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = event.createdBy ? String(event.createdBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the organizer or admin can edit this event" });
+      return;
+    }
+
+    if (!event.createdBy) {
+      event.createdBy = toObjectId(userId);
+    }
+
+    const { title, description, date, campus, venue, organizer, registrationUrl, capacity } = req.body;
+    if (title !== undefined) event.title = title.trim();
+    if (description !== undefined) event.description = description.trim();
+    if (date !== undefined) event.date = new Date(date);
+    if (campus !== undefined) event.campus = campus;
+    if (venue !== undefined) event.venue = venue.trim();
+    if (organizer !== undefined) event.organizer = organizer.trim();
+    if (registrationUrl !== undefined) event.registrationUrl = registrationUrl?.trim() || null;
+    if (capacity !== undefined) event.capacity = capacity ? Number(capacity) : null;
+
+    await event.save();
+    res.json({ success: true, message: "Event updated successfully", event });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/events/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const event = await EventModel.findById(req.params.id);
+    if (!event) {
+      res.status(404).json({ success: false, message: "Event not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = event.createdBy ? String(event.createdBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the organizer or admin can edit this event" });
+      return;
+    }
+
+    if (!event.createdBy) {
+      event.createdBy = toObjectId(userId);
+    }
+
+    const { title, description, date, campus, venue, organizer, registrationUrl, capacity } = req.body;
+    if (title !== undefined) event.title = title.trim();
+    if (description !== undefined) event.description = description.trim();
+    if (date !== undefined) event.date = new Date(date);
+    if (campus !== undefined) event.campus = campus;
+    if (venue !== undefined) event.venue = venue.trim();
+    if (organizer !== undefined) event.organizer = organizer.trim();
+    if (registrationUrl !== undefined) event.registrationUrl = registrationUrl?.trim() || null;
+    if (capacity !== undefined) event.capacity = capacity ? Number(capacity) : null;
+
+    await event.save();
+    res.json({ success: true, message: "Event updated successfully", event });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/events/:id", requireAuth, async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const event = await EventModel.findById(req.params.id);
+    if (!event) {
+      res.status(404).json({ success: false, message: "Event not found" });
+      return;
+    }
+
+    const user = await UserModel.findById(userId).lean();
+    const isOwner = event.createdBy ? String(event.createdBy) === userId : true;
+    if (!isOwner && user?.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only the organizer or admin can delete this event" });
+      return;
+    }
+
+    await Promise.all([
+      EventModel.findByIdAndDelete(req.params.id),
+      EventRegistrationModel.deleteMany({ eventId: toObjectId(req.params.id) }),
+    ]);
+
+    res.json({ success: true, message: "Event deleted successfully" });
   } catch (error) {
     next(error);
   }
@@ -3626,13 +3957,36 @@ router.patch("/interviews/:id", requireAuth, async (req, res, next) => {
       return;
     }
 
-    const { company, role, outcome, rounds, tips, difficulty, packageOffered } = req.body;
+    const {
+      company,
+      role,
+      employmentType,
+      outcome,
+      rounds,
+      tips,
+      prepAdvice,
+      overallExperience,
+      keyTopics,
+      difficulty,
+      packageOffered,
+    } = req.body;
+
     if (company !== undefined && typeof company === "string" && company.trim()) item.company = company.trim();
     if (role !== undefined && typeof role === "string" && role.trim()) item.role = role.trim();
-    if (outcome !== undefined && typeof outcome === "string" && outcome.trim()) item.outcome = outcome.trim();
+    if (employmentType !== undefined && typeof employmentType === "string") item.employmentType = employmentType as any;
+    if (outcome !== undefined && typeof outcome === "string" && outcome.trim()) item.outcome = outcome.trim() as any;
     if (rounds !== undefined && Array.isArray(rounds)) item.rounds = rounds;
-    if (tips !== undefined && typeof tips === "string" && tips.trim()) item.tips = tips.trim();
-    if (difficulty !== undefined && typeof difficulty === "string" && difficulty.trim()) item.difficulty = difficulty.trim();
+    if (prepAdvice !== undefined && typeof prepAdvice === "string") item.prepAdvice = prepAdvice.trim();
+    else if (tips !== undefined && typeof tips === "string") item.prepAdvice = tips.trim();
+    if (overallExperience !== undefined && typeof overallExperience === "string") item.overallExperience = overallExperience.trim();
+    if (keyTopics !== undefined) {
+      item.keyTopics = Array.isArray(keyTopics)
+        ? keyTopics
+        : typeof keyTopics === "string"
+          ? keyTopics.split(",").map((t: string) => t.trim()).filter(Boolean)
+          : [];
+    }
+    if (difficulty !== undefined && typeof difficulty === "string" && difficulty.trim()) item.difficulty = difficulty.trim() as any;
     if (packageOffered !== undefined) item.packageOffered = packageOffered ? String(packageOffered).trim() : null;
 
     await item.save();
@@ -5430,7 +5784,7 @@ router.patch("/showcase/:id", requireAuth, async (req, res, next) => {
       return;
     }
 
-    const { title, tagline, description, category, techStack, githubUrl, liveDemoUrl, videoUrl, award } = req.body;
+    const { title, tagline, description, category, techStack, githubUrl, liveDemoUrl, videoUrl, imageUrl, award } = req.body;
     if (title !== undefined && typeof title === "string" && title.trim()) project.title = title.trim();
     if (tagline !== undefined && typeof tagline === "string") project.tagline = tagline.trim();
     if (description !== undefined && typeof description === "string" && description.trim()) project.description = description.trim();
@@ -5439,6 +5793,7 @@ router.patch("/showcase/:id", requireAuth, async (req, res, next) => {
     if (githubUrl !== undefined) project.githubUrl = githubUrl ? String(githubUrl).trim() : null;
     if (liveDemoUrl !== undefined) project.liveDemoUrl = liveDemoUrl ? String(liveDemoUrl).trim() : null;
     if (videoUrl !== undefined) project.videoUrl = videoUrl ? String(videoUrl).trim() : null;
+    if (imageUrl !== undefined) project.imageUrl = imageUrl ? String(imageUrl).trim() : null;
     if (award !== undefined) project.award = award ? String(award).trim() : null;
 
     await project.save();
@@ -5484,6 +5839,200 @@ router.get("/admin/summary", requireAuth, requireRole("admin"), async (_req, res
     EventModel.countDocuments(),
   ]);
   res.json({ users, opportunities, events });
+});
+
+/* =========================================================================
+   FLAGSHIP COUNTDOWN EVENTS (MANAGED BY ADMIN FOR RIGHT-HAND SIDEBAR)
+   ========================================================================= */
+
+// Helper to determine badge background by category
+function getCategoryBadge(category: string) {
+  const c = category?.toLowerCase() || '';
+  if (c.includes('hackathon')) return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
+  if (c.includes('techfest') || c.includes('fest')) return 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30';
+  if (c.includes('placement') || c.includes('drive') || c.includes('career')) return 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30';
+  if (c.includes('research') || c.includes('lab') || c.includes('fellowship')) return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30';
+  return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+}
+
+router.get("/flagship-events", async (_req, res, next) => {
+  try {
+    let items = await FlagshipEventModel.find({ isActive: true }).sort({ order: 1, targetDate: 1 }).lean();
+
+    // Auto-seed default flagship events if collection is empty
+    if (!items || items.length === 0) {
+      const defaultFlagships = [
+        {
+          title: "SIH 2026 Internal Hackathon",
+          tagline: "Team registration & problem statement selection",
+          category: "Hackathon",
+          targetDate: new Date("2026-09-28T23:59:59Z"),
+          campus: "All Campuses",
+          highlight: "₹1 Lakh+ Prize · National Finalist Track",
+          tag: "#SIH2026",
+          badgeBg: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+          linkUrl: "https://www.sih.gov.in",
+          isActive: true,
+          order: 1,
+        },
+        {
+          title: "Anokha Techfest 2026",
+          tagline: "Annual national techfest & innovation exhibition",
+          category: "Techfest",
+          targetDate: new Date("2026-10-15T09:00:00Z"),
+          campus: "Coimbatore Campus",
+          highlight: "75+ Events · Workshops & RoboWars",
+          tag: "#Anokha",
+          badgeBg: "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30",
+          linkUrl: null,
+          isActive: true,
+          order: 2,
+        },
+        {
+          title: "Microsoft & Cisco Campus Drives",
+          tagline: "CIR shortlisted rounds & technical interviews",
+          category: "Placement",
+          targetDate: new Date("2026-09-18T10:00:00Z"),
+          campus: "CIR All Campuses",
+          highlight: "High CTC · SDE & Cloud Engineering",
+          tag: "#Placements",
+          badgeBg: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30",
+          linkUrl: null,
+          isActive: true,
+          order: 3,
+        },
+      ];
+      await FlagshipEventModel.insertMany(defaultFlagships);
+      items = await FlagshipEventModel.find({ isActive: true }).sort({ order: 1, targetDate: 1 }).lean();
+    }
+
+    const formatted = items.map((doc: any) => ({
+      id: String(doc._id),
+      title: doc.title,
+      tagline: doc.tagline,
+      category: doc.category,
+      targetDate: doc.targetDate ? doc.targetDate.toISOString() : new Date().toISOString(),
+      campus: doc.campus,
+      highlight: doc.highlight,
+      tag: doc.tag,
+      badgeBg: doc.badgeBg || getCategoryBadge(doc.category),
+      linkUrl: doc.linkUrl || null,
+      isActive: doc.isActive !== false,
+      order: doc.order || 0,
+      createdAt: doc.createdAt,
+    }));
+
+    res.json({ items: formatted, total: formatted.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Admin creates new flagship countdown event
+router.post("/flagship-events", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const { title, tagline, category, targetDate, campus, highlight, tag, linkUrl, badgeBg } = req.body;
+    if (!title || !targetDate) {
+      return res.status(400).json({ error: "Title and Target Date are required." });
+    }
+
+    const created = await FlagshipEventModel.create({
+      createdBy: (req as any).user?.id,
+      title: String(title).trim(),
+      tagline: String(tagline || "Amrita flagship university event").trim(),
+      category: String(category || "Hackathon").trim(),
+      targetDate: new Date(targetDate),
+      campus: String(campus || "All Campuses").trim(),
+      highlight: String(highlight || "National Flagship Event").trim(),
+      tag: String(tag || `#${String(title).replace(/[^a-zA-Z0-9]/g, '')}`).trim(),
+      badgeBg: badgeBg || getCategoryBadge(category || 'Hackathon'),
+      linkUrl: linkUrl ? String(linkUrl).trim() : null,
+      isActive: true,
+      order: 0,
+    });
+
+    res.status(201).json({
+      success: true,
+      item: {
+        id: String(created._id),
+        title: created.title,
+        tagline: created.tagline,
+        category: created.category,
+        targetDate: created.targetDate.toISOString(),
+        campus: created.campus,
+        highlight: created.highlight,
+        tag: created.tag,
+        badgeBg: created.badgeBg,
+        linkUrl: created.linkUrl,
+        isActive: created.isActive,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Admin updates a flagship countdown event
+router.put("/flagship-events/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, tagline, category, targetDate, campus, highlight, tag, linkUrl, badgeBg, isActive, order } = req.body;
+
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = String(title).trim();
+    if (tagline !== undefined) updateData.tagline = String(tagline).trim();
+    if (category !== undefined) {
+      updateData.category = String(category).trim();
+      if (!badgeBg) updateData.badgeBg = getCategoryBadge(category);
+    }
+    if (targetDate !== undefined) updateData.targetDate = new Date(targetDate);
+    if (campus !== undefined) updateData.campus = String(campus).trim();
+    if (highlight !== undefined) updateData.highlight = String(highlight).trim();
+    if (tag !== undefined) updateData.tag = String(tag).trim();
+    if (linkUrl !== undefined) updateData.linkUrl = linkUrl ? String(linkUrl).trim() : null;
+    if (badgeBg !== undefined) updateData.badgeBg = badgeBg;
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+    if (order !== undefined) updateData.order = Number(order);
+
+    const updated = await FlagshipEventModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    if (!updated) {
+      return res.status(404).json({ error: "Flagship event not found." });
+    }
+
+    res.json({
+      success: true,
+      item: {
+        id: String(updated._id),
+        title: updated.title,
+        tagline: updated.tagline,
+        category: updated.category,
+        targetDate: updated.targetDate.toISOString(),
+        campus: updated.campus,
+        highlight: updated.highlight,
+        tag: updated.tag,
+        badgeBg: updated.badgeBg,
+        linkUrl: updated.linkUrl,
+        isActive: updated.isActive,
+        order: updated.order,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Admin deletes a flagship countdown event
+router.delete("/flagship-events/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = await FlagshipEventModel.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Flagship event not found." });
+    }
+    res.json({ success: true, deletedId: id });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

@@ -2,6 +2,7 @@ import mongoose, { Schema, type Document, type Model } from "mongoose";
 
 export interface IOpportunity extends Document {
   _id: mongoose.Types.ObjectId;
+  postedBy?: mongoose.Types.ObjectId;
   title: string;
   description: string;
   category: string;
@@ -15,6 +16,7 @@ export interface IOpportunity extends Document {
 
 const OpportunitySchema = new Schema<IOpportunity>(
   {
+    postedBy: { type: Schema.Types.ObjectId, ref: "User", required: false, index: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     category: { type: String, required: true, index: true },

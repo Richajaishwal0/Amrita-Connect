@@ -12,6 +12,7 @@ export * from "./helpRequest";
 export * from "./campusBuddy";
 export * from "./researchProject";
 export * from "./projectShowcase";
+export * from "./flagshipEvent";
 
 
 

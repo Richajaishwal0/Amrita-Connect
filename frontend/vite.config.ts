@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 
 const port = Number(process.env.PORT) || 5173;
 const basePath = process.env.BASE_PATH || '/';
-const apiUrl = process.env.API_URL || 'http://localhost:5000';
+const apiUrl = process.env.API_URL || 'http://127.0.0.1:5000';
 
 export default defineConfig({
   base: basePath,

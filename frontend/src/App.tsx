@@ -5,7 +5,7 @@ import {
   Building2, CalendarDays, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock,
   Code, Compass, Copy, CornerDownRight, Download, ExternalLink, File, FileText, Flame, Globe, GraduationCap, Heart, HeartHandshake, HelpCircle, House, Image, Info, Layers,
   Lightbulb, Link2, Linkedin, Github, LoaderCircle, Lock, LogIn, LogOut, Mail, MapPin, Menu, MessageSquare, Moon,
-  MoreHorizontal, Network, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, RotateCw, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
+  MoreHorizontal, Network, PanelLeft, PanelLeftClose, PanelLeftOpen, Paperclip, PartyPopper, Pencil, PenLine, Play, Plus, Quote, Radio, Rocket, RotateCw, Rss, Search, Send, Settings2, Share, Share2, ShieldCheck, Smile, Sparkles,
   Star, Sun, Terminal, ThumbsUp, Trash2, TrendingUp, Trophy, Upload, UserCheck, UserCircle, UserPlus, UserRoundPlus, Users, Users2, UserX, Video, X, Zap,
 } from 'lucide-react';
 import { useWebSocketChat } from './hooks/useWebSocketChat';
@@ -2739,10 +2739,35 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('amrita_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('amrita_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   const socialNavItems: NavItem[] = [
     { href: '/feed', label: 'Feed & Stories', icon: Rss },
     { href: '/people', label: 'My Friends & Network', icon: Users },
     { href: '/blogs', label: 'Blogs', icon: FileText },
+    { href: '/collaborations', label: 'Collaborations', icon: Network },
     { href: '/mentorship', label: 'Mentorship Hub', icon: HeartHandshake },
     { href: '/showcase', label: 'Project Showcase', icon: Trophy },
     { href: '/research', label: 'Research & Labs', icon: BookOpen },
@@ -2771,14 +2796,45 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
     <div className="min-h-[100dvh] bg-background">
       {/* Modern Social Sidebar for Desktop & Mobile Drawer */}
       <aside
+        style={isDesktop ? { width: isCollapsed ? '72px' : '272px' } : undefined}
         className={cx(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/80 bg-card text-card-foreground transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl lg:shadow-none',
+          'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-border/80 bg-card text-card-foreground lg:translate-x-0 shadow-2xl lg:shadow-none transition-all duration-300 ease-in-out',
+          !isDesktop && 'w-72',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Top Header of Sidebar */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/60 px-5">
-          <Brand />
+        <div
+          className={cx(
+            'flex h-16 shrink-0 items-center border-b border-border/60 transition-all duration-300',
+            isCollapsed && isDesktop ? 'justify-center px-2' : 'justify-between px-4'
+          )}
+        >
+          {!(isCollapsed && isDesktop) ? (
+            <>
+              <Brand />
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                title="Minimize sidebar"
+                data-testid="button-toggle-sidebar"
+                className="hidden lg:flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all active:scale-95"
+              >
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title="Expand sidebar"
+              data-testid="button-toggle-sidebar"
+              className="flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-orange-500 transition-all active:scale-95"
+            >
+              <PanelLeftOpen className="h-5 w-5 text-orange-500" />
+            </button>
+          )}
+
           <button
             data-testid="button-close-menu"
             aria-label="Close navigation menu"
@@ -2791,59 +2847,69 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
 
         {/* Social Mini Profile Card */}
         {user && (
-          <div className="p-3">
-            <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-orange-500/10 via-purple-500/5 to-secondary/30 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-3">
-                <Avatar user={user} size="md" className="ring-2 ring-orange-500/30" />
-                <div className="min-w-0 flex-1">
+          <div className={cx('transition-all duration-300', isCollapsed && isDesktop ? 'p-2 flex justify-center' : 'p-3')}>
+            {!(isCollapsed && isDesktop) ? (
+              <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-orange-500/10 via-purple-500/5 to-secondary/30 p-3.5 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <Avatar user={user} size="md" className="ring-2 ring-orange-500/30" />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="block font-bold text-sm text-foreground hover:text-orange-500 transition-colors truncate"
+                    >
+                      {user.fullName}
+                    </Link>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {user.headline || `${roleLabels[user.role] ?? user.role} · Amrita ${user.campus || ''}`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick links under mini card */}
+                <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5 text-[11px] font-semibold text-muted-foreground">
+                  <Link
+                    href="/connections"
+                    onClick={() => setOpen(false)}
+                    className="hover:text-orange-500 transition-colors flex items-center gap-1"
+                  >
+                    <Users className="h-3 w-3" />
+                    <span>Network</span>
+                  </Link>
+                  <span className="text-border">•</span>
+                  <Link
+                    href="/profile?tab=saved"
+                    onClick={() => setOpen(false)}
+                    className="hover:text-orange-500 transition-colors flex items-center gap-1"
+                  >
+                    <Bookmark className="h-3 w-3" />
+                    <span>Saved</span>
+                  </Link>
+                  <span className="text-border">•</span>
                   <Link
                     href="/profile"
                     onClick={() => setOpen(false)}
-                    className="block font-bold text-sm text-foreground hover:text-orange-500 transition-colors truncate"
+                    className="hover:text-orange-500 transition-colors flex items-center gap-1"
                   >
-                    {user.fullName}
+                    <UserCircle className="h-3 w-3" />
+                    <span>Profile</span>
                   </Link>
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    {user.headline || `${roleLabels[user.role] ?? user.role} · Amrita ${user.campus || ''}`}
-                  </p>
                 </div>
               </div>
-
-              {/* Quick links under mini card */}
-              <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5 text-[11px] font-semibold text-muted-foreground">
-                <Link
-                  href="/connections"
-                  onClick={() => setOpen(false)}
-                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
-                >
-                  <Users className="h-3 w-3" />
-                  <span>Network</span>
-                </Link>
-                <span className="text-border">•</span>
-                <Link
-                  href="/profile?tab=saved"
-                  onClick={() => setOpen(false)}
-                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
-                >
-                  <Bookmark className="h-3 w-3" />
-                  <span>Saved</span>
-                </Link>
-                <span className="text-border">•</span>
-                <Link
-                  href="/profile"
-                  onClick={() => setOpen(false)}
-                  className="hover:text-orange-500 transition-colors flex items-center gap-1"
-                >
-                  <UserCircle className="h-3 w-3" />
-                  <span>Profile</span>
-                </Link>
-              </div>
-            </div>
+            ) : (
+              <Link
+                href="/profile"
+                title={`${user.fullName} (View Profile)`}
+                className="group flex items-center justify-center p-1 rounded-2xl hover:bg-secondary/70 transition-all"
+              >
+                <Avatar user={user} size="md" className="ring-2 ring-orange-500/40 group-hover:scale-105 transition-transform" />
+              </Link>
+            )}
           </div>
         )}
 
         {/* Social Navigation Menu */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <div className={cx('flex-1 overflow-y-auto space-y-1 py-2 transition-all duration-300', isCollapsed && isDesktop ? 'px-2' : 'px-3')}>
           <nav className="space-y-1" aria-label="Social navigation">
             {socialNavItems.map(({ href, label, icon: Icon }) => {
               const isActive = location === href || (href !== '/feed' && location.startsWith(href));
@@ -2853,9 +2919,13 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
                   onClick={() => setOpen(false)}
                   href={href}
                   key={href + label}
+                  title={isCollapsed && isDesktop ? label : undefined}
                   aria-current={isActive ? 'page' : undefined}
                   className={cx(
-                    'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold transition-all',
+                    'relative flex items-center rounded-xl transition-all',
+                    isCollapsed && isDesktop
+                      ? 'justify-center p-3'
+                      : 'gap-3 px-3.5 py-2.5 text-xs sm:text-sm font-semibold',
                     isActive
                       ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold border border-orange-500/20 shadow-2xs'
                       : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
@@ -2863,15 +2933,20 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
                 >
                   <Icon
                     className={cx(
-                      'h-4 w-4 shrink-0',
+                      'shrink-0 transition-transform',
+                      isCollapsed && isDesktop ? 'h-5 w-5' : 'h-4 w-4',
                       isActive ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
                     )}
                   />
-                  <span className="truncate">{label}</span>
+                  {!(isCollapsed && isDesktop) && <span className="truncate">{label}</span>}
                   {href === '/messages' && unreadMessagesCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-extrabold text-white shadow-xs">
-                      +{unreadMessagesCount > 9 ? '9' : unreadMessagesCount}
-                    </span>
+                    isCollapsed && isDesktop ? (
+                      <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-orange-500 ring-2 ring-card" />
+                    ) : (
+                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-extrabold text-white shadow-xs">
+                        +{unreadMessagesCount > 9 ? '9' : unreadMessagesCount}
+                      </span>
+                    )
                   )}
                 </Link>
               );
@@ -2880,15 +2955,19 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
         </div>
 
         {/* Sidebar Bottom Footer */}
-        <div className="shrink-0 border-t border-border/70 p-3 bg-card/90">
+        <div className={cx('shrink-0 border-t border-border/70 bg-card/90 transition-all duration-300', isCollapsed && isDesktop ? 'p-2 flex justify-center' : 'p-3')}>
           <button
             type="button"
             data-testid="button-sidebar-logout"
             onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+            title="Sign out"
+            className={cx(
+              'flex items-center justify-center rounded-xl text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95',
+              isCollapsed && isDesktop ? 'p-2.5' : 'w-full gap-2 py-2'
+            )}
           >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Sign out</span>
+            <LogOut className={cx(isCollapsed && isDesktop ? 'h-4 w-4' : 'h-3.5 w-3.5')} />
+            {!(isCollapsed && isDesktop) && <span>Sign out</span>}
           </button>
         </div>
       </aside>
@@ -2903,7 +2982,10 @@ function AppShell({ children, user }: { children: React.ReactNode; user?: User |
       )}
 
       {/* Main Content Viewport */}
-      <div className="lg:pl-72 flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col transition-all duration-300 ease-in-out"
+        style={isDesktop ? { paddingLeft: isCollapsed ? '72px' : '272px' } : undefined}
+      >
         {/* Social Sticky Top Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/80 bg-background/90 px-4 sm:px-8 backdrop-blur-md">
           <div className="flex items-center gap-3 flex-1 max-w-lg">
@@ -7217,13 +7299,13 @@ function InterviewGuidanceModal({
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
             <Button type="button" variant="quiet" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={guidanceMutation.isPending || !message.trim()} className="font-bold">
+            <Button type="submit" disabled={guidanceMutation.isPending} className="font-bold">
               {guidanceMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Send Question via Chat
+              Send Inquiry
             </Button>
           </div>
         </form>
@@ -7232,197 +7314,65 @@ function InterviewGuidanceModal({
   );
 }
 
-function InterviewDetailModal({
-  interview,
+function ShareInterviewModal({
   onClose,
-  onGuidance,
+  initialInterview,
 }: {
-  interview: InterviewExperience;
   onClose: () => void;
-  onGuidance: () => void;
+  initialInterview?: InterviewExperience | null;
 }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/10 to-accent/20 text-xl font-bold text-foreground border border-border">
-              {interview.company.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={cx(
-                    'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-                    interview.outcome === 'Offered'
-                      ? 'bg-emerald-500/15 text-emerald-500'
-                      : interview.outcome === 'In Progress'
-                        ? 'bg-accent/20 text-accent'
-                        : 'bg-destructive/15 text-destructive'
-                  )}
-                >
-                  {interview.outcome}
-                </span>
-                <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                  {interview.difficulty} Difficulty
-                </span>
-                <span className="mono text-[10px] text-muted-foreground">{interview.interviewDate}</span>
-              </div>
-              <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
-                {interview.company} · {interview.role}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {interview.employmentType} · Amrita {interview.campus}
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Key topics chips */}
-        {interview.keyTopics?.length > 0 && (
-          <div className="mt-5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Key Topics Covered</div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {interview.keyTopics.map((t) => (
-                <Tag key={t} warm>
-                  {t}
-                </Tag>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Overall Experience */}
-        <div className="mt-6">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Interview Experience Summary</h3>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">{interview.overallExperience}</p>
-        </div>
-
-        {/* Rounds Breakdown */}
-        {interview.rounds?.length > 0 && (
-          <div className="mt-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Rounds Breakdown ({interview.rounds.length} Rounds)
-            </h3>
-            <div className="space-y-3">
-              {interview.rounds.map((round) => (
-                <div key={round.roundNumber} className="rounded-xl border border-border bg-secondary/30 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-bold text-primary">
-                        {round.roundNumber}
-                      </span>
-                      <h4 className="text-sm font-bold text-foreground">{round.roundName}</h4>
-                    </div>
-                    {round.durationMinutes && (
-                      <span className="mono text-[10px] text-muted-foreground">{round.durationMinutes} mins</span>
-                    )}
-                  </div>
-                  <p className="mt-2.5 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
-                    {round.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Prep Advice Callout */}
-        <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-accent uppercase tracking-wider">
-            <Sparkles className="h-4 w-4" /> Advice for Amrita Juniors & Peers
-          </div>
-          <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-foreground font-medium">
-            {interview.prepAdvice}
-          </p>
-        </div>
-
-        {/* Author Footer */}
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-border pt-4">
-          <div className="flex items-center gap-3">
-            <Avatar user={interview.author} size="md" />
-            <div>
-              <Link href={`/people/${interview.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
-                {interview.author.fullName}
-              </Link>
-              <p className="text-[10px] text-muted-foreground">
-                {interview.author.headline || `${roleLabels[interview.author.role]} · Amrita ${interview.author.campus}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!interview.isAuthor && (
-              <Button onClick={onGuidance} className="font-bold text-xs">
-                <MessageSquare className="h-3.5 w-3.5" /> Ask {interview.author.fullName.split(' ')[0]} for Prep Advice
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ShareInterviewModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  const isEditing = !!initialInterview;
+
   const [form, setForm] = useState({
-    company: '',
-    role: '',
-    employmentType: 'Full-time',
-    outcome: 'Offered',
-    difficulty: 'Medium',
-    interviewDate: new Date().toISOString().slice(0, 7),
-    keyTopics: '',
-    overallExperience: '',
-    prepAdvice: '',
+    company: initialInterview?.company ?? '',
+    role: initialInterview?.role ?? '',
+    employmentType: initialInterview?.employmentType ?? 'Full-time',
+    outcome: initialInterview?.outcome ?? 'Offered',
+    difficulty: initialInterview?.difficulty ?? 'Medium',
+    keyTopics: initialInterview?.keyTopics ? initialInterview.keyTopics.join(', ') : '',
+    overallExperience: initialInterview?.overallExperience ?? '',
+    prepAdvice: initialInterview?.prepAdvice ?? '',
   });
 
-  const [rounds, setRounds] = useState<Array<{ roundNumber: number; roundName: string; description: string; durationMinutes: number }>>([
-    {
-      roundNumber: 1,
-      roundName: 'Online Coding Assessment (OA)',
-      description: '',
-      durationMinutes: 60,
-    },
-    {
-      roundNumber: 2,
-      roundName: 'Technical DSA / Coding Round',
-      description: '',
-      durationMinutes: 45,
-    },
-  ]);
+  const [rounds, setRounds] = useState<Array<{ roundName: string; description: string; durationMinutes?: number }>>(
+    initialInterview?.rounds && initialInterview.rounds.length > 0
+      ? initialInterview.rounds
+      : [
+          { roundName: 'Round 1: Online Assessment (Coding & Aptitude)', description: '3 LeetCode medium questions, 20 MCQs on OS & DBMS.', durationMinutes: 90 },
+          { roundName: 'Round 2: Technical Interview (DSA & Core CS)', description: 'Graphs, Trees, DP and project architecture deep dive.', durationMinutes: 60 },
+          { roundName: 'Round 3: Techno-Managerial / HR', description: 'Behavioral situational questions and culture fit.', durationMinutes: 30 },
+        ]
+  );
 
   const addRound = () => {
-    setRounds((prev) => [
-      ...prev,
-      {
-        roundNumber: prev.length + 1,
-        roundName: `Round ${prev.length + 1} (e.g. System Design / Managerial)`,
-        description: '',
-        durationMinutes: 45,
-      },
+    setRounds([
+      ...rounds,
+      { roundName: `Round ${rounds.length + 1}: Technical`, description: '', durationMinutes: 45 },
     ]);
   };
 
-  const removeRound = (idx: number) => {
-    setRounds((prev) => prev.filter((_, i) => i !== idx).map((r, i) => ({ ...r, roundNumber: i + 1 })));
+  const removeRound = (index: number) => {
+    setRounds(rounds.filter((_, i) => i !== index));
   };
 
-  const updateRound = (idx: number, field: string, value: any) => {
-    setRounds((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  const updateRound = (index: number, field: string, val: any) => {
+    setRounds(
+      rounds.map((r, i) => (i === index ? { ...r, [field]: val } : r))
+    );
   };
 
   const shareMutation = useMutation({
     mutationFn: (body: any) =>
-      apiFetch<{ id: string }>(`/interviews`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+      initialInterview
+        ? apiFetch<{ success: boolean; id: string }>(`/interviews/${initialInterview.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          })
+        : apiFetch<{ id: string }>(`/interviews`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+          }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interviews'] });
       onClose();
@@ -7433,6 +7383,7 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     shareMutation.mutate({
       ...form,
+      tips: form.prepAdvice,
       keyTopics: form.keyTopics.split(',').map((t) => t.trim()).filter(Boolean),
       rounds,
     });
@@ -7444,7 +7395,9 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between">
           <div>
             <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Community Knowledge</div>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Share an Interview Experience</h2>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
+              {isEditing ? 'Edit Interview Experience' : 'Share an Interview Experience'}
+            </h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
             <X className="h-4 w-4" />
@@ -7477,37 +7430,49 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
               label="Selection Outcome"
               value={form.outcome}
               onChange={(e) => setForm({ ...form, outcome: e.target.value })}
-              options={['Offered', 'Not Selected', 'In Progress', 'Declined Offer'].map((v) => ({ value: v, label: v }))}
-            />
-            <SelectField
-              id="difficulty"
-              label="Difficulty Rating"
-              value={form.difficulty}
-              onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
-              options={['Easy', 'Medium', 'Hard', 'Challenging'].map((v) => ({ value: v, label: v }))}
-            />
+            >
+              <option value="Offered">Offered</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Not Selected">Not Selected</option>
+              <option value="Declined Offer">Declined Offer</option>
+            </SelectField>
+
             <SelectField
               id="employment-type"
-              label="Employment Type"
+              label="Engagement Type"
               value={form.employmentType}
               onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
-              options={['Full-time', 'Internship', '6-Month Co-op'].map((v) => ({ value: v, label: v }))}
-            />
+            >
+              <option value="Full-time">Full-time</option>
+              <option value="Internship">Internship</option>
+              <option value="6-Month Co-op">6-Month Co-op</option>
+            </SelectField>
+
+            <SelectField
+              id="difficulty"
+              label="Interview Difficulty"
+              value={form.difficulty}
+              onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+            >
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+              <option value="Challenging">Challenging</option>
+            </SelectField>
           </div>
 
           <Field
             id="key-topics"
-            label="Key Topics Asked (comma-separated)"
-            placeholder="e.g. Dynamic Programming, System Design, Operating Systems, SQL"
+            label="Key Topics Covered (Comma-separated)"
+            placeholder="e.g. Binary Search, Dynamic Programming, System Design, LLD, Spring Boot"
             value={form.keyTopics}
             onChange={(e) => setForm({ ...form, keyTopics: e.target.value })}
-            required
           />
 
-          {/* Rounds List */}
+          {/* Dynamic Rounds Breakdown */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-foreground">Interview Rounds Breakdown</label>
+              <span className="text-xs font-bold text-foreground">Interview Rounds Breakdown</span>
               <button
                 type="button"
                 onClick={addRound}
@@ -7518,23 +7483,24 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {rounds.map((round, idx) => (
-              <div key={idx} className="rounded-xl border border-border bg-secondary/30 p-3.5 space-y-2.5">
+              <div key={idx} className="rounded-xl border border-border bg-secondary/20 p-3.5 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent">
-                    Round {round.roundNumber}
-                  </span>
-                  <input
-                    value={round.roundName}
-                    onChange={(e) => updateRound(idx, 'roundName', e.target.value)}
-                    placeholder="Round Title (e.g. System Design)"
-                    className="flex-1 rounded-lg border border-input bg-card px-2.5 py-1 text-xs font-bold outline-none focus:border-accent"
-                    required
-                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent/20 text-xs font-bold text-accent">
+                      {idx + 1}
+                    </span>
+                    <input
+                      value={round.roundName}
+                      onChange={(e) => updateRound(idx, 'roundName', e.target.value)}
+                      placeholder="Round Title (e.g. Technical Round 1 - DSA)"
+                      className="w-full rounded-lg border border-input bg-card px-2.5 py-1 text-xs font-bold outline-none focus:border-accent"
+                    />
+                  </div>
                   {rounds.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeRound(idx)}
-                      className="p-1 text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive p-1"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -7544,9 +7510,8 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
                   rows={2}
                   value={round.description}
                   onChange={(e) => updateRound(idx, 'description', e.target.value)}
-                  placeholder="What specific questions, coding problems, or scenarios were asked in this round?"
-                  className="w-full rounded-lg border border-input bg-card p-2.5 text-xs outline-none focus:border-accent"
-                  required
+                  placeholder="Questions asked, coding problem details, concepts tested..."
+                  className="w-full rounded-lg border border-input bg-card p-2 text-xs outline-none focus:border-accent"
                 />
               </div>
             ))}
@@ -7558,7 +7523,7 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
               rows={3}
               value={form.overallExperience}
               onChange={(e) => setForm({ ...form, overallExperience: e.target.value })}
-              placeholder="How was the recruitment process? Interviewer demeanor, speed of feedback, etc..."
+              placeholder="How was the interviewer? Any specific focus on projects or resume details?"
               className="w-full rounded-xl border border-input bg-card p-3 text-xs outline-none focus:border-accent"
               required
             />
@@ -7581,8 +7546,14 @@ function ShareInterviewModal({ onClose }: { onClose: () => void }) {
               Cancel
             </Button>
             <Button type="submit" disabled={shareMutation.isPending} className="font-bold">
-              {shareMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Publish Experience
+              {shareMutation.isPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : isEditing ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {isEditing ? 'Save Changes' : 'Publish Experience'}
             </Button>
           </div>
         </form>
@@ -7595,143 +7566,178 @@ function InterviewCard({
   item,
   onSelect,
   onGuidance,
+  onEdit,
+  onDelete,
 }: {
   item: InterviewExperience;
   onSelect: () => void;
   onGuidance: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
-  const queryClient = useQueryClient();
+          const queryClient = useQueryClient();
 
-  const likeMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ isLiked: boolean; likesCount: number }>(`/interviews/${item.id}/like`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
-  });
+          const likeMutation = useMutation({
+            mutationFn: () =>
+              apiFetch<{ isLiked: boolean; likesCount: number }>(`/interviews/${item.id}/like`, { method: 'POST' }),
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
+          });
 
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ isSaved: boolean }>(`/interviews/${item.id}/save`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
-  });
+          const saveMutation = useMutation({
+            mutationFn: () =>
+              apiFetch<{ isSaved: boolean }>(`/interviews/${item.id}/save`, { method: 'POST' }),
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: ['interviews'] }),
+          });
 
-  return (
-    <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary text-base font-bold text-foreground border border-border">
-              {item.company.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={cx(
-                    'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-                    item.outcome === 'Offered'
-                      ? 'bg-emerald-500/15 text-emerald-500'
-                      : item.outcome === 'In Progress'
-                        ? 'bg-accent/20 text-accent'
-                        : 'bg-destructive/15 text-destructive'
+          return (
+            <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary text-base font-bold text-foreground border border-border">
+                      {item.company.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={cx(
+                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                            item.outcome === 'Offered'
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : item.outcome === 'In Progress'
+                                ? 'bg-accent/20 text-accent'
+                                : 'bg-destructive/15 text-destructive'
+                          )}
+                        >
+                          {item.outcome}
+                        </span>
+                        <span className="rounded bg-secondary/80 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          {item.difficulty}
+                        </span>
+                      </div>
+                      <h3
+                        onClick={onSelect}
+                        className="mt-1 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
+                      >
+                        {item.company} · {item.role}
+                      </h3>
+                    </div>
+                  </div>
+                  <span className="mono text-[10px] text-muted-foreground">{item.interviewDate}</span>
+                </div>
+
+                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.overallExperience}</p>
+
+                {/* Rounds Timeline Preview */}
+                {item.rounds?.length > 0 && (
+                  <div className="mt-3.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground bg-secondary/30 p-2.5 rounded-xl border border-border">
+                    <span className="font-bold text-foreground mr-1">Rounds:</span>
+                    {item.rounds.map((r, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        <span className="rounded bg-accent/20 px-1.5 py-0.2 font-bold text-accent text-[10px]">
+                          {r.roundName.split(' ')[0]}
+                        </span>
+                        {i < item.rounds.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground/60" />}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Key topics chips */}
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {item.keyTopics?.slice(0, 4).map((t) => (
+                    <Tag key={t}>{t}</Tag>
+                  ))}
+                  {item.keyTopics?.length > 4 && (
+                    <span className="text-[10px] text-muted-foreground self-center">+{item.keyTopics.length - 4} more</span>
                   )}
-                >
-                  {item.outcome}
-                </span>
-                <span className="rounded bg-secondary/80 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                  {item.difficulty}
-                </span>
+                </div>
               </div>
-              <h3
-                onClick={onSelect}
-                className="mt-1 text-lg font-bold text-foreground hover:text-accent cursor-pointer tracking-[-.03em]"
-              >
-                {item.company} · {item.role}
-              </h3>
+
+              <div className="mt-5 border-t border-border pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Avatar user={item.author} size="sm" />
+                  <div>
+                    <Link href={`/people/${item.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
+                      {item.author.fullName}
+                    </Link>
+                    <p className="text-[10px] text-muted-foreground">Amrita {item.author.campus} {item.batch ? `· '${item.batch}` : ''}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => likeMutation.mutate()}
+                    className={cx(
+                      'inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all',
+                      item.isLiked
+                        ? 'border-accent bg-accent/20 text-accent'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Heart className={cx('h-3.5 w-3.5', item.isLiked && 'fill-accent')} />
+                    {item.likesCount > 0 && item.likesCount}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => saveMutation.mutate()}
+                    className={cx(
+                      'rounded-lg border p-1.5 transition-all',
+                      item.isSaved
+                        ? 'border-accent bg-accent/20 text-accent'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Bookmark className={cx('h-3.5 w-3.5', item.isSaved && 'fill-accent')} />
+                  </button>
+
+                  {item.isAuthor ? (
+                    <div className="flex items-center gap-1">
+                      {onEdit && (
+                        <button
+                          type="button"
+                          data-testid={`button-edit-interview-${item.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit();
+                          }}
+                          className="rounded-lg border border-border p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                          title="Edit interview experience"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          data-testid={`button-delete-interview-${item.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                          }}
+                          className="rounded-lg border border-destructive/30 bg-destructive/10 p-1.5 text-destructive hover:bg-destructive/20 transition-colors"
+                          title="Delete interview experience"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <Button variant="quiet" className="px-2.5 py-1.5 text-xs font-bold" onClick={onGuidance}>
+                      Ask Tips
+                    </Button>
+                  )}
+
+                  <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
+                    Read Experience <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-          <span className="mono text-[10px] text-muted-foreground">{item.interviewDate}</span>
-        </div>
-
-        <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.overallExperience}</p>
-
-        {/* Rounds Timeline Preview */}
-        {item.rounds?.length > 0 && (
-          <div className="mt-3.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground bg-secondary/30 p-2.5 rounded-xl border border-border">
-            <span className="font-bold text-foreground mr-1">Rounds:</span>
-            {item.rounds.map((r, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <span className="rounded bg-accent/20 px-1.5 py-0.2 font-bold text-accent text-[10px]">
-                  {r.roundName.split(' ')[0]}
-                </span>
-                {i < item.rounds.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground/60" />}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Key topics chips */}
-        <div className="mt-3 flex flex-wrap gap-1">
-          {item.keyTopics?.slice(0, 4).map((t) => (
-            <Tag key={t}>{t}</Tag>
-          ))}
-          {item.keyTopics?.length > 4 && (
-            <span className="text-[10px] text-muted-foreground self-center">+{item.keyTopics.length - 4} more</span>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-5 border-t border-border pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Avatar user={item.author} size="sm" />
-          <div>
-            <Link href={`/people/${item.author.id}`} className="text-xs font-bold text-foreground hover:text-accent">
-              {item.author.fullName}
-            </Link>
-            <p className="text-[10px] text-muted-foreground">Amrita {item.author.campus} {item.batch ? `· '${item.batch}` : ''}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={() => likeMutation.mutate()}
-            className={cx(
-              'inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all',
-              item.isLiked
-                ? 'border-accent bg-accent/20 text-accent'
-                : 'border-border text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Heart className={cx('h-3.5 w-3.5', item.isLiked && 'fill-accent')} />
-            {item.likesCount > 0 && item.likesCount}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => saveMutation.mutate()}
-            className={cx(
-              'rounded-lg border p-1.5 transition-all',
-              item.isSaved
-                ? 'border-accent bg-accent/20 text-accent'
-                : 'border-border text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Bookmark className={cx('h-3.5 w-3.5', item.isSaved && 'fill-accent')} />
-          </button>
-
-          {!item.isAuthor && (
-            <Button variant="quiet" className="px-2.5 py-1.5 text-xs font-bold" onClick={onGuidance}>
-              Ask Tips
-            </Button>
-          )}
-
-          <Button variant="outline" className="px-3 py-1.5 text-xs font-bold" onClick={onSelect}>
-            Read Experience <ArrowRight className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
+          );
+        }
 
 function InterviewsPage() {
   const [search, setSearch] = useState('');
@@ -7739,8 +7745,29 @@ function InterviewsPage() {
   const [outcome, setOutcome] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [showShare, setShowShare] = useState(false);
+  const [editingInterview, setEditingInterview] = useState<InterviewExperience | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<InterviewExperience | null>(null);
   const [guidanceTarget, setGuidanceTarget] = useState<InterviewExperience | null>(null);
+  const queryClient = useQueryClient();
+
+  const deleteInterviewMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/interviews/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      if (selectedInterview) setSelectedInterview(null);
+    },
+  });
+
+  const handleDeleteInterview = (item: InterviewExperience) => {
+    if (!item.isAuthor) {
+      alert('You can only delete your own interview experiences.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete your ${item.company} interview experience? This action cannot be undone.`)) {
+      return;
+    }
+    deleteInterviewMutation.mutate(item.id);
+  };
 
   const params = useMemo(
     () => ({
@@ -7825,6 +7852,7 @@ function InterviewsPage() {
           <option value="Offered">Offered Only</option>
           <option value="In Progress">In Progress</option>
           <option value="Not Selected">Not Selected</option>
+          <option value="Declined Offer">Declined Offer</option>
         </select>
 
         <select
@@ -7859,6 +7887,8 @@ function InterviewsPage() {
               item={item}
               onSelect={() => setSelectedInterview(item)}
               onGuidance={() => setGuidanceTarget(item)}
+              onEdit={() => setEditingInterview(item)}
+              onDelete={() => handleDeleteInterview(item)}
             />
           ))}
         </div>
@@ -7872,6 +7902,11 @@ function InterviewsPage() {
             setGuidanceTarget(selectedInterview);
             setSelectedInterview(null);
           }}
+          onEdit={() => {
+            setEditingInterview(selectedInterview);
+            setSelectedInterview(null);
+          }}
+          onDelete={() => handleDeleteInterview(selectedInterview)}
         />
       )}
 
@@ -7882,11 +7917,18 @@ function InterviewsPage() {
         />
       )}
 
-      {showShare && <ShareInterviewModal onClose={() => setShowShare(false)} />}
+      {(showShare || editingInterview) && (
+        <ShareInterviewModal
+          initialInterview={editingInterview}
+          onClose={() => {
+            setShowShare(false);
+            setEditingInterview(null);
+          }}
+        />
+      )}
     </>
   );
 }
-
 // ==========================================
 // HELP & QUESTION SYSTEM ("I NEED HELP" MATCHING)
 // ==========================================
@@ -7971,10 +8013,14 @@ function HelpDetailModal({
   requestId,
   onClose,
   onRefresh,
+  onEdit,
+  onDelete,
 }: {
   requestId: string;
   onClose: () => void;
   onRefresh: () => void;
+  onEdit?: (item: HelpRequest) => void;
+  onDelete?: (item: HelpRequest) => void;
 }) {
   const queryClient = useQueryClient();
   const { data: item, isLoading, refetch } = useHelpRequestDetail(requestId);
@@ -8074,9 +8120,35 @@ function HelpDetailModal({
                 </div>
                 <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{item.title}</h2>
               </div>
-              <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {item.isAuthor && (
+                  <>
+                    {onEdit && (
+                      <Button
+                        variant="outline"
+                        className="gap-1.5 px-3 py-1.5 text-xs font-semibold"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="danger"
+                        className="gap-1.5 px-3 py-1.5 text-xs font-semibold"
+                        onClick={() => onDelete(item)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </Button>
+                    )}
+                  </>
+                )}
+                <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Tags */}
@@ -8267,31 +8339,45 @@ function HelpDetailModal({
   );
 }
 
-function AskHelpModal({ onClose }: { onClose: () => void }) {
+function AskHelpModal({
+  onClose,
+  initialRequest,
+}: {
+  onClose: () => void;
+  initialRequest?: HelpRequest | null;
+}) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    category: 'Academic',
-    urgency: 'Normal',
-    tags: '',
+    title: initialRequest?.title ?? '',
+    description: initialRequest?.description ?? '',
+    category: initialRequest?.category ?? 'Academic',
+    urgency: initialRequest?.urgency ?? 'Normal',
+    tags: initialRequest?.tags ? initialRequest.tags.join(', ') : '',
   });
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: (body: any) =>
-      apiFetch<{ id: string }>(`/help-requests`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+      initialRequest
+        ? apiFetch<{ id: string }>(`/help-requests/${initialRequest.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          })
+        : apiFetch<{ id: string }>(`/help-requests`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+          }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+      if (initialRequest) {
+        queryClient.invalidateQueries({ queryKey: ['help-request-detail', initialRequest.id] });
+      }
       onClose();
     },
   });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
+    saveMutation.mutate({
       ...form,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
     });
@@ -8303,7 +8389,9 @@ function AskHelpModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between">
           <div>
             <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Community Help Desk</div>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Ask for Help or Advice</h2>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">
+              {initialRequest ? 'Edit Help Request' : 'Ask for Help or Advice'}
+            </h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
             <X className="h-4 w-4" />
@@ -8325,14 +8413,14 @@ function AskHelpModal({ onClose }: { onClose: () => void }) {
               id="help-category"
               label="Category"
               value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              onChange={(e) => setForm({ ...form, category: e.target.value as any })}
               options={['Academic', 'Project / Coding', 'Hackathon', 'Placements / Career', 'Campus Life', 'General'].map((v) => ({ value: v, label: v }))}
             />
             <SelectField
               id="help-urgency"
               label="Urgency Level"
               value={form.urgency}
-              onChange={(e) => setForm({ ...form, urgency: e.target.value })}
+              onChange={(e) => setForm({ ...form, urgency: e.target.value as any })}
               options={['Normal', 'High', 'Urgent'].map((v) => ({ value: v, label: v }))}
             />
           </div>
@@ -8362,9 +8450,9 @@ function AskHelpModal({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="quiet" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending} className="font-bold">
-              {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Publish Question
+            <Button type="submit" disabled={saveMutation.isPending} className="font-bold">
+              {saveMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {initialRequest ? 'Save Changes' : 'Publish Question'}
             </Button>
           </div>
         </form>
@@ -8376,9 +8464,13 @@ function AskHelpModal({ onClose }: { onClose: () => void }) {
 function HelpCard({
   item,
   onSelect,
+  onEdit,
+  onDelete,
 }: {
   item: HelpRequest;
   onSelect: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -8417,7 +8509,39 @@ function HelpCard({
               {item.status === 'solved' ? '✓ Solved' : '⏱ Open'}
             </span>
           </div>
-          <span className="mono text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+          <div className="flex items-center gap-2">
+            {item.isAuthor && (
+              <div className="flex items-center gap-1">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    title="Edit question"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="rounded-lg p-1 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    title="Delete question"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            <span className="mono text-[10px] text-muted-foreground">{relative(item.createdAt)}</span>
+          </div>
         </div>
 
         <h3
@@ -8475,11 +8599,30 @@ function HelpCard({
 }
 
 function HelpDeskPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('all');
   const [showAsk, setShowAsk] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<HelpRequest | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ success: boolean }>(`/help-requests/${id}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['help-requests'] });
+      setSelectedId(null);
+    },
+  });
+
+  const handleDeleteHelp = (request: HelpRequest) => {
+    if (window.confirm(`Are you sure you want to delete your question "${request.title}"? This cannot be undone.`)) {
+      deleteMutation.mutate(request.id);
+    }
+  };
 
   const params = useMemo(
     () => ({
@@ -8581,6 +8724,8 @@ function HelpDeskPage() {
               key={item.id}
               item={item}
               onSelect={() => setSelectedId(item.id)}
+              onEdit={() => setEditingRequest(item)}
+              onDelete={() => handleDeleteHelp(item)}
             />
           ))}
         </div>
@@ -8591,10 +8736,23 @@ function HelpDeskPage() {
           requestId={selectedId}
           onClose={() => setSelectedId(null)}
           onRefresh={() => refetch()}
+          onEdit={(req) => {
+            setSelectedId(null);
+            setEditingRequest(req);
+          }}
+          onDelete={(req) => handleDeleteHelp(req)}
         />
       )}
 
-      {showAsk && <AskHelpModal onClose={() => setShowAsk(false)} />}
+      {(showAsk || editingRequest) && (
+        <AskHelpModal
+          initialRequest={editingRequest}
+          onClose={() => {
+            setShowAsk(false);
+            setEditingRequest(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -10515,27 +10673,29 @@ function getEmbedVideoUrl(url?: string): string | null {
 function CreateShowcaseModal({
   onClose,
   onSuccess,
+  initialProject,
 }: {
   onClose: () => void;
   onSuccess: () => void;
+  initialProject?: ProjectShowcase | null;
 }) {
   const { data: user } = useGetCurrentUser();
   const [activeTab, setActiveTab] = useState<'basics' | 'media'>('basics');
   const imageFileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
-    title: '',
-    tagline: '',
-    description: '',
-    category: 'AI / ML',
-    techStack: 'React, Python, PyTorch',
-    campus: user?.campus || 'Amaravati',
-    department: user?.department || 'Computer Science & Engineering',
-    githubUrl: '',
-    liveDemoUrl: '',
-    videoUrl: '',
-    imageUrl: '',
-    award: '',
+    title: initialProject?.title ?? '',
+    tagline: initialProject?.tagline ?? '',
+    description: initialProject?.description ?? '',
+    category: initialProject?.category ?? 'AI / ML',
+    techStack: initialProject?.techStack ? initialProject.techStack.join(', ') : 'React, Python, PyTorch',
+    campus: initialProject?.campus || user?.campus || 'Amaravati',
+    department: initialProject?.department || user?.department || 'Computer Science & Engineering',
+    githubUrl: initialProject?.githubUrl ?? '',
+    liveDemoUrl: initialProject?.liveDemoUrl ?? '',
+    videoUrl: initialProject?.videoUrl ?? '',
+    imageUrl: initialProject?.imageUrl ?? '',
+    award: initialProject?.award ?? '',
   });
 
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -10550,15 +10710,23 @@ function CreateShowcaseModal({
     reader.readAsDataURL(file);
   };
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: () =>
-      apiFetch<{ success: boolean; id: string }>(`/showcase`, {
-        method: 'POST',
-        body: JSON.stringify({
-          ...form,
-          techStack: form.techStack.split(',').map((t) => t.trim()).filter(Boolean),
-        }),
-      }),
+      initialProject
+        ? apiFetch<{ success: boolean; project: any }>(`/showcase/${initialProject.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              ...form,
+              techStack: form.techStack.split(',').map((t) => t.trim()).filter(Boolean),
+            }),
+          })
+        : apiFetch<{ success: boolean; id: string }>(`/showcase`, {
+            method: 'POST',
+            body: JSON.stringify({
+              ...form,
+              techStack: form.techStack.split(',').map((t) => t.trim()).filter(Boolean),
+            }),
+          }),
     onSuccess: () => {
       onSuccess();
       onClose();
@@ -10571,7 +10739,7 @@ function CreateShowcaseModal({
       setActiveTab('basics');
       return;
     }
-    createMutation.mutate();
+    saveMutation.mutate();
   };
 
   const embedPreview = getEmbedVideoUrl(form.videoUrl);
@@ -10589,7 +10757,9 @@ function CreateShowcaseModal({
         <div className="flex items-center justify-between border-b border-border/80 px-6 py-4">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-orange-500">Innovation Gallery</span>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Showcase Your Project</h2>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              {initialProject ? 'Edit Project Showcase' : 'Showcase Your Project'}
+            </h2>
           </div>
           <button
             type="button"
@@ -10789,17 +10959,17 @@ function CreateShowcaseModal({
                       ref={imageFileInputRef}
                       type="file"
                       accept="image/*"
-                      className="hidden"
                       onChange={handleImageFileUpload}
+                      className="hidden"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => imageFileInputRef.current?.click()}
-                      className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-secondary/50 px-3 py-2 text-xs font-bold text-foreground hover:bg-secondary transition-colors shrink-0"
+                      className="px-3 text-xs"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      <span>Upload</span>
-                    </button>
+                    </Button>
                   </div>
                   {form.imageUrl && (
                     <div className="relative h-20 w-full overflow-hidden rounded-xl border border-border mt-1.5">
@@ -10862,11 +11032,11 @@ function CreateShowcaseModal({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || !form.title.trim()}
+                  disabled={saveMutation.isPending || !form.title.trim()}
                   className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
                 >
-                  {createMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                  <span>Publish Showcase</span>
+                  {saveMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                  <span>{initialProject ? 'Save Changes' : 'Publish Showcase'}</span>
                 </Button>
               </>
             )}
@@ -10881,10 +11051,14 @@ function ShowcaseDetailModal({
   projectId,
   onClose,
   onRefresh,
+  onEdit,
+  onDelete,
 }: {
   projectId: string;
   onClose: () => void;
   onRefresh: () => void;
+  onEdit?: (project: ProjectShowcase) => void;
+  onDelete?: (project: ProjectShowcase) => void;
 }) {
   const queryClient = useQueryClient();
   const { data: project, isLoading, refetch } = useShowcaseProjectDetail(projectId);
@@ -10953,13 +11127,39 @@ function ShowcaseDetailModal({
             <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">{project.title}</h2>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">{project.tagline}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {project.isAuthor && (
+              <>
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    className="gap-1.5 px-3 py-1.5 text-xs font-semibold"
+                    onClick={() => onEdit(project)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button
+                    variant="danger"
+                    className="gap-1.5 px-3 py-1.5 text-xs font-semibold"
+                    onClick={() => onDelete(project)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                )}
+              </>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Action Links Bar & Upvotes */}
@@ -11150,9 +11350,13 @@ function ShowcaseDetailModal({
 function ShowcaseCard({
   project,
   onSelect,
+  onEdit,
+  onDelete,
 }: {
   project: ProjectShowcase;
   onSelect: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -11185,22 +11389,55 @@ function ShowcaseCard({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              upvoteMutation.mutate();
-            }}
-            className={cx(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all shadow-2xs',
-              project.isUpvoted
-                ? 'bg-rose-500 text-white shadow-rose-500/20'
-                : 'border border-border/80 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+          <div className="flex items-center gap-2">
+            {project.isAuthor && (
+              <div className="flex items-center gap-1">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    title="Edit project"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="rounded-lg p-1 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    title="Delete project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             )}
-          >
-            <Flame className={cx('h-3.5 w-3.5', project.isUpvoted ? 'fill-white text-white' : 'text-rose-500')} />
-            <span>{project.upvotesCount}</span>
-          </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                upvoteMutation.mutate();
+              }}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all shadow-2xs',
+                project.isUpvoted
+                  ? 'bg-rose-500 text-white shadow-rose-500/20'
+                  : 'border border-border/80 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+              )}
+            >
+              <Flame className={cx('h-3.5 w-3.5', project.isUpvoted ? 'fill-white text-white' : 'text-rose-500')} />
+              <span>{project.upvotesCount}</span>
+            </button>
+          </div>
         </div>
 
         {/* Title & Tagline */}
@@ -11275,6 +11512,7 @@ function ShowcasePage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('upvotes');
   const [showCreate, setShowCreate] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectShowcase | null>(null);
   const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
 
   const params = useMemo(
@@ -11291,6 +11529,21 @@ function ShowcasePage() {
 
   const { data, isLoading, isError, refetch } = useListShowcaseProjects(params);
   const items = data?.items ?? [];
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ success: boolean }>(`/showcase/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      refetch();
+      setSelectedDetailId(null);
+    },
+  });
+
+  const handleDeleteProject = (project: ProjectShowcase) => {
+    if (window.confirm(`Are you sure you want to delete your showcase project "${project.title}"? This cannot be undone.`)) {
+      deleteMutation.mutate(project.id);
+    }
+  };
 
   const categories = [
     { id: '', label: 'All Innovations' },
@@ -11459,6 +11712,8 @@ function ShowcasePage() {
               key={project.id}
               project={project}
               onSelect={() => setSelectedDetailId(project.id)}
+              onEdit={() => setEditingProject(project)}
+              onDelete={() => handleDeleteProject(project)}
             />
           ))}
         </div>
@@ -11469,12 +11724,21 @@ function ShowcasePage() {
           projectId={selectedDetailId}
           onClose={() => setSelectedDetailId(null)}
           onRefresh={() => refetch()}
+          onEdit={(p) => {
+            setSelectedDetailId(null);
+            setEditingProject(p);
+          }}
+          onDelete={(p) => handleDeleteProject(p)}
         />
       )}
 
-      {showCreate && (
+      {(showCreate || editingProject) && (
         <CreateShowcaseModal
-          onClose={() => setShowCreate(false)}
+          initialProject={editingProject}
+          onClose={() => {
+            setShowCreate(false);
+            setEditingProject(null);
+          }}
           onSuccess={() => refetch()}
         />
       )}
@@ -11482,6 +11746,691 @@ function ShowcasePage() {
   );
 }
 
+/* =========================================================================
+   LIVE COUNTDOWN & SUGGESTED CONNECTIONS WIDGETS (CLEAN DESKTOP SIDEBAR)
+   ========================================================================= */
+
+interface CountdownEventItem {
+  id: string;
+  title: string;
+  tagline: string;
+  category: string;
+  targetDate: string;
+  campus: string;
+  highlight: string;
+  tag: string;
+  badgeBg: string;
+  linkUrl?: string | null;
+  isActive?: boolean;
+}
+
+function FlagshipEventModal({
+  initialEvent,
+  onClose,
+  onSuccess,
+}: {
+  initialEvent?: CountdownEventItem | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [title, setTitle] = useState(initialEvent?.title || '');
+  const [tagline, setTagline] = useState(initialEvent?.tagline || '');
+  const [category, setCategory] = useState(initialEvent?.category || 'Hackathon');
+  const [targetDate, setTargetDate] = useState(() => {
+    if (initialEvent?.targetDate) {
+      try {
+        const d = new Date(initialEvent.targetDate);
+        return d.toISOString().slice(0, 16);
+      } catch {
+        return '';
+      }
+    }
+    const d = new Date(Date.now() + 19 * 24 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 16);
+  });
+  const [campus, setCampus] = useState(initialEvent?.campus || 'All Campuses');
+  const [highlight, setHighlight] = useState(initialEvent?.highlight || '');
+  const [tag, setTag] = useState(initialEvent?.tag || '');
+  const [linkUrl, setLinkUrl] = useState(initialEvent?.linkUrl || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('Please provide an event title.');
+      return;
+    }
+    if (!targetDate) {
+      setError('Please select a target deadline date & time.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {
+        title: title.trim(),
+        tagline: tagline.trim() || 'Amrita flagship university event',
+        category,
+        targetDate: new Date(targetDate).toISOString(),
+        campus,
+        highlight: highlight.trim() || 'Flagship Amrita Event',
+        tag: tag.trim() || `#${title.replace(/[^a-zA-Z0-9]/g, '')}`,
+        linkUrl: linkUrl.trim() || null,
+      };
+
+      if (initialEvent && initialEvent.id && !initialEvent.id.startsWith('curated-')) {
+        await apiFetch(`/flagship-events/${initialEvent.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/flagship-events', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['flagship-events'] });
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save flagship event.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-rise">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-border/70 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-orange-500/15 text-orange-500">
+              <Trophy className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-foreground">
+                {initialEvent ? 'Edit Flagship Countdown Event' : 'Add Flagship Countdown Event'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Displayed in the live countdown widget on the Community Feed
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">
+              Event Title <span className="text-orange-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. SIH 2026 Internal Hackathon"
+              className="w-full rounded-xl border border-input bg-secondary/30 px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1">
+              Tagline / Synopsis
+            </label>
+            <input
+              type="text"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              placeholder="e.g. Team registration & problem statement selection"
+              className="w-full rounded-xl border border-input bg-secondary/30 px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3 py-2 text-xs text-foreground outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="Hackathon">Hackathon</option>
+                <option value="Techfest">Techfest</option>
+                <option value="Placement">Placement Drive</option>
+                <option value="Research">Research Fellowship</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Conference">Conference</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Campus
+              </label>
+              <select
+                value={campus}
+                onChange={(e) => setCampus(e.target.value)}
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3 py-2 text-xs text-foreground outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="All Campuses">All Campuses</option>
+                <option value="Coimbatore Campus">Coimbatore</option>
+                <option value="Amritapuri Campus">Amritapuri</option>
+                <option value="Bengaluru Campus">Bengaluru</option>
+                <option value="Chennai Campus">Chennai</option>
+                <option value="Kochi Campus">Kochi</option>
+                <option value="CIR All Campuses">CIR Placement</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Countdown Target Date & Time <span className="text-orange-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                required
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3 py-2 text-xs text-foreground outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Perk / Highlight Banner
+              </label>
+              <input
+                type="text"
+                value={highlight}
+                onChange={(e) => setHighlight(e.target.value)}
+                placeholder="e.g. ₹1 Lakh+ Prize · National Finalist"
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Filter Hashtag
+              </label>
+              <input
+                type="text"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="#SIH2026"
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1">
+                Registration / Official Link
+              </label>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-input bg-secondary/30 px-3.5 py-2 text-xs text-foreground outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/70">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 text-xs font-bold cursor-pointer transition-all shadow-xs disabled:opacity-60"
+            >
+              {saving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              <span>{initialEvent ? 'Save Changes' : 'Publish Flagship Event'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function EventCountdownWidget({
+  dbEvents,
+  onSelectTag,
+}: {
+  dbEvents?: any[];
+  onSelectTag?: (tag: string) => void;
+}) {
+  const { data: currentUser } = useGetCurrentUser();
+  const queryClient = useQueryClient();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CountdownEventItem | null>(null);
+
+  // Live query from real database
+  const { data: flagshipData, refetch: refetchFlagships } = useQuery({
+    queryKey: ['flagship-events'],
+    queryFn: () => apiFetch<{ items: CountdownEventItem[]; total: number }>('/flagship-events'),
+    staleTime: 30000,
+  });
+
+  const curatedEvents: CountdownEventItem[] = useMemo(() => {
+    if (flagshipData?.items && flagshipData.items.length > 0) {
+      return flagshipData.items;
+    }
+
+    const fallbackList: CountdownEventItem[] = [
+      {
+        id: 'curated-sih-2026',
+        title: 'SIH 2026 Internal Hackathon',
+        tagline: 'Team registration & problem statement selection',
+        category: 'Hackathon',
+        targetDate: '2026-09-28T23:59:59Z',
+        campus: 'All Campuses',
+        highlight: '₹1 Lakh+ Prize · National Finalist Track',
+        tag: '#SIH2026',
+        badgeBg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+        linkUrl: 'https://www.sih.gov.in',
+      },
+      {
+        id: 'curated-anokha-2026',
+        title: 'Anokha Techfest 2026',
+        tagline: 'Annual national techfest & innovation exhibition',
+        category: 'Techfest',
+        targetDate: '2026-10-15T09:00:00Z',
+        campus: 'Coimbatore Campus',
+        highlight: '75+ Events · Workshops & RoboWars',
+        tag: '#Anokha',
+        badgeBg: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
+      },
+      {
+        id: 'curated-placements-2026',
+        title: 'Microsoft & Cisco Campus Drives',
+        tagline: 'CIR shortlisted rounds & technical interviews',
+        category: 'Placement',
+        targetDate: '2026-09-18T10:00:00Z',
+        campus: 'CIR All Campuses',
+        highlight: 'High CTC · SDE & Cloud Engineering',
+        tag: '#Placements',
+        badgeBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+      },
+    ];
+
+    if (dbEvents && dbEvents.length > 0) {
+      dbEvents.slice(0, 3).forEach((ev: any) => {
+        if (ev.title && ev.date) {
+          fallbackList.push({
+            id: String(ev.id || ev._id),
+            title: ev.title,
+            tagline: ev.description?.slice(0, 55) || `${ev.organizer || 'Campus'} flagship event`,
+            category: ev.category || 'Event',
+            targetDate: ev.date,
+            campus: ev.campus || 'Amrita Campus',
+            highlight: ev.venue ? `Venue: ${ev.venue}` : 'Campus Live Event',
+            tag: `#${(ev.campus || 'Events').replace(/\s+/g, '')}`,
+            badgeBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+            linkUrl: ev.registrationUrl,
+          });
+        }
+      });
+    }
+
+    return fallbackList;
+  }, [flagshipData, dbEvents]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const activeEvent = curatedEvents[currentIndex % curatedEvents.length] || curatedEvents[0];
+
+  // Live real-time countdown calculation
+  const getRemaining = (targetStr: string) => {
+    try {
+      const diff = Math.max(0, new Date(targetStr).getTime() - Date.now());
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / 1000 / 60) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      return { days, hours, minutes, seconds };
+    } catch {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    }
+  };
+
+  const [timeLeft, setTimeLeft] = useState(() => getRemaining(activeEvent.targetDate));
+
+  useEffect(() => {
+    setTimeLeft(getRemaining(activeEvent.targetDate));
+    const timer = setInterval(() => {
+      setTimeLeft(getRemaining(activeEvent.targetDate));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeEvent.targetDate]);
+
+  const handleNext = () => setCurrentIndex((prev) => (prev + 1) % curatedEvents.length);
+  const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + curatedEvents.length) % curatedEvents.length);
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-card via-card to-orange-500/5 p-4 shadow-sm space-y-3.5 group">
+      {/* Ambient background glow */}
+      <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-orange-500/15 blur-2xl transition-all group-hover:bg-orange-500/25" />
+
+      {/* Header bar */}
+      <div className="flex items-center justify-between border-b border-border/60 pb-2.5 relative z-10">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="grid h-6 w-6 place-items-center rounded-lg bg-orange-500/15 text-orange-500 shrink-0">
+            <Trophy className="h-3.5 w-3.5" />
+          </div>
+          <h4 className="text-xs font-black tracking-tight text-foreground truncate">
+            Flagship Countdown
+          </h4>
+          {currentUser?.role === 'admin' && (
+            <div className="flex items-center gap-1 shrink-0 ml-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEvent(null);
+                  setShowAddModal(true);
+                }}
+                className="inline-flex items-center gap-0.5 rounded-md bg-orange-500/15 hover:bg-orange-500 hover:text-white px-1.5 py-0.5 text-[9px] font-extrabold text-orange-600 dark:text-orange-400 transition-all cursor-pointer"
+                title="Admin: Add new countdown event"
+              >
+                <Plus className="h-2.5 w-2.5" />
+                <span>Add</span>
+              </button>
+              <Link
+                href="/admin"
+                className="inline-flex items-center rounded-md bg-secondary hover:bg-secondary/80 p-0.5 text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                title="Admin Console: Manage Events"
+              >
+                <Settings2 className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2 py-0.5 border border-orange-500/25">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+              Live
+            </span>
+          </div>
+          {/* Navigation Arrows */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous event"
+              className="grid h-6 w-6 place-items-center rounded-lg border border-border/70 bg-card/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-95"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next event"
+              className="grid h-6 w-6 place-items-center rounded-lg border border-border/70 bg-card/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-95"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Event Information */}
+      <div className="space-y-1 relative z-10">
+        <div className="flex items-center justify-between gap-2">
+          <span className={cx('rounded-md border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider', activeEvent.badgeBg)}>
+            {activeEvent.category}
+          </span>
+          <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 truncate">
+            <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+            {activeEvent.campus}
+          </span>
+        </div>
+        <h5 className="text-sm font-extrabold text-foreground tracking-tight leading-snug line-clamp-1">
+          {activeEvent.title}
+        </h5>
+        <p className="text-[11px] text-muted-foreground line-clamp-1">
+          {activeEvent.tagline}
+        </p>
+      </div>
+
+      {/* 4-digit live countdown box grid */}
+      <div className="grid grid-cols-4 gap-1.5 relative z-10">
+        <div className="rounded-xl border border-border/80 bg-background/90 dark:bg-secondary/60 p-2 text-center shadow-2xs backdrop-blur-xs">
+          <span className="block font-mono text-base font-black tracking-tight text-foreground">
+            {String(timeLeft.days).padStart(2, '0')}
+          </span>
+          <span className="block text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground">Days</span>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-background/90 dark:bg-secondary/60 p-2 text-center shadow-2xs backdrop-blur-xs">
+          <span className="block font-mono text-base font-black tracking-tight text-foreground">
+            {String(timeLeft.hours).padStart(2, '0')}
+          </span>
+          <span className="block text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground">Hours</span>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-background/90 dark:bg-secondary/60 p-2 text-center shadow-2xs backdrop-blur-xs">
+          <span className="block font-mono text-base font-black tracking-tight text-foreground">
+            {String(timeLeft.minutes).padStart(2, '0')}
+          </span>
+          <span className="block text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground">Mins</span>
+        </div>
+        <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 dark:bg-orange-500/15 p-2 text-center shadow-2xs backdrop-blur-xs">
+          <span className="block font-mono text-base font-black tracking-tight text-orange-600 dark:text-orange-400">
+            {String(timeLeft.seconds).padStart(2, '0')}
+          </span>
+          <span className="block text-[8px] font-extrabold uppercase tracking-widest text-orange-600/80 dark:text-orange-400/80">Secs</span>
+        </div>
+      </div>
+
+      {/* Highlight tag */}
+      <div className="flex items-center gap-1.5 rounded-lg bg-secondary/60 border border-border/60 px-2.5 py-1 text-[10px] font-semibold text-foreground/90 relative z-10">
+        <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+        <span className="truncate">{activeEvent.highlight}</span>
+      </div>
+
+      {/* Action CTA */}
+      <button
+        type="button"
+        onClick={() => {
+          if (activeEvent.linkUrl) {
+            window.open(activeEvent.linkUrl, '_blank');
+          } else if (onSelectTag) {
+            onSelectTag(activeEvent.tag);
+          }
+        }}
+        className="group w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-3 py-2 text-xs font-bold transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-98 relative z-10"
+      >
+        <span>{activeEvent.linkUrl ? 'Register Online' : 'Explore Event & Guidelines'}</span>
+        <ArrowUpRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+      </button>
+
+      {/* Slide indicators */}
+      <div className="flex justify-center items-center gap-1.5 pt-0.5 relative z-10">
+        {curatedEvents.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setCurrentIndex(i)}
+            className={cx(
+              'h-1.5 rounded-full transition-all cursor-pointer',
+              i === currentIndex % curatedEvents.length ? 'w-4 bg-orange-500' : 'w-1.5 bg-border hover:bg-muted-foreground/50'
+            )}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
+
+      {/* Admin quick add/edit modal */}
+      {showAddModal && (
+        <FlagshipEventModal
+          initialEvent={editingEvent}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingEvent(null);
+          }}
+          onSuccess={() => {
+            refetchFlagships();
+            queryClient.invalidateQueries({ queryKey: ['flagship-events'] });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function WhoToConnectWidget({
+  suggestions,
+  fallbackMentors,
+  onDiscoverAll,
+}: {
+  suggestions?: ConnectionSuggestionItem[];
+  fallbackMentors?: PublicUser[];
+  onDiscoverAll: () => void;
+}) {
+  const displayList = useMemo(() => {
+    // 1. Prioritize real database connection suggestions
+    if (suggestions && suggestions.length > 0) {
+      return suggestions.slice(0, 3).map((s) => ({
+        id: s.user.id,
+        name: s.user.fullName,
+        role: s.user.headline || `${s.user.department || 'Student'} · ${s.user.campus || 'Amrita'}`,
+        reason: s.reason || 'Suggested connection',
+        avatarUrl: s.user.avatarUrl,
+        user: s.user,
+        profileHref: `/people/${s.user.id}`,
+      }));
+    }
+
+    // 2. Fallback to real database alumni mentors
+    if (fallbackMentors && fallbackMentors.length > 0) {
+      return fallbackMentors.slice(0, 3).map((m) => ({
+        id: m.id,
+        name: m.fullName,
+        role: m.headline || (m as any).jobRole || `${m.department || 'Alumni'} Mentor`,
+        reason: `${m.campus ? `Amrita ${m.campus}` : 'Verified Alumni'}`,
+        avatarUrl: m.avatarUrl,
+        user: m,
+        profileHref: `/profile/${m.id}`,
+      }));
+    }
+
+    // 3. Fallback to placed seniors directory
+    return PLACED_SENIORS.slice(0, 3).map((s) => ({
+      id: s.slug,
+      name: s.name,
+      role: s.role,
+      reason: `${s.campus} · ${s.department}`,
+      avatarUrl: s.avatar,
+      user: null as PublicUser | null,
+      profileHref: `/seniors/${s.slug}`,
+    }));
+  }, [suggestions, fallbackMentors]);
+
+  if (displayList.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3">
+      <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="grid h-6 w-6 place-items-center rounded-lg bg-orange-500/10 text-orange-500">
+            <UserRoundPlus className="h-3.5 w-3.5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-foreground">Who to Connect With</h4>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onDiscoverAll}
+          className="text-[11px] font-bold text-orange-500 hover:text-orange-600 hover:underline cursor-pointer"
+        >
+          See All
+        </button>
+      </div>
+
+      <div className="space-y-2.5">
+        {displayList.map((person) => (
+          <div
+            key={person.id}
+            className="group flex items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-secondary/20 hover:bg-secondary/60 hover:border-orange-500/30 p-2.5 transition-all"
+          >
+            <Link href={person.profileHref} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer">
+              {person.avatarUrl ? (
+                <img
+                  src={person.avatarUrl}
+                  alt={person.name}
+                  className="h-9 w-9 rounded-full object-cover border border-orange-500/30 shrink-0 ring-1 ring-border group-hover:ring-orange-500/40"
+                />
+              ) : (
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white font-black text-xs shrink-0">
+                  {person.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <p className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
+                    {person.name}
+                  </p>
+                  <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {person.role}
+                </p>
+                {person.reason && (
+                  <p className="text-[9px] font-semibold text-orange-600 dark:text-orange-400 truncate">
+                    {person.reason}
+                  </p>
+                )}
+              </div>
+            </Link>
+            <div className="shrink-0">
+              {person.user ? (
+                <ConnectActionButton targetUser={person.user} size="sm" />
+              ) : (
+                <Link
+                  href={person.profileHref}
+                  className="rounded-lg bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0 inline-block"
+                >
+                  Profile
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* =========================================================================
    COMMUNITY FEED — STANDARD SOCIAL MEDIA PLATFORM FEED
@@ -11495,6 +12444,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCampus, setSelectedCampus] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createStep, setCreateStep] = useState<'category' | 'compose'>('category');
@@ -11658,28 +12608,36 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtered members based on network tab and sorting
+  // Campus-wise and Branch-wise distribution of connections/members
+  const campusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const baseList = networkTab === 'friends' ? connectedUsers : rawMemberItems;
+    baseList.forEach((u) => {
+      if (u.campus) {
+        counts[u.campus] = (counts[u.campus] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [networkTab, connectedUsers, rawMemberItems]);
+
+  const branchCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const baseList = (networkTab === 'friends' ? connectedUsers : rawMemberItems).filter(
+      (u) => !selectedCampus || u.campus?.toLowerCase() === selectedCampus.toLowerCase()
+    );
+    baseList.forEach((u) => {
+      if (u.department) {
+        counts[u.department] = (counts[u.department] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [networkTab, connectedUsers, rawMemberItems, selectedCampus]);
+
+  // Filtered members based on network tab, campus, branch, role, search and sorting
   const memberItems = useMemo(() => {
     let list: PublicUser[] = [];
     if (networkTab === 'friends') {
       list = [...connectedUsers];
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        list = list.filter(
-          (u) =>
-            u.fullName?.toLowerCase().includes(q) ||
-            u.department?.toLowerCase().includes(q) ||
-            u.campus?.toLowerCase().includes(q) ||
-            u.headline?.toLowerCase().includes(q) ||
-            u.skills?.some((s) => s.toLowerCase().includes(q))
-        );
-      }
-      if (selectedCampus) {
-        list = list.filter((u) => u.campus?.toLowerCase() === selectedCampus.toLowerCase());
-      }
-      if (selectedRole) {
-        list = list.filter((u) => u.role === selectedRole);
-      }
     } else {
       list = [...rawMemberItems];
       if (networkTab === 'campus' && currentUser?.campus) {
@@ -11688,11 +12646,33 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
         list = list.filter((u) => u.graduationYear === currentUser.graduationYear);
       }
     }
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (u) =>
+          u.fullName?.toLowerCase().includes(q) ||
+          u.department?.toLowerCase().includes(q) ||
+          u.campus?.toLowerCase().includes(q) ||
+          u.headline?.toLowerCase().includes(q) ||
+          u.skills?.some((s) => s.toLowerCase().includes(q))
+      );
+    }
+    if (selectedCampus) {
+      list = list.filter((u) => u.campus?.toLowerCase() === selectedCampus.toLowerCase());
+    }
+    if (selectedBranch) {
+      list = list.filter((u) => u.department?.toLowerCase().includes(selectedBranch.toLowerCase()));
+    }
+    if (selectedRole) {
+      list = list.filter((u) => u.role === selectedRole);
+    }
+
     if (sortBy === 'name') {
       list.sort((a, b) => a.fullName.localeCompare(b.fullName));
     }
     return list;
-  }, [networkTab, connectedUsers, rawMemberItems, search, selectedCampus, selectedRole, currentUser, sortBy]);
+  }, [networkTab, connectedUsers, rawMemberItems, search, selectedCampus, selectedBranch, selectedRole, currentUser, sortBy]);
 
   // Posts query for social feed
   const postsQueryKey = useMemo(() => [
@@ -11743,6 +12723,9 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
     queryFn: () => apiFetch<{ items: PublicUser[]; total: number }>('/users?role=alumni&pageSize=4'),
     staleTime: 45000,
   });
+
+  const { data: suggestionsData } = useConnectionSuggestions();
+
 
   // Instant reactive client-side post filtering
   const filteredPosts = useMemo(() => {
@@ -11853,7 +12836,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
   return (
     <div className="animate-rise pb-16">
-      {/* Top Social Switcher & Post Trigger */}
+      {/* Top Social Switcher & Action Trigger */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex rounded-2xl border border-border/80 bg-card p-1 shadow-2xs gap-1">
           <button
@@ -11872,6 +12855,7 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             <Rss className="h-3.5 w-3.5" />
             <span>Community Feed</span>
           </button>
+
           <button
             type="button"
             onClick={() => {
@@ -11881,40 +12865,61 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             }}
             className={cx(
               'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer',
-              activeView === 'discover'
+              activeView === 'discover' && networkTab === 'friends'
                 ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
             )}
           >
-            <Users className="h-3.5 w-3.5" />
+            <UserCheck className="h-3.5 w-3.5" />
             <span>My Friends</span>
-            {connectedUsers.length > 0 && (
-              <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', activeView === 'discover' ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
-                {connectedUsers.length}
-              </span>
+            <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', activeView === 'discover' && networkTab === 'friends' ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
+              {connectedUsers.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('discover');
+              setNetworkTab('all');
+              setSearch('');
+            }}
+            className={cx(
+              'rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer',
+              activeView === 'discover' && networkTab === 'all'
+                ? 'bg-orange-500 text-white shadow-xs scale-[1.02]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
             )}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            <span>Campus Directory</span>
+            <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', activeView === 'discover' && networkTab === 'all' ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
+              {rawMemberItems.length}
+            </span>
           </button>
         </div>
 
-        {activeView === 'feed' ? (
-          <button
-            type="button"
-            onClick={handleOpenCreateCategoryPrompt}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            <span>Start a Post</span>
-          </button>
-        ) : (
+        <div className="flex items-center gap-2">
+          {activeView === 'feed' && (
+            <button
+              type="button"
+              onClick={handleOpenCreateCategoryPrompt}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span>Start a Post</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
             className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-3.5 py-2 text-xs font-bold text-foreground hover:bg-secondary/70 shadow-2xs transition-all cursor-pointer"
           >
             <UserPlus className="h-3.5 w-3.5 text-orange-500" />
-            <span>Invite People</span>
+            <span>Invite Friends</span>
           </button>
-        )}
+        </div>
       </div>
 
       {/* VIEW 1: COMMUNITY FEED */}
@@ -12222,332 +13227,63 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
             </div>
           </div>
 
-          {/* Right Sidebar (Desktop only) - High Utility Live Database Widgets */}
-          <div className="hidden lg:flex flex-col gap-5 sticky top-6">
+          {/* Right Sidebar (Desktop only) - High Utility Live Widgets */}
+          <div className="hidden lg:flex flex-col gap-4 sticky top-6">
 
-            {/* 1. Live Campus Deadlines & Events Tracker (Fetched from Database) */}
-            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3.5">
-              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4 text-orange-500" />
-                  <h4 className="text-xs font-extrabold text-foreground">
-                    Campus Deadlines & Events
-                  </h4>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                  </span>
-                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                    Live
-                  </span>
-                </div>
-              </div>
+            {/* 1. Flagship Hackathons & Events Live Countdown Widget */}
+            <EventCountdownWidget
+              dbEvents={dbEventsData?.items}
+              onSelectTag={(tag) => setSearch(search === tag ? '' : tag)}
+            />
 
-              <div className="space-y-2.5">
-                {(() => {
-                  // Merge live database events and opportunities
-                  const liveDbItems: Array<{
-                    id: string;
-                    title: string;
-                    sub: string;
-                    badge: string;
-                    badgeColor: string;
-                    tag: string;
-                    icon: any;
-                    linkUrl?: string;
-                  }> = [];
+            {/* 2. Suggested Connections (Who to Connect With) */}
+            <WhoToConnectWidget
+              suggestions={suggestionsData?.items}
+              fallbackMentors={dbMentorsData?.items}
+              onDiscoverAll={() => {
+                setActiveView('discover');
+                setNetworkTab('all');
+              }}
+            />
 
-                  if (dbEventsData?.items && dbEventsData.items.length > 0) {
-                    dbEventsData.items.slice(0, 2).forEach((ev: any) => {
-                      let badge = 'Upcoming';
-                      if (ev.date) {
-                        try {
-                          const d = new Date(ev.date);
-                          const diff = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                          badge = diff > 0 && diff <= 7 ? `${diff}d left` : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        } catch {
-                          badge = 'Upcoming';
-                        }
-                      }
-                      liveDbItems.push({
-                        id: String(ev.id || ev._id),
-                        title: ev.title,
-                        sub: ev.organizer ? `${ev.organizer} · ${ev.campus || 'Amrita'}` : ev.campus || 'Amrita Campus',
-                        badge,
-                        badgeColor: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
-                        tag: `#${ev.campus || 'Events'}`,
-                        icon: CalendarDays,
-                        linkUrl: ev.registrationUrl,
-                      });
-                    });
-                  }
-
-                  if (dbOpportunitiesData?.items && dbOpportunitiesData.items.length > 0) {
-                    dbOpportunitiesData.items.slice(0, 2).forEach((op: any) => {
-                      let badge = 'Open';
-                      if (op.deadline) {
-                        try {
-                          const d = new Date(op.deadline);
-                          const diff = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                          badge = diff > 0 && diff <= 7 ? `${diff}d left` : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        } catch {
-                          badge = 'Active';
-                        }
-                      }
-                      liveDbItems.push({
-                        id: String(op.id || op._id),
-                        title: op.title,
-                        sub: op.organization ? `${op.organization} · ${op.category || 'Career'}` : op.category || 'Placement',
-                        badge,
-                        badgeColor: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-                        tag: '#Placements',
-                        icon: Briefcase,
-                        linkUrl: op.applicationUrl,
-                      });
-                    });
-                  }
-
-                  // Default curated Amrita deadlines if database items are fewer than 3
-                  const fallbackEvents = [
-                    {
-                      id: 'sih-curated',
-                      title: 'SIH 2026 Internal Hackathon',
-                      sub: 'Team registration & synopsis',
-                      badge: '3 Days Left',
-                      badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-                      tag: '#SIH2026',
-                      icon: Trophy,
-                    },
-                    {
-                      id: 'placement-curated',
-                      title: 'Microsoft & Cisco Drives',
-                      sub: 'SDE & Cloud shortlist release',
-                      badge: 'Sep 18',
-                      badgeColor: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-                      tag: '#Placements',
-                      icon: Briefcase,
-                    },
-                    {
-                      id: 'hut-curated',
-                      title: 'HuT Labs AI Fellowship',
-                      sub: 'Robotics & CV lab openings',
-                      badge: 'Oct 02',
-                      badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
-                      tag: '#Research',
-                      icon: Rocket,
-                    },
-                  ];
-
-                  const displayItems = liveDbItems.length >= 2 ? liveDbItems.slice(0, 4) : [...liveDbItems, ...fallbackEvents].slice(0, 4);
-
-                  return displayItems.map((event) => {
-                    const Icon = event.icon;
-                    return (
-                      <button
-                        key={event.id}
-                        type="button"
-                        onClick={() => {
-                          if (event.linkUrl) {
-                            window.open(event.linkUrl, '_blank');
-                          } else {
-                            setSearch(search === event.tag ? '' : event.tag);
-                          }
-                        }}
-                        className="group flex w-full items-start justify-between gap-2 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 text-left transition-all cursor-pointer hover:border-orange-500/40"
-                      >
-                        <div className="flex items-start gap-2 min-w-0">
-                          <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-500">
-                            <Icon className="h-3.5 w-3.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-foreground group-hover:text-orange-500 transition-colors truncate">
-                              {event.title}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground truncate">{event.sub}</p>
-                          </div>
-                        </div>
-                        <span className={cx('shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider', event.badgeColor)}>
-                          {event.badge}
-                        </span>
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-
-            {/* 2. Top Senior Mentors & Verified Alumni (Live Database Records) */}
-            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
-                  <Award className="h-4 w-4 text-orange-500" />
-                  <span>Featured Senior Mentors</span>
-                </h4>
+            {/* 3. Subtle Campus Quick Access & Accreditation */}
+            <div className="px-2 pt-1 text-center space-y-2">
+              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground/80 font-semibold">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveView('discover');
-                    setNetworkTab('all');
-                  }}
-                  className="text-[11px] font-bold text-orange-500 hover:text-orange-600 hover:underline cursor-pointer"
+                  onClick={() => setSelectedCampus(selectedCampus === 'Coimbatore' ? '' : 'Coimbatore')}
+                  className={cx('hover:text-orange-500 transition-colors cursor-pointer', selectedCampus === 'Coimbatore' && 'text-orange-500 font-bold')}
                 >
-                  View All
+                  Coimbatore
                 </button>
-              </div>
-
-              <div className="space-y-2.5">
-                {(() => {
-                  const dbAlumni = dbMentorsData?.items || [];
-                  if (dbAlumni.length > 0) {
-                    return dbAlumni.slice(0, 3).map((mentor) => (
-                      <Link
-                        key={mentor.id}
-                        href={`/profile/${mentor.id}`}
-                        className="group flex items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 transition-all hover:border-orange-500/40 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {mentor.avatarUrl ? (
-                            <img
-                              src={mentor.avatarUrl}
-                              alt={mentor.fullName}
-                              className="h-9 w-9 rounded-full object-cover border border-orange-500/30 shrink-0"
-                            />
-                          ) : (
-                            <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white font-black text-xs shrink-0">
-                              {mentor.fullName?.slice(0, 2).toUpperCase() || 'AM'}
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1">
-                              <p className="text-xs font-extrabold text-foreground group-hover:text-orange-500 transition-colors truncate">
-                                {mentor.fullName}
-                              </p>
-                              <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
-                            </div>
-                            <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 truncate">
-                              {mentor.headline || (mentor as any).jobRole || `${mentor.department || 'Alumni'} Mentor`}
-                            </p>
-                            <p className="text-[9px] text-muted-foreground truncate">
-                              {mentor.campus ? `Amrita ${mentor.campus}` : 'Amrita University'} · {mentor.department || 'Alumni'}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
-                          Profile
-                        </span>
-                      </Link>
-                    ));
-                  }
-
-                  // Fallback to placed seniors directory
-                  return PLACED_SENIORS.slice(0, 3).map((senior) => (
-                    <Link
-                      key={senior.slug}
-                      href={`/seniors/${senior.slug}`}
-                      className="group flex items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/70 p-2.5 transition-all hover:border-orange-500/40 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={senior.avatar}
-                          alt={senior.name}
-                          className="h-9 w-9 rounded-full object-cover border border-orange-500/30 shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="text-xs font-extrabold text-foreground group-hover:text-orange-500 transition-colors truncate">
-                              {senior.name}
-                            </p>
-                            <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
-                          </div>
-                          <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 truncate">
-                            {senior.role}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground truncate">
-                            {senior.campus} · {senior.department}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
-                        Profile
-                      </span>
-                    </Link>
-                  ));
-                })()}
-              </div>
-            </div>
-
-            {/* 3. University Resource Quick Vault & Database Stats */}
-            <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
-                  <Zap className="h-4 w-4 text-orange-500" />
-                  <span>Campus Quick Vault</span>
-                </h4>
-                {dashboardSummary?.peopleCount ? (
-                  <span className="text-[10px] font-bold text-muted-foreground">
-                    {dashboardSummary.peopleCount} members
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+                <span>·</span>
                 <button
                   type="button"
-                  onClick={() => setSearch('#Academics')}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                  onClick={() => setSelectedCampus(selectedCampus === 'Amritapuri' ? '' : 'Amritapuri')}
+                  className={cx('hover:text-orange-500 transition-colors cursor-pointer', selectedCampus === 'Amritapuri' && 'text-orange-500 font-bold')}
                 >
-                  <BookOpen className="h-4 w-4 text-blue-500" />
-                  <span className="text-xs font-bold text-foreground">PyQ & Notes</span>
-                  <span className="text-[9px] text-muted-foreground">Study Material</span>
+                  Amritapuri
                 </button>
-
+                <span>·</span>
                 <button
                   type="button"
-                  onClick={() => setSelectedCategory('Interview')}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                  onClick={() => setSelectedCampus(selectedCampus === 'Bengaluru' ? '' : 'Bengaluru')}
+                  className={cx('hover:text-orange-500 transition-colors cursor-pointer', selectedCampus === 'Bengaluru' && 'text-orange-500 font-bold')}
                 >
-                  <BriefcaseBusiness className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs font-bold text-foreground">Interview Logs</span>
-                  <span className="text-[9px] text-muted-foreground">Company archive</span>
+                  Bengaluru
                 </button>
-
+                <span>·</span>
                 <button
                   type="button"
-                  onClick={() => setSelectedCategory('Showcase')}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
+                  onClick={() => setSelectedCampus(selectedCampus === 'Chennai' ? '' : 'Chennai')}
+                  className={cx('hover:text-orange-500 transition-colors cursor-pointer', selectedCampus === 'Chennai' && 'text-orange-500 font-bold')}
                 >
-                  <Code className="h-4 w-4 text-purple-500" />
-                  <span className="text-xs font-bold text-foreground">HuT Projects</span>
-                  <span className="text-[9px] text-muted-foreground">Research collabs</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleOpenCreateWithCategory('General');
-                  }}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border/60 bg-secondary/40 hover:bg-secondary/80 p-2.5 text-left transition-all hover:border-orange-500/30 cursor-pointer active:scale-95"
-                >
-                  <Users2 className="h-4 w-4 text-orange-500" />
-                  <span className="text-xs font-bold text-foreground">Find Team</span>
-                  <span className="text-[9px] text-muted-foreground">Hackathon squad</span>
+                  Chennai
                 </button>
               </div>
-            </div>
-
-            {/* 4. Multi-Campus Network Pulse */}
-            <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-orange-500/10 via-card to-card p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-orange-500/15 text-orange-500">
-                <Globe className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-foreground">7 Campuses Live Network</p>
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {dashboardSummary?.peopleCount ? `${dashboardSummary.peopleCount} verified students & faculty` : 'Coimbatore · Amritapuri · Bengaluru · Kochi · Chennai'}
-                </p>
-              </div>
+              <p className="text-[10px] text-muted-foreground/60">
+                Amrita Vishwa Vidyapeetham · NAAC A++
+              </p>
             </div>
 
           </div>
@@ -12557,59 +13293,12 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
 
       {/* VIEW 2: DISCOVER MEMBERS & FRIENDS */}
       {activeView === 'discover' && (
-        <div className="space-y-5 max-w-5xl">
-          {/* Top Network Subtabs */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-3 sm:p-4 rounded-2xl border border-border/80 shadow-xs">
-            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
-              {[
-                { id: 'friends', label: 'My Friends', count: connectedUsers.length, icon: UserCheck },
-                { id: 'all', label: 'Campus Directory', count: rawMemberItems.length, icon: Globe },
-                ...(currentUser?.campus
-                  ? [{ id: 'campus', label: `Amrita ${currentUser.campus}`, count: rawMemberItems.filter((u) => u.campus?.toLowerCase() === currentUser.campus?.toLowerCase()).length, icon: MapPin }]
-                  : []),
-                ...(currentUser?.graduationYear
-                  ? [{ id: 'batch', label: `Class of ${currentUser.graduationYear}`, count: rawMemberItems.filter((u) => u.graduationYear === currentUser.graduationYear).length, icon: GraduationCap }]
-                  : []),
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = networkTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setNetworkTab(tab.id as any)}
-                    className={cx(
-                      'rounded-xl px-3.5 py-2 transition-all flex items-center gap-1.5 cursor-pointer',
-                      isActive
-                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 !text-white shadow-md shadow-orange-500/20'
-                        : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{tab.label}</span>
-                    <span className={cx('rounded-full px-1.5 py-0.2 text-[10px] font-black', isActive ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 dark:border-orange-900 bg-orange-500/10 px-3 py-1.5 text-xs font-extrabold text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-all shadow-2xs cursor-pointer"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>Invite Friends</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Member Search Bar and Role Filter */}
-          <div className="space-y-3 bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-xs">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div className="space-y-4 max-w-5xl">
+          {/* Single Unified Clean Filter & Search Hub */}
+          <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-xs space-y-3.5">
+            {/* Row 1: Search Input + Campus Dropdown + Branch Dropdown */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+              {/* Search Bar */}
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
                 <input
@@ -12618,60 +13307,158 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={
                     networkTab === 'friends'
-                      ? 'Search your friends by name, department, campus...'
-                      : 'Search all members across Amrita 7 campuses by name, skill, department...'
+                      ? 'Search your friends by name, skills, title...'
+                      : 'Search across 7 Amrita campuses by name, skill, role...'
                   }
-                  className="w-full rounded-xl border border-input bg-secondary/30 py-2.5 pl-10 pr-4 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-xs"
+                  className="w-full rounded-xl border border-input bg-secondary/30 py-2.5 pl-10 pr-9 text-xs sm:text-sm outline-none focus:border-orange-500 shadow-xs transition-colors"
                 />
                 {search && (
                   <button
                     type="button"
                     onClick={() => setSearch('')}
-                    className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-3 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
 
-              <select
-                value={selectedCampus}
-                onChange={(e) => setSelectedCampus(e.target.value)}
-                className="rounded-xl border border-border bg-secondary/30 px-3 py-2.5 text-xs font-semibold text-foreground outline-none shadow-xs shrink-0"
-              >
-                <option value="">All Campuses</option>
-                {campuses.map((c) => (
-                  <option key={c} value={c}>
-                    Amrita {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Role filter pills */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {[
-                { id: '', label: 'All Roles' },
-                { id: 'student', label: 'Students' },
-                { id: 'alumni', label: 'Alumni Mentors' },
-                { id: 'researcher', label: 'Researchers' },
-                { id: 'faculty', label: 'Faculty' },
-              ].map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setSelectedRole(r.id)}
+              {/* Campus Selector Dropdown */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedCampus}
+                  onChange={(e) => setSelectedCampus(e.target.value)}
                   className={cx(
-                    'rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs cursor-pointer',
-                    selectedRole === r.id
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-xs'
-                      : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                    'w-full md:w-48 appearance-none rounded-xl border pl-8 pr-8 py-2.5 text-xs font-bold outline-none shadow-xs transition-colors cursor-pointer',
+                    selectedCampus
+                      ? 'border-orange-500/50 bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                      : 'border-border bg-secondary/30 text-foreground hover:bg-secondary/60'
                   )}
                 >
-                  {r.label}
-                </button>
-              ))}
+                  <option value="">All Campuses ({networkTab === 'friends' ? connectedUsers.length : rawMemberItems.length})</option>
+                  {campuses.map((c) => {
+                    const count = campusCounts[c] || 0;
+                    return (
+                      <option key={c} value={c}>
+                        Amrita {c} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+                <MapPin className={cx('pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5', selectedCampus ? 'text-orange-500' : 'text-muted-foreground')} />
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+
+              {/* Branch / Department Dropdown */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className={cx(
+                    'w-full md:w-56 appearance-none rounded-xl border pl-8 pr-8 py-2.5 text-xs font-bold outline-none shadow-xs transition-colors truncate cursor-pointer',
+                    selectedBranch
+                      ? 'border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      : 'border-border bg-secondary/30 text-foreground hover:bg-secondary/60'
+                  )}
+                >
+                  <option value="">All Branches / Depts</option>
+                  {departments.map((d) => {
+                    const count = branchCounts[d] || 0;
+                    return (
+                      <option key={d} value={d}>
+                        {d} {count > 0 ? `(${count})` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                <GraduationCap className={cx('pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5', selectedBranch ? 'text-blue-500' : 'text-muted-foreground')} />
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </div>
+
+            {/* Row 2: Role Filter Pills & Clear Action */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-border/50">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-muted-foreground mr-1">Role:</span>
+                {[
+                  { id: '', label: 'All Roles' },
+                  { id: 'student', label: 'Students' },
+                  { id: 'alumni', label: 'Alumni Mentors' },
+                  { id: 'researcher', label: 'Researchers' },
+                  { id: 'faculty', label: 'Faculty' },
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSelectedRole(r.id)}
+                    className={cx(
+                      'rounded-full px-3 py-1 text-[11px] font-bold transition-all border shadow-2xs cursor-pointer',
+                      selectedRole === r.id
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent'
+                        : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Reset button if any filter is active */}
+              {(selectedCampus || selectedBranch || selectedRole || search) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCampus('');
+                    setSelectedBranch('');
+                    setSelectedRole('');
+                    setSearch('');
+                  }}
+                  className="font-bold text-orange-500 hover:text-orange-600 hover:underline cursor-pointer text-xs flex items-center gap-1"
+                >
+                  <RotateCw className="h-3 w-3" />
+                  <span>Reset filters</span>
+                </button>
+              )}
+            </div>
+
+            {/* Active Filters Tag Strip */}
+            {(selectedCampus || selectedBranch || selectedRole || search) && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active:</span>
+                {selectedCampus && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-2 py-0.5 font-bold text-[11px]">
+                    <MapPin className="h-3 w-3" /> Amrita {selectedCampus}
+                    <button type="button" onClick={() => setSelectedCampus('')} className="hover:opacity-75 cursor-pointer">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {selectedBranch && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 font-bold text-[11px]">
+                    <GraduationCap className="h-3 w-3" /> {selectedBranch}
+                    <button type="button" onClick={() => setSelectedBranch('')} className="hover:opacity-75 cursor-pointer">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {selectedRole && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 font-bold text-[11px]">
+                    Role: {selectedRole}
+                    <button type="button" onClick={() => setSelectedRole('')} className="hover:opacity-75 cursor-pointer">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {search && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-secondary text-foreground px-2 py-0.5 font-bold text-[11px]">
+                    "{search}"
+                    <button type="button" onClick={() => setSearch('')} className="hover:opacity-75 cursor-pointer">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Members List Container (LinkedIn Style) */}
@@ -12734,32 +13521,46 @@ function FeedPage({ initialTab = 'feed' }: { initialTab?: 'feed' | 'discover' } 
                   <Users className="h-7 w-7" />
                 </div>
                 <h3 className="text-base font-extrabold text-foreground">
-                  {networkTab === 'friends'
-                    ? search
-                      ? `No friends match "${search}"`
-                      : 'You have no connections yet'
+                  {selectedCampus || selectedBranch || search || selectedRole
+                    ? `No ${networkTab === 'friends' ? 'friends' : 'members'} found matching filters`
+                    : networkTab === 'friends'
+                    ? 'You have no connections yet'
                     : 'No members found'}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  {networkTab === 'friends'
-                    ? search
-                      ? 'Looking for someone across other departments or campuses? Search the entire Amrita Campus Directory.'
-                      : 'Connect with batchmates, professors, and alumni across all 7 Amrita campuses in the Campus Directory.'
-                    : 'Try adjusting your keywords, campus selection, or role filters.'}
+                  {selectedCampus || selectedBranch || search || selectedRole
+                    ? `Try clearing your campus (${selectedCampus || 'All'}), branch (${selectedBranch || 'All'}), or role filters.`
+                    : networkTab === 'friends'
+                    ? 'Connect with batchmates, professors, and alumni across all 7 Amrita campuses in the Campus Directory.'
+                    : 'Try adjusting your search keywords, campus selection, or role filters.'}
                 </p>
-                <div className="mt-5 flex items-center justify-center gap-2">
-                  {networkTab === 'friends' ? (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  {(selectedCampus || selectedBranch || selectedRole || search) && (
+                    <Button
+                      onClick={() => {
+                        setSearch('');
+                        setSelectedRole('');
+                        setSelectedCampus('');
+                        setSelectedBranch('');
+                      }}
+                      variant="outline"
+                      className="text-xs font-semibold"
+                    >
+                      Clear All Filters
+                    </Button>
+                  )}
+                  {networkTab === 'friends' && (
                     <button
                       type="button"
-                      onClick={() => setNetworkTab('all')}
+                      onClick={() => {
+                        setNetworkTab('all');
+                        setSelectedCampus('');
+                        setSelectedBranch('');
+                      }}
                       className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 !text-white text-xs font-extrabold px-4 py-2 shadow-md shadow-orange-500/20 active:scale-95 transition-all cursor-pointer"
                     >
-                      {search ? 'Search Campus Directory' : 'Explore Campus Directory'}
+                      Explore Campus Directory
                     </button>
-                  ) : (
-                    <Button onClick={() => { setSearch(''); setSelectedRole(''); setSelectedCampus(''); }} variant="outline">
-                      Reset filters
-                    </Button>
                   )}
                 </div>
               </div>
@@ -14540,15 +15341,22 @@ interface ExtendedCollaboration {
 
 function CollaborationDetailModal({
   item,
+  currentUser,
   onClose,
   onRefresh,
+  onEdit,
+  onDelete,
 }: {
   item: ExtendedCollaboration;
+  currentUser?: any;
   onClose: () => void;
   onRefresh: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
+  const isOwner = Boolean(item.isCreator || (item.creator?.id && item.creator.id === currentUser?.id) || currentUser?.role === 'admin');
   const [activeTab, setActiveTab] = useState<'details' | 'team' | 'applications'>(
-    item.isCreator && (item.pendingApplicantsCount ?? 0) > 0 ? 'applications' : 'details'
+    isOwner && (item.pendingApplicantsCount ?? 0) > 0 ? 'applications' : 'details'
   );
   const [selectedRole, setSelectedRole] = useState(item.rolesNeeded?.[0] || 'Contributor');
   const [pitch, setPitch] = useState('');
@@ -14634,9 +15442,37 @@ function CollaborationDetailModal({
             </div>
             <h2 className="mt-2 text-2xl font-bold tracking-[-.04em] text-foreground">{item.title}</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {isOwner && (
+              <>
+                <button
+                  type="button"
+                  title="Edit project"
+                  onClick={() => {
+                    onClose();
+                    onEdit?.();
+                  }}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  title="Delete project"
+                  onClick={() => {
+                    onClose();
+                    onDelete?.();
+                  }}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Navigation Tabs */}
@@ -14990,7 +15826,10 @@ function CollaborationsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [editingCollab, setEditingCollab] = useState<ExtendedCollaboration | null>(null);
   const [selectedCollab, setSelectedCollab] = useState<ExtendedCollaboration | null>(null);
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useGetCurrentUser();
 
   const params = useMemo(
     () => ({
@@ -15007,6 +15846,17 @@ function CollaborationsPage() {
   });
 
   const items = (data?.items as any as ExtendedCollaboration[]) ?? [];
+
+  const handleDeleteCollab = async (collabId: string) => {
+    if (!window.confirm('Are you sure you want to delete this collaboration project? This action cannot be undone.')) return;
+    try {
+      await apiFetch(`/collaborations/${collabId}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+      if (selectedCollab?.id === collabId) setSelectedCollab(null);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete project');
+    }
+  };
 
   return (
     <>
@@ -15069,7 +15919,10 @@ function CollaborationsPage() {
             <CollaborationCard
               key={item.id}
               item={item}
+              currentUser={currentUser}
               onSelect={() => setSelectedCollab(item)}
+              onEdit={() => setEditingCollab(item)}
+              onDelete={() => handleDeleteCollab(item.id)}
             />
           ))}
         </div>
@@ -15078,7 +15931,13 @@ function CollaborationsPage() {
       {selectedCollab && (
         <CollaborationDetailModal
           item={selectedCollab}
+          currentUser={currentUser}
           onClose={() => setSelectedCollab(null)}
+          onEdit={() => {
+            setEditingCollab(selectedCollab);
+            setSelectedCollab(null);
+          }}
+          onDelete={() => handleDeleteCollab(selectedCollab.id)}
           onRefresh={() => {
             refetch();
             setSelectedCollab(null);
@@ -15087,18 +15946,37 @@ function CollaborationsPage() {
       )}
 
       {showCreate && <CreateCollaborationDialog onClose={() => setShowCreate(false)} />}
+
+      {editingCollab && (
+        <EditCollaborationDialog
+          collaboration={editingCollab}
+          onClose={() => setEditingCollab(null)}
+          onUpdated={() => {
+            refetch();
+            queryClient.invalidateQueries({ queryKey: getListCollaborationsQueryKey() });
+          }}
+        />
+      )}
     </>
   );
 }
 
 function CollaborationCard({
   item,
+  currentUser,
   onSelect,
+  onEdit,
+  onDelete,
 }: {
   item: ExtendedCollaboration;
+  currentUser?: any;
   onSelect: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const isFull = item.memberCount >= item.teamSize;
+  const currentUserId = String(currentUser?.id || currentUser?._id || '');
+  const isOwner = Boolean(item.isCreator || (item.creator?.id && String(item.creator.id) === currentUserId) || currentUser?.role === 'admin');
 
   return (
     <div className="surface flex flex-col justify-between rounded-2xl border border-border p-5 sm:p-6 shadow-sm transition-all hover:border-accent/40 animate-rise">
@@ -15119,7 +15997,35 @@ function CollaborationCard({
               {item.status === 'open' ? 'Recruiting' : item.status === 'closed' ? 'Team Full' : 'Completed'}
             </span>
           </div>
-          <span className="mono text-[10px] text-muted-foreground">Due {formatDate(item.deadline)}</span>
+          <div className="flex items-center gap-2">
+            <span className="mono text-[10px] text-muted-foreground">Due {formatDate(item.deadline)}</span>
+            {isOwner && (
+              <div className="flex items-center gap-1 border-l border-border/80 pl-2">
+                <button
+                  type="button"
+                  title="Edit project"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.();
+                  }}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Delete project"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.();
+                  }}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <h2 className="mt-3.5 text-xl font-bold tracking-[-.04em] text-foreground hover:text-accent cursor-pointer" onClick={onSelect}>
@@ -15197,6 +16103,156 @@ function CollaborationCard({
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EditCollaborationDialog({
+  collaboration,
+  onClose,
+  onUpdated,
+}: {
+  collaboration: ExtendedCollaboration;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: collaboration.title || '',
+    description: collaboration.description || '',
+    requiredSkills: (collaboration.requiredSkills || []).join(', '),
+    rolesNeeded: (collaboration.rolesNeeded || []).join(', '),
+    teamSize: String(collaboration.teamSize || 4),
+    deadline: collaboration.deadline ? collaboration.deadline.slice(0, 10) : '',
+    category: collaboration.category || 'Hackathon',
+    status: collaboration.status || 'open',
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await apiFetch(`/collaborations/${collaboration.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          requiredSkills: form.requiredSkills.split(',').map((x) => x.trim()).filter(Boolean),
+          rolesNeeded: form.rolesNeeded.split(',').map((x) => x.trim()).filter(Boolean),
+          teamSize: Number(form.teamSize),
+          deadline: form.deadline,
+          category: form.category,
+          status: form.status,
+        }),
+      });
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update collaboration');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[.18em] text-accent font-bold">Edit Project</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-[-.04em] text-foreground">Update Collaboration</h2>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="mt-3 text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <Field id="edit-collab-title" label="Project / Hackathon Title" value={form.title} onChange={(e) => set('title', e.target.value)} required />
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">What are you working on?</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => set('description', e.target.value)}
+              required
+              rows={4}
+              className="w-full rounded-xl border border-input bg-card p-3 text-xs leading-relaxed outline-none focus:border-accent"
+            />
+          </label>
+
+          <Field
+            id="edit-collab-roles"
+            label="Roles Needed (comma-separated)"
+            value={form.rolesNeeded}
+            onChange={(e) => set('rolesNeeded', e.target.value)}
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="edit-collab-skills"
+              label="Prerequisite Skills"
+              value={form.requiredSkills}
+              onChange={(e) => set('requiredSkills', e.target.value)}
+              required
+            />
+            <Field
+              id="edit-collab-deadline"
+              label="Recruitment Deadline"
+              type="date"
+              value={form.deadline}
+              onChange={(e) => set('deadline', e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SelectField
+              id="edit-collab-category"
+              label="Category"
+              value={form.category}
+              onChange={(e) => set('category', e.target.value)}
+              options={['Hackathon', 'Research', 'Startup', 'Student life', 'Community'].map((value) => ({ value, label: value }))}
+            />
+            <Field
+              id="edit-collab-team-size"
+              label="Team Size"
+              type="number"
+              value={form.teamSize}
+              onChange={(e) => set('teamSize', e.target.value)}
+              required
+            />
+            <SelectField
+              id="edit-collab-status"
+              label="Status"
+              value={form.status}
+              onChange={(e) => set('status', e.target.value)}
+              options={[
+                { value: 'open', label: 'Open (Recruiting)' },
+                { value: 'closed', label: 'Closed (Full)' },
+                { value: 'completed', label: 'Completed' },
+              ]}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -15651,7 +16707,10 @@ function EventsAndOpportunitiesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [showCreateOpportunity, setShowCreateOpportunity] = useState(false);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const queryClient = useQueryClient();
+  const { data: currentUser } = useGetCurrentUser();
 
   // Fetch opportunities
   const oppParams = useMemo(
@@ -15700,6 +16759,28 @@ function EventsAndOpportunitiesPage() {
         onError: () => setActionError('Save status could not be updated. Please try again.'),
       }
     );
+  };
+
+  const handleDeleteOpportunity = async (oppId: string) => {
+    if (!window.confirm('Are you sure you want to delete this opportunity? This action cannot be undone.')) return;
+    try {
+      await apiFetch(`/opportunities/${oppId}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: getListOpportunitiesQueryKey() });
+      if (editingOpportunity?.id === oppId) setEditingOpportunity(null);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete opportunity');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+    try {
+      await apiFetch(`/events/${eventId}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: getListEventsQueryKey() });
+      if (editingEvent?.id === eventId) setEditingEvent(null);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete event');
+    }
   };
 
   // Event Register/Unregister
@@ -15960,9 +17041,12 @@ function EventsAndOpportunitiesPage() {
               <EventCard
                 key={`event-${event.id}`}
                 event={event}
+                currentUser={currentUser}
                 registered={event.registered}
                 onRegister={() => toggleRegistration(event)}
                 registering={registering}
+                onEdit={() => setEditingEvent(event)}
+                onDelete={() => handleDeleteEvent(event.id)}
               />
             ))}
 
@@ -15972,8 +17056,11 @@ function EventsAndOpportunitiesPage() {
               <OpportunityCard
                 key={`opp-${item.id}`}
                 item={item}
+                currentUser={currentUser}
                 onSave={() => toggleSave(item)}
                 saving={saving}
+                onEdit={() => setEditingOpportunity(item)}
+                onDelete={() => handleDeleteOpportunity(item.id)}
               />
             ))}
         </div>
@@ -15999,19 +17086,53 @@ function EventsAndOpportunitiesPage() {
           }}
         />
       )}
+
+      {/* Edit Modals */}
+      {editingOpportunity && (
+        <EditOpportunityDialog
+          opportunity={editingOpportunity}
+          onClose={() => setEditingOpportunity(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: getListOpportunitiesQueryKey() });
+          }}
+        />
+      )}
+
+      {editingEvent && (
+        <EditEventDialog
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: getListEventsQueryKey() });
+          }}
+        />
+      )}
     </>
   );
 }
 
 function OpportunityCard({
   item,
+  currentUser,
   onSave,
   saving,
+  onEdit,
+  onDelete,
 }: {
   item: Opportunity;
+  currentUser?: any;
   onSave: () => void;
   saving: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
+  const currentUserId = String(currentUser?.id || currentUser?._id || '');
+  const isOwner = Boolean(
+    (item as any).isOwner ||
+    ((item as any).postedBy && String((item as any).postedBy) === currentUserId) ||
+    currentUser?.role === 'admin'
+  );
+
   return (
     <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all">
       <div>
@@ -16027,20 +17148,42 @@ function OpportunityCard({
             </span>
           </div>
 
-          <button
-            type="button"
-            aria-label={item.saved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
-            data-testid={`button-save-opportunity-${item.id}`}
-            onClick={onSave}
-            disabled={saving}
-            className={cx(
-              'rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors border border-transparent hover:border-border/60',
-              item.saved && 'text-orange-500 bg-orange-500/10 border-orange-500/20'
+          <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <button
+                  type="button"
+                  title="Edit opportunity"
+                  onClick={onEdit}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Delete opportunity"
+                  onClick={onDelete}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </>
             )}
-            title={item.saved ? 'Saved to bookmarks' : 'Bookmark opportunity'}
-          >
-            <Bookmark className={cx('h-4 w-4', item.saved && 'fill-orange-500 text-orange-500')} />
-          </button>
+            <button
+              type="button"
+              aria-label={item.saved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
+              data-testid={`button-save-opportunity-${item.id}`}
+              onClick={onSave}
+              disabled={saving}
+              className={cx(
+                'rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors border border-transparent hover:border-border/60',
+                item.saved && 'text-orange-500 bg-orange-500/10 border-orange-500/20'
+              )}
+              title={item.saved ? 'Saved to bookmarks' : 'Bookmark opportunity'}
+            >
+              <Bookmark className={cx('h-4 w-4', item.saved && 'fill-orange-500 text-orange-500')} />
+            </button>
+          </div>
         </div>
 
         {/* Title */}
@@ -16090,18 +17233,188 @@ function OpportunityCard({
   );
 }
 
+function EditOpportunityDialog({
+  opportunity,
+  onClose,
+  onUpdated,
+}: {
+  opportunity: Opportunity;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: opportunity.title || '',
+    category: opportunity.category || 'Internship',
+    organization: opportunity.organization || '',
+    description: opportunity.description || '',
+    requiredSkills: (opportunity.requiredSkills || []).join(', '),
+    eligibility: opportunity.eligibility || 'Open to all Amrita students and alumni',
+    deadline: opportunity.deadline ? opportunity.deadline.slice(0, 10) : '',
+    applicationUrl: opportunity.applicationUrl || 'https://www.amrita.edu',
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await apiFetch(`/opportunities/${opportunity.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...form,
+          requiredSkills: form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean),
+        }),
+      });
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update opportunity. Please check all fields.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Edit Opportunity</h3>
+            <p className="text-xs text-muted-foreground">Modify opportunity details, requirements, and deadline.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field
+            id="edit-opp-title"
+            label="Opportunity Title *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. AI Research Intern / Full Stack Developer"
+            required
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-foreground">Category *</span>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-xs font-medium text-foreground outline-none focus:border-orange-500"
+              >
+                <option value="Internship">Internship</option>
+                <option value="Job">Job / Full-Time</option>
+                <option value="Hackathon">Hackathon & Sprint</option>
+                <option value="Research">Research Fellowship</option>
+                <option value="Scholarship">Scholarship & Grant</option>
+                <option value="Mentorship">Mentorship Program</option>
+              </select>
+            </label>
+
+            <Field
+              id="edit-opp-org"
+              label="Organization / Lab / Company *"
+              value={form.organization}
+              onChange={(e) => setForm({ ...form, organization: e.target.value })}
+              placeholder="e.g. Amrita Innovation Hub or Google"
+              required
+            />
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">Description *</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500"
+              placeholder="Provide a detailed overview of the role, team, and responsibilities..."
+              required
+            />
+          </label>
+
+          <Field
+            id="edit-opp-skills"
+            label="Required Skills (comma separated)"
+            value={form.requiredSkills}
+            onChange={(e) => setForm({ ...form, requiredSkills: e.target.value })}
+            placeholder="e.g. React, Python, Machine Learning, Problem Solving"
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="edit-opp-eligibility"
+              label="Eligibility Criteria"
+              value={form.eligibility}
+              onChange={(e) => setForm({ ...form, eligibility: e.target.value })}
+              placeholder="e.g. Pre-final & Final year B.Tech"
+            />
+
+            <Field
+              id="edit-opp-deadline"
+              label="Application Deadline *"
+              type="date"
+              value={form.deadline}
+              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              required
+            />
+          </div>
+
+          <Field
+            id="edit-opp-url"
+            label="Application URL"
+            type="url"
+            value={form.applicationUrl}
+            onChange={(e) => setForm({ ...form, applicationUrl: e.target.value })}
+            placeholder="https://example.com/apply"
+          />
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function EventCard({
   event,
+  currentUser,
   registered,
   onRegister,
   registering,
+  onEdit,
+  onDelete,
 }: {
   event: Event;
+  currentUser?: any;
   registered: boolean;
   onRegister: () => void;
   registering: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const eventDate = new Date(event.date);
+  const currentUserId = String(currentUser?.id || currentUser?._id || '');
+  const isOwner = Boolean(
+    (event as any).isOwner ||
+    ((event as any).createdBy && String((event as any).createdBy) === currentUserId) ||
+    currentUser?.role === 'admin'
+  );
 
   return (
     <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-orange-500/30 transition-all">
@@ -16122,9 +17435,31 @@ function EventCard({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-              <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
-              <span>Amrita {event.campus} · {event.venue}</span>
+            <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground font-semibold">
+              <div className="flex items-center gap-1.5 truncate">
+                <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                <span className="truncate">Amrita {event.campus} · {event.venue}</span>
+              </div>
+              {isOwner && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    title="Edit event"
+                    onClick={onEdit}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete event"
+                    onClick={onDelete}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
             <h3 className="mt-1 text-base sm:text-lg font-bold text-foreground group-hover:text-orange-500 tracking-tight transition-colors line-clamp-2 leading-snug">
               {event.title}
@@ -16168,6 +17503,162 @@ function EventCard({
   );
 }
 
+function EditEventDialog({
+  event,
+  onClose,
+  onUpdated,
+}: {
+  event: Event;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: event.title || '',
+    campus: event.campus || 'Coimbatore',
+    venue: event.venue || '',
+    organizer: event.organizer || '',
+    date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
+    description: event.description || '',
+    capacity: String(event.capacity || ''),
+    registrationUrl: event.registrationUrl || '',
+  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await apiFetch(`/events/${event.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...form,
+          capacity: form.capacity ? Number(form.capacity) : null,
+        }),
+      });
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update event. Please check all fields.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Edit Campus Event</h3>
+            <p className="text-xs text-muted-foreground">Update event details, schedule, venue, and capacity.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg font-medium">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field
+            id="edit-event-title"
+            label="Event Title *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. Anokha 2026 Tech Symposium"
+            required
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold text-foreground">Campus *</span>
+              <select
+                value={form.campus}
+                onChange={(e) => setForm({ ...form, campus: e.target.value })}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-xs font-medium text-foreground outline-none focus:border-orange-500"
+              >
+                {campuses.map((c) => (
+                  <option key={c} value={c}>
+                    Amrita {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <Field
+              id="edit-event-venue"
+              label="Venue / Platform *"
+              value={form.venue}
+              onChange={(e) => setForm({ ...form, venue: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="edit-event-organizer"
+              label="Organizer / Club *"
+              value={form.organizer}
+              onChange={(e) => setForm({ ...form, organizer: e.target.value })}
+              required
+            />
+
+            <Field
+              id="edit-event-date"
+              label="Event Date & Time *"
+              type="datetime-local"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              required
+            />
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold text-foreground">Event Details *</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-xs outline-none focus:border-orange-500"
+              required
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="edit-event-capacity"
+              label="Attendee Capacity (Optional)"
+              type="number"
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+            />
+
+            <Field
+              id="edit-event-url"
+              label="Registration URL (Optional)"
+              type="url"
+              value={form.registrationUrl}
+              onChange={(e) => setForm({ ...form, registrationUrl: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="quiet" onClick={onClose} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="text-xs font-bold">
+              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Backward-compatible component aliases
 function OpportunitiesPage() {
   return <EventsAndOpportunitiesPage />;
@@ -16204,6 +17695,7 @@ interface BlogPostItem {
   summary: string;
   content: string;
   keyTakeaways?: string[];
+  authorId?: string;
   authorName: string;
   authorAvatar?: string;
   authorRole: string;
@@ -16219,6 +17711,20 @@ interface BlogPostItem {
   difficulty?: 'Super Dream' | 'Dream' | 'Enterprise' | 'Moderate' | 'Advanced';
   rounds?: InterviewRound[];
   resources?: BlogPostResource[];
+}
+
+function isBlogAuthor(blog: BlogPostItem, user?: any): boolean {
+  if (!user) return false;
+  const uid = user.id || user._id;
+  if (blog.authorId && uid && String(blog.authorId) === String(uid)) {
+    return true;
+  }
+  const cleanAuthor = (blog.authorName || '').trim().toLowerCase();
+  const cleanUser = (user.fullName || '').trim().toLowerCase();
+  if (cleanAuthor && cleanUser && cleanAuthor === cleanUser) {
+    return true;
+  }
+  return false;
 }
 
 function getInitialBlogs(): BlogPostItem[] {
@@ -16243,6 +17749,7 @@ function BlogsPage() {
   const [selectedCampus, setSelectedCampus] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<BlogPostItem | null>(null);
   const [readingBlog, setReadingBlog] = useState<BlogPostItem | null>(null);
 
   const categories = [
@@ -16284,15 +17791,44 @@ function BlogsPage() {
     );
   };
 
-  const handlePublishBlog = (newBlog: BlogPostItem) => {
+  const handleDeleteBlog = (blogId: string) => {
+    const target = blogs.find((b) => b.id === blogId);
+    if (!target) return;
+    if (!isBlogAuthor(target, currentUser)) {
+      alert('You can only delete your own articles.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete "${target.title}"? This action cannot be undone.`)) {
+      return;
+    }
     setBlogs((prev) => {
-      const updated = [newBlog, ...prev];
+      const updated = prev.filter((b) => b.id !== blogId);
       if (typeof window !== 'undefined') {
         localStorage.setItem('amrita_custom_blogs', JSON.stringify(updated));
       }
       return updated;
     });
+    if (readingBlog?.id === blogId) {
+      setReadingBlog(null);
+    }
+  };
+
+  const handlePublishBlog = (savedBlog: BlogPostItem) => {
+    setBlogs((prev) => {
+      const exists = prev.some((b) => b.id === savedBlog.id);
+      const updated = exists
+        ? prev.map((b) => (b.id === savedBlog.id ? savedBlog : b))
+        : [savedBlog, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('amrita_custom_blogs', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    if (readingBlog?.id === savedBlog.id) {
+      setReadingBlog(savedBlog);
+    }
     setShowCreateModal(false);
+    setEditingBlog(null);
   };
 
   const filteredBlogs = useMemo(() => {
@@ -16465,9 +18001,12 @@ function BlogsPage() {
             <BlogCard
               key={blog.id}
               blog={blog}
+              currentUser={currentUser}
               onRead={() => setReadingBlog(blog)}
               onLike={() => handleLikeToggle(blog.id)}
               onBookmark={() => handleBookmarkToggle(blog.id)}
+              onEdit={() => setEditingBlog(blog)}
+              onDelete={() => handleDeleteBlog(blog.id)}
             />
           ))}
         </div>
@@ -16477,17 +18016,30 @@ function BlogsPage() {
       {readingBlog && (
         <BlogDetailModal
           blog={readingBlog}
+          currentUser={currentUser}
           onClose={() => setReadingBlog(null)}
           onLike={() => handleLikeToggle(readingBlog.id)}
           onBookmark={() => handleBookmarkToggle(readingBlog.id)}
+          onEdit={() => setEditingBlog(readingBlog)}
+          onDelete={() => handleDeleteBlog(readingBlog.id)}
         />
       )}
 
-      {/* Write / Publish Knowledge Modal */}
+      {/* Write Article Modal */}
       {showCreateModal && (
         <CreateBlogModal
           user={currentUser}
           onClose={() => setShowCreateModal(false)}
+          onPublish={handlePublishBlog}
+        />
+      )}
+
+      {/* Edit Article Modal */}
+      {editingBlog && (
+        <CreateBlogModal
+          user={currentUser}
+          initialBlog={editingBlog}
+          onClose={() => setEditingBlog(null)}
           onPublish={handlePublishBlog}
         />
       )}
@@ -16497,15 +18049,22 @@ function BlogsPage() {
 
 function BlogCard({
   blog,
+  currentUser,
   onRead,
   onLike,
   onBookmark,
+  onEdit,
+  onDelete,
 }: {
   blog: BlogPostItem;
+  currentUser?: any;
   onRead: () => void;
   onLike: () => void;
   onBookmark: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
+  const isAuthor = isBlogAuthor(blog, currentUser);
   const isInterview = blog.postType === 'interview' || blog.category === 'Interview Experiences';
   const isTechDiscovery = blog.postType === 'tech_discovery' || blog.category === 'Tech Discoveries & Tools';
   const isStudyGuide = blog.postType === 'study_guide' || blog.category === 'Study Notes & Guides';
@@ -16513,7 +18072,7 @@ function BlogCard({
   return (
     <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs hover:border-border transition-colors">
       <div>
-        {/* Author row & Bookmark */}
+        {/* Author row & Bookmark/Edit/Delete Actions */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {blog.authorAvatar ? (
@@ -16546,17 +18105,49 @@ function BlogCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onBookmark}
-            className={cx(
-              'rounded-xl p-2 text-muted-foreground hover:bg-secondary transition-colors shrink-0',
-              blog.isBookmarked && 'text-orange-500'
+          <div className="flex items-center gap-1 shrink-0">
+            {isAuthor && (
+              <>
+                <button
+                  type="button"
+                  data-testid={`button-edit-blog-${blog.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  title="Edit article"
+                  aria-label="Edit article"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  data-testid={`button-delete-blog-${blog.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Delete article"
+                  aria-label="Delete article"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
             )}
-            title={blog.isBookmarked ? 'Saved' : 'Save article'}
-          >
-            <Bookmark className={cx('h-4 w-4', blog.isBookmarked && 'fill-orange-500')} />
-          </button>
+            <button
+              type="button"
+              onClick={onBookmark}
+              className={cx(
+                'rounded-xl p-2 text-muted-foreground hover:bg-secondary transition-colors shrink-0',
+                blog.isBookmarked && 'text-orange-500'
+              )}
+              title={blog.isBookmarked ? 'Saved' : 'Save article'}
+            >
+              <Bookmark className={cx('h-4 w-4', blog.isBookmarked && 'fill-orange-500')} />
+            </button>
+          </div>
         </div>
 
         {/* Badges: Post Type + Company / Difficulty + Read Time */}
@@ -16666,15 +18257,22 @@ function BlogCard({
 
 function BlogDetailModal({
   blog,
+  currentUser,
   onClose,
   onLike,
   onBookmark,
+  onEdit,
+  onDelete,
 }: {
   blog: BlogPostItem;
+  currentUser?: any;
   onClose: () => void;
   onLike: () => void;
   onBookmark: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
+  const isAuthor = isBlogAuthor(blog, currentUser);
   const isInterview = blog.postType === 'interview' || blog.category === 'Interview Experiences';
 
   return (
@@ -16710,7 +18308,31 @@ function BlogDetailModal({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {isAuthor && (
+              <>
+                <button
+                  type="button"
+                  data-testid={`button-modal-edit-blog-${blog.id}`}
+                  onClick={onEdit}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-secondary/60 hover:bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground transition-colors"
+                  title="Edit article"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid={`button-modal-delete-blog-${blog.id}`}
+                  onClick={onDelete}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 hover:bg-destructive/20 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors"
+                  title="Delete article"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete</span>
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={onBookmark}
@@ -16961,23 +18583,28 @@ function BlogDetailModal({
 
 function CreateBlogModal({
   user,
+  initialBlog,
   onClose,
   onPublish,
 }: {
   user?: Partial<User> | null;
+  initialBlog?: BlogPostItem | null;
   onClose: () => void;
   onPublish: (blog: BlogPostItem) => void;
 }) {
-  const [category, setCategory] = useState('Interview Experiences');
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
-  const [tags, setTags] = useState('Placement, SDE, Amrita');
-  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
-  const [company, setCompany] = useState('');
-  const [roleOffer, setRoleOffer] = useState('');
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [resourceUrl, setResourceUrl] = useState('');
+  const isEditing = Boolean(initialBlog);
+  const [category, setCategory] = useState(initialBlog?.category || 'Interview Experiences');
+  const [title, setTitle] = useState(initialBlog?.title || '');
+  const [summary, setSummary] = useState(initialBlog?.summary || '');
+  const [content, setContent] = useState(initialBlog?.content || '');
+  const [tags, setTags] = useState(initialBlog?.tags?.join(', ') || 'Placement, SDE, Amrita');
+  const [showOptionalDetails, setShowOptionalDetails] = useState(
+    Boolean(initialBlog?.company || initialBlog?.roleOffer || (initialBlog?.resources && initialBlog.resources.length > 0))
+  );
+  const [company, setCompany] = useState(initialBlog?.company || '');
+  const [roleOffer, setRoleOffer] = useState(initialBlog?.roleOffer || '');
+  const [resourceTitle, setResourceTitle] = useState(initialBlog?.resources?.[0]?.title || '');
+  const [resourceUrl, setResourceUrl] = useState(initialBlog?.resources?.[0]?.url || '');
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const DOMAIN_OPTIONS = [
@@ -17025,28 +18652,45 @@ function CreateBlogModal({
       });
     }
 
-    const newBlog: BlogPostItem = {
-      id: `blog-${Date.now()}`,
-      postType: category === 'Interview Experiences' ? 'interview' : category.includes('Study') ? 'study_guide' : 'tech_discovery',
-      title: title.trim(),
-      date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-      readTime: estimatedReadTime,
-      tags: tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean),
-      summary: summary.trim() || title.trim(),
-      content: content.trim(),
-      authorName: user?.fullName || 'Amrita Member',
-      authorRole: user?.role === 'alumni' ? 'Alumni' : user?.role === 'faculty' ? 'Faculty' : user?.role === 'researcher' ? 'Researcher' : 'Student',
-      authorCampus: user?.campus || 'Coimbatore',
-      authorCompany: company.trim() || undefined,
-      category,
-      company: company.trim() || undefined,
-      roleOffer: roleOffer.trim() || undefined,
-      resources: resourcesList.length ? resourcesList : undefined,
-      likes: 1,
-      isLiked: true,
-    };
-
-    onPublish(newBlog);
+    if (initialBlog) {
+      const updatedBlog: BlogPostItem = {
+        ...initialBlog,
+        postType: category === 'Interview Experiences' ? 'interview' : category.includes('Study') ? 'study_guide' : 'tech_discovery',
+        title: title.trim(),
+        readTime: estimatedReadTime,
+        tags: tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean),
+        summary: summary.trim() || title.trim(),
+        content: content.trim(),
+        category,
+        company: company.trim() || undefined,
+        roleOffer: roleOffer.trim() || undefined,
+        resources: resourcesList.length ? resourcesList : undefined,
+      };
+      onPublish(updatedBlog);
+    } else {
+      const newBlog: BlogPostItem = {
+        id: `blog-${Date.now()}`,
+        authorId: user?.id || (user as any)?._id || '',
+        postType: category === 'Interview Experiences' ? 'interview' : category.includes('Study') ? 'study_guide' : 'tech_discovery',
+        title: title.trim(),
+        date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+        readTime: estimatedReadTime,
+        tags: tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean),
+        summary: summary.trim() || title.trim(),
+        content: content.trim(),
+        authorName: user?.fullName || 'Amrita Member',
+        authorRole: user?.role === 'alumni' ? 'Alumni' : user?.role === 'faculty' ? 'Faculty' : user?.role === 'researcher' ? 'Researcher' : 'Student',
+        authorCampus: user?.campus || 'Coimbatore',
+        authorCompany: company.trim() || undefined,
+        category,
+        company: company.trim() || undefined,
+        roleOffer: roleOffer.trim() || undefined,
+        resources: resourcesList.length ? resourcesList : undefined,
+        likes: 1,
+        isLiked: true,
+      };
+      onPublish(newBlog);
+    }
   };
 
   return (
@@ -17064,10 +18708,10 @@ function CreateBlogModal({
             <Avatar user={user} size="sm" />
             <div>
               <div className="text-xs font-bold text-foreground">
-                {user?.fullName || 'Amrita Member'}
+                {user?.fullName || initialBlog?.authorName || 'Amrita Member'}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                Publishing to Amrita Connect · {estimatedReadTime}
+                {isEditing ? 'Editing Article' : 'Publishing to Amrita Connect'} · {estimatedReadTime}
               </div>
             </div>
           </div>
@@ -17303,7 +18947,7 @@ Share your interview experiences, question breakdowns, coding solutions, study n
                 className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <PenLine className="h-4 w-4" />
-                <span>Publish Article</span>
+                <span>{isEditing ? 'Save Changes' : 'Publish Article'}</span>
               </button>
             </div>
           </div>
@@ -20073,29 +21717,236 @@ function ProfilePage({ initialTab = 'profile' }: { initialTab?: 'profile' | 'con
 
 function AdminPage() {
   const { data: user, isLoading: userLoading } = useGetCurrentUser();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useGetAdminSummary({ query: { queryKey: getGetAdminSummaryQueryKey(), enabled: user?.role === 'admin' } });
+  
+  const { data: flagshipData, isLoading: flagshipLoading, refetch: refetchFlagships } = useQuery({
+    queryKey: ['flagship-events'],
+    queryFn: () => apiFetch<{ items: CountdownEventItem[]; total: number }>('/flagship-events'),
+    enabled: user?.role === 'admin',
+  });
+
+  const [editingEvent, setEditingEvent] = useState<CountdownEventItem | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const handleDeleteFlagship = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to remove "${title}" from the flagship countdown widget?`)) return;
+    try {
+      await apiFetch(`/flagship-events/${id}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: ['flagship-events'] });
+    } catch (err: any) {
+      alert(err?.message || 'Failed to remove flagship event.');
+    }
+  };
+
   if (userLoading || isLoading) return <LoadingState rows={4} />;
   if (!user || user.role !== 'admin') return <EmptyState icon={ShieldCheck} title="This workspace is restricted" detail="Admin console access is limited to platform administrators." action={<Link href="/feed" className="text-sm font-bold text-accent">Return to Feed</Link>} />;
   if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
 
-  return <>
-    <PageTitle eyebrow="Platform operations" title="Keep the commons healthy." detail="A focused view of the people and activity shaping Amrita Connect." />
-    <section className="mb-6 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><div className="mono text-[9px] font-bold uppercase tracking-[.2em] text-muted-foreground">Administrator access</div><h2 className="mt-2 text-xl font-bold tracking-[-.03em] text-foreground">A calm control room for a trusted network.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Review the network at a glance before moving into verification, reports, and community operations.</p></div>
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/20 text-accent"><BarChart3 className="h-5 w-5" /></div>
+  const flagshipItems = flagshipData?.items || [];
+
+  return (
+    <div className="space-y-6 animate-rise">
+      <PageTitle eyebrow="Platform operations" title="Keep the commons healthy." detail="A focused view of the people and activity shaping Amrita Connect." />
+      
+      {/* Overview Banner */}
+      <section className="rounded-2xl border border-border bg-card p-5 text-card-foreground sm:p-6 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="mono text-[9px] font-bold uppercase tracking-[.2em] text-muted-foreground">Administrator access</div>
+            <h2 className="mt-2 text-xl font-bold tracking-[-.03em] text-foreground">A calm control room for a trusted network.</h2>
+            <p className="mt-2 max-w-2xl text-xs sm:text-sm leading-6 text-muted-foreground">
+              Review network metrics, configure the feed flagship countdowns, and manage community operations.
+            </p>
+          </div>
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-orange-500/15 text-orange-500">
+            <BarChart3 className="h-6 w-6" />
+          </div>
+        </div>
+      </section>
+
+      {/* Summary Metrics Grid */}
+      <div data-testid="admin-summary-grid" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Members" value={data.users.toLocaleString()} detail="Across every campus" />
+        <Metric label="Opportunities" value={data.opportunities.toLocaleString()} detail="Published opportunities" accent />
+        <Metric label="Events" value={data.events.toLocaleString()} detail="On shared calendar" />
+        <Metric label="Flagship Countdowns" value={flagshipItems.length.toString()} detail="Active on feed sidebar" accent />
       </div>
-    </section>
-    <div data-testid="admin-summary-grid" className="grid gap-4 sm:grid-cols-3">
-      <Metric label="Members" value={data.users.toLocaleString()} detail="Across every campus" />
-      <Metric label="Opportunities" value={data.opportunities.toLocaleString()} detail="Published opportunities" accent />
-      <Metric label="Events" value={data.events.toLocaleString()} detail="On the shared calendar" />
+
+      {/* Flagship Countdown & Spotlight Events Manager */}
+      <section id="flagship-events" className="rounded-2xl border border-orange-500/30 bg-card p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-orange-500/15 text-orange-500 shrink-0">
+              <Trophy className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-foreground">
+                  Flagship Countdown & Spotlight Events
+                </h3>
+                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-extrabold text-orange-600 dark:text-orange-400 border border-orange-500/25">
+                  Right Sidebar Live Widget
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Add, update, or remove the featured hackathons, fests, and drives pinned to the community feed right sidebar.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => {
+              setEditingEvent(null);
+              setShowModal(true);
+            }}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-xs gap-1.5 shrink-0 active:scale-95"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Flagship Event
+          </Button>
+        </div>
+
+        {/* List of active Flagship Events */}
+        {flagshipLoading ? (
+          <LoadingState rows={2} />
+        ) : flagshipItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center space-y-2">
+            <Trophy className="mx-auto h-8 w-8 text-muted-foreground/50" />
+            <p className="text-xs font-bold text-foreground">No flagship countdown events created yet.</p>
+            <p className="text-[11px] text-muted-foreground">Click "Add Flagship Event" above to create your first countdown banner.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {flagshipItems.map((event) => (
+              <div
+                key={event.id}
+                className="group rounded-2xl border border-border/80 bg-secondary/20 hover:border-orange-500/30 p-4 transition-all space-y-3 flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cx('rounded-md border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider', event.badgeBg)}>
+                      {event.category}
+                    </span>
+                    <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+                      {event.campus}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-extrabold text-foreground leading-snug">
+                    {event.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {event.tagline}
+                  </p>
+                  <div className="rounded-xl border border-border/70 bg-card/80 p-2 text-center text-xs font-mono font-bold text-orange-600 dark:text-orange-400">
+                    Deadline: {new Date(event.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+                    <span className="truncate">{event.highlight}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                  {event.linkUrl ? (
+                    <a
+                      href={event.linkUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-bold text-orange-500 hover:underline flex items-center gap-1"
+                    >
+                      <span>Website</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground font-mono">{event.tag}</span>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingEvent(event);
+                        setShowModal(true);
+                      }}
+                      className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-card hover:bg-secondary text-foreground text-xs font-bold transition-all cursor-pointer"
+                      title="Edit countdown event"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFlagship(event.id, event.title)}
+                      className="grid h-7 w-7 place-items-center rounded-lg border border-destructive/30 bg-destructive/10 hover:bg-destructive text-destructive hover:text-white text-xs font-bold transition-all cursor-pointer"
+                      title="Remove event from widget"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Operational Views & Quick Links */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="surface rounded-2xl border border-border p-5 sm:p-6">
+          <SectionHeader eyebrow="Next operational views" title="Keep building the trust layer" />
+          <div className="mt-5 space-y-3">
+            {[
+              ['Verification queue', 'Review official identity signals and keep member badges meaningful.'],
+              ['Reports & moderation', 'Give members a clear, accountable path to report concerns.'],
+              ['Engagement analytics', 'Understand which campuses, roles, and pathways are finding value.'],
+            ].map(([title, detail]) => (
+              <div key={title} className="flex gap-3 rounded-xl border border-border bg-card p-4">
+                <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-accent">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">{title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="surface rounded-2xl border border-border p-5 sm:p-6">
+          <SectionHeader eyebrow="Quick access" title="Review the public network" />
+          <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              ['Community Feed', '/feed', Rss],
+              ['Opportunities Board', '/opportunities', BriefcaseBusiness],
+              ['Events Calendar', '/events', CalendarDays],
+            ].map(([label, href, Icon]) => (
+              <Link key={label as string} href={href as string} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-accent">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="text-sm font-bold text-foreground">{label as string}</span>
+                <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Add / Edit Flagship Modal */}
+      {showModal && (
+        <FlagshipEventModal
+          initialEvent={editingEvent}
+          onClose={() => {
+            setShowModal(false);
+            setEditingEvent(null);
+          }}
+          onSuccess={() => {
+            refetchFlagships();
+            queryClient.invalidateQueries({ queryKey: ['flagship-events'] });
+          }}
+        />
+      )}
     </div>
-    <div className="mt-8 grid gap-6 lg:grid-cols-2">
-      <section className="surface rounded-xl border border-border p-5 sm:p-6"><SectionHeader eyebrow="Next operational views" title="Keep building the trust layer" /><div className="mt-5 space-y-3">{[['Verification queue', 'Review official identity signals and keep member badges meaningful.'], ['Reports & moderation', 'Give members a clear, accountable path to report concerns.'], ['Engagement analytics', 'Understand which campuses, roles, and pathways are finding value.']].map(([title, detail]) => <div key={title} className="flex gap-3 rounded-lg border border-border bg-card p-4"><div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-accent"><ShieldCheck className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">{title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div></div>)}</div></section>
-      <section className="surface rounded-xl border border-border p-5 sm:p-6"><SectionHeader eyebrow="Quick access" title="Review the public network" /><div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">{[['Feed', '/feed', Rss], ['Opportunities', '/opportunities', BriefcaseBusiness], ['Events', '/events', CalendarDays]].map(([label, href, Icon]) => <Link key={label as string} href={href as string} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"><span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-accent"><Icon className="h-4 w-4" /></span><span className="text-sm font-bold text-foreground">{label as string}</span><ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" /></Link>)}</div></section>
-    </div>
-  </>;
+  );
 }
 
 function NotFound() { return <div className="grid min-h-[100dvh] place-items-center bg-background p-6 text-center"><div><div className="mono text-[10px] uppercase tracking-[.2em] text-muted-foreground">404 / Off the map</div><h1 className="mt-4 text-5xl font-bold tracking-[-.06em] text-foreground">This path is not connected.</h1><Link href="/" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-accent">Return home <ArrowRight className="h-4 w-4" /></Link></div></div>; }
